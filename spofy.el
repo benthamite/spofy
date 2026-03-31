@@ -30,7 +30,7 @@
 ;; via the Spotify Web API.
 ;;
 ;; Getting started:
-;; 1. Register a Spotify app at <https://developer.spotify.com>.
+;; 1. Register a Spotify app at <https://developer.spotify.com/dashboard>.
 ;; 2. Set `spofy-client-id' and `spofy-client-secret'.
 ;; 3. Run `spofy-authenticate' to log in.
 ;; 4. Run `spofy' to open the dashboard.

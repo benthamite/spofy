@@ -40,7 +40,7 @@ The core capabilities are:
 
 Before using Spofy, you must register a Spotify application:
 
-1. Go to [[https://developer.spotify.com]] and create a new application.
+1. Go to the [[https://developer.spotify.com/dashboard][Spotify Developer Dashboard]] and create a new application.
 2. In the application settings, add =http://localhost:8080/spofy/callback= as a redirect URI (adjust the port if you change ~spofy-redirect-port~).
 3. Note the Client ID and Client Secret.
 

@@ -41,13 +41,13 @@
 
 (defcustom spofy-client-id nil
   "Spotify application client ID.
-Register at `https://developer.spotify.com' to obtain one."
+Register at `https://developer.spotify.com/dashboard'."
   :type '(choice (const :tag "Not set" nil) string)
   :group 'spofy)
 
 (defcustom spofy-client-secret nil
   "Spotify application client secret.
-Register at `https://developer.spotify.com' to obtain one."
+Register at `https://developer.spotify.com/dashboard'."
   :type '(choice (const :tag "Not set" nil) string)
   :group 'spofy)
 
