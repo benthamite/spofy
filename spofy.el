@@ -58,6 +58,7 @@
 (declare-function spofy-player-stop-polling "spofy-player" ())
 (declare-function spofy-player-current-track "spofy-player" ())
 (declare-function spofy-player-playing-p "spofy-player" ())
+(declare-function spofy-player-interpolated-progress "spofy-player" ())
 (declare-function spofy-play-pause "spofy-player" ())
 (declare-function spofy-next "spofy-player" ())
 (declare-function spofy-previous "spofy-player" ())
@@ -153,16 +154,11 @@ WIDTH is the total character width of the bar (excluding brackets)."
          (track (and state (alist-get 'track state)))
          (artist (and state (alist-get 'artist state)))
          (album (and state (alist-get 'album state)))
-         (progress (and state (alist-get 'progress state)))
+         (progress (and state (spofy-player-interpolated-progress)))
+         (duration (and state (alist-get 'duration state)))
          (is-playing (and state (alist-get 'is-playing state)))
          (shuffle (and state (alist-get 'shuffle state)))
-         (repeat-state (and state (alist-get 'repeat state)))
-         ;; We need the track item to get duration; extract from raw
-         ;; state if possible.  The normalized state doesn't include
-         ;; duration, so we show progress vs an estimate.  We actually
-         ;; need to get it from the raw poll data.  Since the dashboard
-         ;; also fetches currently-playing, we store duration separately.
-         (duration (and state (alist-get 'duration state))))
+         (repeat-state (and state (alist-get 'repeat state))))
     (insert (propertize "Now playing" 'face 'spofy-header) "\n\n")
     (if (not track)
         (insert (propertize "  No track playing" 'face 'spofy-muted) "\n")
@@ -178,7 +174,7 @@ WIDTH is the total character width of the bar (excluding brackets)."
                           'face 'spofy-muted)
               "\n")
       (insert "  "
-              (if is-playing "▶" "⏸")
+              (if is-playing "⏸" "▶")
               "  "
               (format "shuffle: %s" (if shuffle "on" "off"))
               "  "
@@ -260,9 +256,12 @@ WIDTH is the total character width of the bar (excluding brackets)."
 (defvar spofy--dashboard-now-playing-end-marker nil
   "Marker for the end of the now-playing section in the dashboard.")
 
+(defvar spofy--dashboard-progress-timer nil
+  "Timer for updating the progress bar every second.")
+
 (defun spofy--dashboard-refresh-now-playing ()
   "Refresh only the now-playing section in the *Spofy* buffer.
-Called from `spofy-player-state-changed-hook'."
+Called from `spofy-player-state-changed-hook' and the progress timer."
   (when-let* ((buf (get-buffer "*Spofy*")))
     (when (buffer-live-p buf)
       (with-current-buffer buf
@@ -270,13 +269,27 @@ Called from `spofy-player-state-changed-hook'."
                    (markerp spofy--dashboard-now-playing-end-marker)
                    (marker-position spofy--dashboard-now-playing-marker)
                    (marker-position spofy--dashboard-now-playing-end-marker))
-          (let ((inhibit-read-only t))
+          (let ((inhibit-read-only t)
+                (pos (point)))
             (delete-region spofy--dashboard-now-playing-marker
                            spofy--dashboard-now-playing-end-marker)
             (goto-char spofy--dashboard-now-playing-marker)
             (spofy--dashboard-insert-now-playing)
             (set-marker spofy--dashboard-now-playing-end-marker
-                        (point))))))))
+                        (point))
+            (goto-char (min pos (point-max)))))))))
+
+(defun spofy--dashboard-start-progress-timer ()
+  "Start a 1-second timer to refresh the progress bar."
+  (spofy--dashboard-stop-progress-timer)
+  (setq spofy--dashboard-progress-timer
+        (run-with-timer 1 1 #'spofy--dashboard-refresh-now-playing)))
+
+(defun spofy--dashboard-stop-progress-timer ()
+  "Stop the progress bar refresh timer."
+  (when spofy--dashboard-progress-timer
+    (cancel-timer spofy--dashboard-progress-timer)
+    (setq spofy--dashboard-progress-timer nil)))
 
 ;;;;; Dashboard: full render
 
@@ -333,17 +346,6 @@ Assumes the current buffer is in `spofy-dashboard-mode'."
                    (goto-char playlist-marker)
                    (spofy--dashboard-insert-playlists items)))))))))))
 
-;;;;; Dashboard: state change hook to get duration
-
-(defun spofy--enrich-state-with-duration (data)
-  "Store duration from raw player DATA into `spofy-player--current-state'."
-  (when (and data (boundp 'spofy-player--current-state)
-             spofy-player--current-state)
-    (let* ((item (alist-get 'item data))
-           (duration (and item (alist-get 'duration_ms item))))
-      (when duration
-        (setf (alist-get 'duration spofy-player--current-state) duration)))))
-
 ;;;;; Dashboard: interactive commands
 
 ;;;###autoload
@@ -369,10 +371,10 @@ authentication, starts polling, and displays the dashboard buffer."
   ;; Start polling if not already running
   (unless (and (boundp 'spofy-player--timer) spofy-player--timer)
     (spofy-player-start-polling))
-  ;; Hook up duration enrichment for the dashboard
+  ;; Hook up now-playing refresh on state changes
   (add-hook 'spofy-player-state-changed-hook #'spofy--dashboard-refresh-now-playing)
-  ;; Fetch current state for duration
-  (spofy-api-get "me/player" nil #'spofy--enrich-state-with-duration)
+  ;; Start progress interpolation timer
+  (spofy--dashboard-start-progress-timer)
   ;; Create and display the dashboard
   (let ((buf (get-buffer-create "*Spofy*")))
     (with-current-buffer buf
@@ -385,8 +387,6 @@ authentication, starts polling, and displays the dashboard buffer."
   (interactive)
   (require 'spofy-api)
   (require 'spofy-player)
-  ;; Re-fetch duration
-  (spofy-api-get "me/player" nil #'spofy--enrich-state-with-duration)
   (when (string= (buffer-name) "*Spofy*")
     (spofy--dashboard-render)))
 
@@ -397,7 +397,7 @@ authentication, starts polling, and displays the dashboard buffer."
   (require 'spofy-player)
   (let ((track-info (spofy-player-current-track)))
     (if track-info
-        (let ((icon (if (spofy-player-playing-p) "▶" "⏸")))
+        (let ((icon (if (spofy-player-playing-p) "⏸" "▶")))
           (format "Spofy: %s %s — %s" icon (car track-info) (cdr track-info)))
       "Spofy: no track playing")))
 
@@ -446,6 +446,7 @@ authentication, starts polling, and displays the dashboard buffer."
   (interactive)
   (require 'spofy-player)
   (spofy-player-stop-polling)
+  (spofy--dashboard-stop-progress-timer)
   (remove-hook 'spofy-player-state-changed-hook
                #'spofy--dashboard-refresh-now-playing)
   (when spofy-global-mode

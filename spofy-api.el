@@ -205,7 +205,8 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
             (url-request-extra-headers
              `(("Authorization" . ,(format "Bearer %s" (spofy-auth-access-token)))
                ("Content-Type" . "application/json")))
-            (url-request-data (when data (json-serialize data))))
+            (url-request-data (when data (json-serialize data)))
+            (url-show-status nil))
         (url-retrieve
          full-url
          (lambda (_status)

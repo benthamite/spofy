@@ -89,6 +89,7 @@ device, volume, track-id.")
         (artist    . ,(when artists (spofy-ui-format-artists artists)))
         (album     . ,(alist-get 'name album))
         (progress  . ,(alist-get 'progress_ms data))
+        (duration  . ,(alist-get 'duration_ms item))
         (is-playing . ,(eq (alist-get 'is_playing data) t))
         (shuffle   . ,(eq (alist-get 'shuffle_state data) t))
         (repeat    . ,(alist-get 'repeat_state data))
@@ -107,6 +108,8 @@ device, volume, track-id.")
 Compare to previous state and run appropriate hooks."
   (let ((new-state (spofy-player--extract-state data)))
     (when new-state
+      ;; Record the wall-clock time of this poll for progress interpolation
+      (setf (alist-get 'poll-time new-state) (float-time))
       (let ((old-state spofy-player--current-state))
         (setq spofy-player--current-state new-state)
         (unless (equal old-state new-state)
@@ -147,6 +150,19 @@ Polls at `spofy-poll-interval' second intervals."
 (defun spofy-player-current-track-id ()
   "Return the Spotify track ID of the currently playing track, or nil."
   (alist-get 'track-id spofy-player--current-state))
+
+(defun spofy-player-interpolated-progress ()
+  "Return the estimated current progress in milliseconds.
+Adds elapsed wall-clock time since the last poll if the track is playing."
+  (when spofy-player--current-state
+    (let ((progress (or (alist-get 'progress spofy-player--current-state) 0))
+          (duration (or (alist-get 'duration spofy-player--current-state) 0))
+          (poll-time (alist-get 'poll-time spofy-player--current-state))
+          (playing (alist-get 'is-playing spofy-player--current-state)))
+      (if (and playing poll-time)
+          (let ((elapsed-ms (* (- (float-time) poll-time) 1000)))
+            (min (round (+ progress elapsed-ms)) duration))
+        progress))))
 
 ;;;; Device management
 
