@@ -133,24 +133,14 @@
   (let ((spofy-auth--access-token nil)
         (spofy-auth--refresh-token nil)
         (spofy-auth--token-expiry nil))
-    ;; Mock auth-source-search to avoid touching real auth-source
-    (cl-letf (((symbol-function 'auth-source-search)
-               (lambda (&rest _) nil))
-              ((symbol-function 'auth-source-delete)
-               (lambda (&rest _) nil))
-              ((symbol-function 'secrets-create-item)
-               (lambda (&rest _) nil))
-              ((symbol-function 'auth-source--backend-create)
-               (lambda (&rest _) nil)))
-      ;; Mock the auth-source persistence to be a no-op
-      (cl-letf (((symbol-function 'spofy-auth--persist-tokens)
-                 (lambda () nil)))
-        (spofy-auth--store-tokens "my-access" "my-refresh" 3600))
-      (should (equal spofy-auth--access-token "my-access"))
-      (should (equal spofy-auth--refresh-token "my-refresh"))
-      ;; Expiry should be approximately now + 3600
-      (should (> spofy-auth--token-expiry (+ (float-time) 3500)))
-      (should (< spofy-auth--token-expiry (+ (float-time) 3700))))))
+    (cl-letf (((symbol-function 'spofy-auth--persist-tokens)
+               (lambda () nil)))
+      (spofy-auth--store-tokens "my-access" "my-refresh" 3600))
+    (should (equal spofy-auth--access-token "my-access"))
+    (should (equal spofy-auth--refresh-token "my-refresh"))
+    ;; Expiry should be approximately now + 3600
+    (should (> spofy-auth--token-expiry (+ (float-time) 3500)))
+    (should (< spofy-auth--token-expiry (+ (float-time) 3700)))))
 
 (ert-deftest spofy-auth-test-access-token-returns-from-memory ()
   "Access token is returned from memory when available and not expired."

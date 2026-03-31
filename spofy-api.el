@@ -46,6 +46,14 @@
 (defconst spofy-api--max-retries 3
   "Maximum number of retries for transient (5xx) errors.")
 
+(defconst spofy-api--error-cooldown 60
+  "Minimum seconds between repeated error messages for the same endpoint.")
+
+;;;; Error rate limiting
+
+(defvar spofy-api--last-error-times (make-hash-table :test #'equal)
+  "Hash table mapping endpoint URLs to the last time an error was logged.")
+
 (defconst spofy-api--default-retry-after 1
   "Default Retry-After delay in seconds when the header is missing.")
 
@@ -235,8 +243,11 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
                               (1+ retry-count) refreshed-p)))
               ;; All retries exhausted or unrecoverable error
               (t
-               (message "Spofy: API request failed (HTTP %s): %s %s"
-                        (or status-code "?") method full-url))))))))))
+               (let ((last (gethash full-url spofy-api--last-error-times 0)))
+                 (when (> (- (float-time) last) spofy-api--error-cooldown)
+                   (puthash full-url (float-time) spofy-api--last-error-times)
+                   (message "Spofy: API request failed (HTTP %s): %s %s"
+                            (or status-code "?") method full-url))))))))))))
 
 ;;;; High-level helpers
 

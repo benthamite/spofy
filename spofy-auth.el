@@ -30,7 +30,6 @@
 ;;; Code:
 
 (require 'spofy-ui)
-(require 'auth-source)
 (require 'url)
 (require 'url-http)
 (require 'cl-lib)
@@ -54,6 +53,13 @@ Register at `https://developer.spotify.com/dashboard'."
 (defcustom spofy-redirect-port 8080
   "Port for the local OAuth2 redirect server."
   :type 'integer
+  :group 'spofy)
+
+(defcustom spofy-token-file (locate-user-emacs-file "spofy-tokens.gpg")
+  "File for storing Spotify OAuth tokens.
+The .gpg extension causes Emacs to encrypt the file automatically
+via EasyPG.  Use a plain .el extension to store tokens unencrypted."
+  :type 'file
   :group 'spofy)
 
 ;;;; Hooks
@@ -128,23 +134,15 @@ type, and a random state parameter."
 ;;;; Token storage
 
 (defun spofy-auth--persist-tokens ()
-  "Persist tokens to auth-source.
-Uses a distinctive host value to avoid collisions with other
-entries (e.g. macOS keychain entries for accounts.spotify.com)."
-  (spofy-auth--persist-token "spofy-access" spofy-auth--access-token)
-  (spofy-auth--persist-token "spofy-refresh" spofy-auth--refresh-token))
-
-(defun spofy-auth--persist-token (user secret)
-  "Persist SECRET under USER in auth-source."
-  (auth-source-delete :host "spofy.localhost" :user user)
-  (let ((auth-source-creation-prompts nil))
-    (when-let* ((result (car (auth-source-search :host "spofy.localhost"
-                                                 :user user
-                                                 :secret secret
-                                                 :create t)))
-                (save-fn (plist-get result :save-function)))
-      (when (functionp save-fn)
-        (funcall save-fn)))))
+  "Persist tokens to `spofy-token-file'."
+  (let ((data `((access-token . ,spofy-auth--access-token)
+                (refresh-token . ,spofy-auth--refresh-token)))
+        (file (expand-file-name spofy-token-file)))
+    (with-temp-file file
+      (let ((print-length nil)
+            (print-level nil))
+        (prin1 data (current-buffer))))
+    (set-file-modes file #o600)))
 
 (defun spofy-auth--store-tokens (access-token refresh-token expires-in)
   "Store ACCESS-TOKEN, REFRESH-TOKEN and compute expiry from EXPIRES-IN.
@@ -156,23 +154,18 @@ Tokens are stored both in memory and in auth-source."
   (spofy-auth--persist-tokens))
 
 (defun spofy-auth--load-tokens ()
-  "Load tokens from auth-source into memory.
+  "Load tokens from `spofy-token-file' into memory.
 Returns non-nil if tokens were found."
-  (let ((access-entry (car (auth-source-search :host "spofy.localhost"
-                                               :user "spofy-access"
-                                               :max 1)))
-        (refresh-entry (car (auth-source-search :host "spofy.localhost"
-                                                :user "spofy-refresh"
-                                                :max 1))))
-    (when access-entry
-      (let ((secret (plist-get access-entry :secret)))
-        (setq spofy-auth--access-token
-              (if (functionp secret) (funcall secret) secret))))
-    (when refresh-entry
-      (let ((secret (plist-get refresh-entry :secret)))
-        (setq spofy-auth--refresh-token
-              (if (functionp secret) (funcall secret) secret))))
-    (and spofy-auth--access-token spofy-auth--refresh-token)))
+  (let ((file (expand-file-name spofy-token-file)))
+    (when (file-exists-p file)
+      (with-temp-buffer
+        (insert-file-contents file)
+        (let ((data (read (current-buffer))))
+          (when-let* ((access (alist-get 'access-token data)))
+            (setq spofy-auth--access-token access))
+          (when-let* ((refresh (alist-get 'refresh-token data)))
+            (setq spofy-auth--refresh-token refresh))
+          (and spofy-auth--access-token spofy-auth--refresh-token))))))
 
 ;;;; Token access
 

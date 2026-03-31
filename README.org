@@ -25,7 +25,7 @@ Spofy is organized as a multi-file package.  The main entry point is the =spofy=
 
 The core capabilities are:
 
-- *Authentication:* OAuth2 authorization code flow with a local HTTP callback server and persistent token storage via ~auth-source~ ([[#h:authentication][Authentication]]).
+- *Authentication:* OAuth2 authorization code flow with a local HTTP callback server and persistent encrypted token storage ([[#h:authentication][Authentication]]).
 - *Playback control:* Play, pause, skip, seek, adjust volume, toggle shuffle and repeat.  Timer-based polling keeps the UI in sync with the player state ([[#h:playback-control][Playback control]]).
 - *Search:* Dedicated commands for searching tracks, albums, artists, and playlists, each displaying results in a ~tabulated-list~ buffer ([[#h:search][Search]]).
 - *Browsing:* Detail views for albums, artists, and playlists with contextual keybindings ([[#h:browsing][Browsing]]).
@@ -51,7 +51,7 @@ Then configure Spofy in your init file:
 (setq spofy-client-secret "your-client-secret")
 #+end_src
 
-Run =M-x spofy-authenticate= to authorize Spofy with your Spotify account.  This opens your browser to the Spotify authorization page.  After granting access, the browser redirects to the local server and Spofy stores the tokens via ~auth-source~ using the host =spofy.localhost= (works with any configured backend: =password-store=, macOS keychain, netrc, etc.).  Subsequent sessions reuse the stored tokens automatically.
+Run =M-x spofy-authenticate= to authorize Spofy with your Spotify account.  This opens your browser to the Spotify authorization page.  After granting access, the browser redirects to the local server and Spofy stores the tokens in ~spofy-token-file~ (defaults to =spofy-tokens.gpg= in the user Emacs directory, encrypted via EasyPG).  Subsequent sessions reuse the stored tokens automatically.
 
 Once authenticated, run =M-x spofy= to open the dashboard.
 
@@ -68,12 +68,15 @@ Once authenticated, run =M-x spofy= to open the dashboard.
 #+vindex: spofy-client-id
 #+vindex: spofy-client-secret
 #+vindex: spofy-redirect-port
+#+vindex: spofy-token-file
 
 The user option ~spofy-client-id~ holds the Client ID of your registered Spotify application.  It defaults to ~nil~.  Without this value, Spofy cannot communicate with the Spotify API.  Obtain it from the Spotify Developer Dashboard ([[#h:getting-started][Getting started]]).
 
 The user option ~spofy-client-secret~ holds the Client Secret of your registered Spotify application.  It defaults to ~nil~.  Like the client ID, this is required for the OAuth2 token exchange.
 
 The user option ~spofy-redirect-port~ controls the port on which Spofy's temporary OAuth2 callback server listens.  It defaults to ~8080~.  Change this if port 8080 is already in use on your machine.  The redirect URI registered in the Spotify Developer Dashboard must match the port you configure here.
+
+The user option ~spofy-token-file~ specifies where Spofy stores OAuth tokens.  It defaults to =spofy-tokens.gpg= in the user Emacs directory.  The =.gpg= extension causes Emacs to encrypt the file via EasyPG; use a plain =.el= extension to store tokens unencrypted.
 
 ** Playback
 :PROPERTIES:
@@ -141,7 +144,7 @@ The user option ~spofy-enable-mode-line~ controls whether ~spofy-global-mode~ au
 
 #+findex: spofy-authenticate
 
-The command ~spofy-authenticate~ initiates the Spotify OAuth2 authorization flow.  It starts a temporary HTTP server on ~spofy-redirect-port~, opens the user's default browser to Spotify's authorization page, and waits for the redirect callback.  Once the user grants access, Spofy exchanges the authorization code for access and refresh tokens, stores them via ~auth-source~ under the host =spofy.localhost=, and shuts down the temporary server.
+The command ~spofy-authenticate~ initiates the Spotify OAuth2 authorization flow.  It starts a temporary HTTP server on ~spofy-redirect-port~, opens the user's default browser to Spotify's authorization page, and waits for the redirect callback.  Once the user grants access, Spofy exchanges the authorization code for access and refresh tokens, stores them in ~spofy-token-file~, and shuts down the temporary server.
 
 After successful authentication, Spofy runs ~spofy-authenticated-hook~.  You only need to authenticate once; subsequent sessions reuse the stored refresh token to obtain new access tokens automatically.
 
