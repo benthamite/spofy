@@ -58,6 +58,13 @@ Optional integrations extend `spofy` into the broader Emacs ecosystem:
 
 4. Run `M-x spofy` to open the dashboard, or enable `spofy-global-mode` to get the transient popup on `C-c s` and a mode-line display of the current track.
 
+## Roadmap
+
+- [ ] Personalized recommendations and radio based on seed tracks, artists, or genres
+- [ ] Queue management (view upcoming tracks, add to queue)
+- [ ] Album art display in GUI Emacs frames
+- [ ] Social features (follow users, real-time collaborative playlist editing)
+
 ## Documentation
 
 For a comprehensive description of all user options, commands, and functions, see the [manual](README.org).
