@@ -51,7 +51,7 @@ Then configure Spofy in your init file:
 (setq spofy-client-secret "your-client-secret")
 #+end_src
 
-Run =M-x spofy-authenticate= to authorize Spofy with your Spotify account.  This opens your browser to the Spotify authorization page.  After granting access, the browser redirects to the local server and Spofy stores the tokens in ~auth-source~ (e.g. =~/.authinfo.gpg=).  Subsequent sessions reuse the stored tokens automatically.
+Run =M-x spofy-authenticate= to authorize Spofy with your Spotify account.  This opens your browser to the Spotify authorization page.  After granting access, the browser redirects to the local server and Spofy stores the tokens via ~auth-source~ using the host =spofy.localhost= (works with any configured backend: =password-store=, macOS keychain, netrc, etc.).  Subsequent sessions reuse the stored tokens automatically.
 
 Once authenticated, run =M-x spofy= to open the dashboard.
 
@@ -141,7 +141,7 @@ The user option ~spofy-enable-mode-line~ controls whether ~spofy-global-mode~ au
 
 #+findex: spofy-authenticate
 
-The command ~spofy-authenticate~ initiates the Spotify OAuth2 authorization flow.  It starts a temporary HTTP server on ~spofy-redirect-port~, opens the user's default browser to Spotify's authorization page, and waits for the redirect callback.  Once the user grants access, Spofy exchanges the authorization code for access and refresh tokens, stores them in ~auth-source~, and shuts down the temporary server.
+The command ~spofy-authenticate~ initiates the Spotify OAuth2 authorization flow.  It starts a temporary HTTP server on ~spofy-redirect-port~, opens the user's default browser to Spotify's authorization page, and waits for the redirect callback.  Once the user grants access, Spofy exchanges the authorization code for access and refresh tokens, stores them via ~auth-source~ under the host =spofy.localhost=, and shuts down the temporary server.
 
 After successful authentication, Spofy runs ~spofy-authenticated-hook~.  You only need to authenticate once; subsequent sessions reuse the stored refresh token to obtain new access tokens automatically.
 

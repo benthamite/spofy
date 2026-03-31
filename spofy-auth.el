@@ -128,22 +128,23 @@ type, and a random state parameter."
 ;;;; Token storage
 
 (defun spofy-auth--persist-tokens ()
-  "Persist tokens to auth-source."
-  (auth-source-delete :host "accounts.spotify.com" :user "spofy")
+  "Persist tokens to auth-source.
+Uses a distinctive host value to avoid collisions with other
+entries (e.g. macOS keychain entries for accounts.spotify.com)."
+  (spofy-auth--persist-token "spofy-access" spofy-auth--access-token)
+  (spofy-auth--persist-token "spofy-refresh" spofy-auth--refresh-token))
+
+(defun spofy-auth--persist-token (user secret)
+  "Persist SECRET under USER in auth-source."
+  (auth-source-delete :host "spofy.localhost" :user user)
   (let ((auth-source-creation-prompts nil))
-    (auth-source-search :host "accounts.spotify.com"
-                        :user "spofy"
-                        :secret spofy-auth--access-token
-                        :create t
-                        :type 'netrc))
-  ;; Store refresh token separately
-  (auth-source-delete :host "accounts.spotify.com" :user "spofy-refresh")
-  (let ((auth-source-creation-prompts nil))
-    (auth-source-search :host "accounts.spotify.com"
-                        :user "spofy-refresh"
-                        :secret spofy-auth--refresh-token
-                        :create t
-                        :type 'netrc)))
+    (when-let* ((result (car (auth-source-search :host "spofy.localhost"
+                                                 :user user
+                                                 :secret secret
+                                                 :create t)))
+                (save-fn (plist-get result :save-function)))
+      (when (functionp save-fn)
+        (funcall save-fn)))))
 
 (defun spofy-auth--store-tokens (access-token refresh-token expires-in)
   "Store ACCESS-TOKEN, REFRESH-TOKEN and compute expiry from EXPIRES-IN.
@@ -157,10 +158,10 @@ Tokens are stored both in memory and in auth-source."
 (defun spofy-auth--load-tokens ()
   "Load tokens from auth-source into memory.
 Returns non-nil if tokens were found."
-  (let ((access-entry (car (auth-source-search :host "accounts.spotify.com"
-                                               :user "spofy"
+  (let ((access-entry (car (auth-source-search :host "spofy.localhost"
+                                               :user "spofy-access"
                                                :max 1)))
-        (refresh-entry (car (auth-source-search :host "accounts.spotify.com"
+        (refresh-entry (car (auth-source-search :host "spofy.localhost"
                                                 :user "spofy-refresh"
                                                 :max 1))))
     (when access-entry
