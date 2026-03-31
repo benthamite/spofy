@@ -45,7 +45,7 @@ Optional integrations extend `spofy` into the broader Emacs ecosystem:
 
 ## Quick start
 
-1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard), create a new application, and add `http://localhost:8080/spofy/callback` as a redirect URI.
+1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard), create a new application, and add `http://127.0.0.1:8080/spofy/callback` as a redirect URI.
 
 2. Configure your credentials:
 

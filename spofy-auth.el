@@ -99,7 +99,7 @@ Register at `https://developer.spotify.com/dashboard'."
 
 (defun spofy-auth--redirect-uri ()
   "Return the OAuth2 redirect URI based on `spofy-redirect-port'."
-  (format "http://localhost:%d/spofy/callback" spofy-redirect-port))
+  (format "http://127.0.0.1:%d/spofy/callback" spofy-redirect-port))
 
 ;;;; Authorization URL
 

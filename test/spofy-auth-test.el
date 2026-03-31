@@ -41,13 +41,13 @@
   "Redirect URI uses the default port 8080."
   (let ((spofy-redirect-port 8080))
     (should (equal (spofy-auth--redirect-uri)
-                   "http://localhost:8080/spofy/callback"))))
+                   "http://127.0.0.1:8080/spofy/callback"))))
 
 (ert-deftest spofy-auth-test-redirect-uri-custom-port ()
   "Redirect URI respects a custom port."
   (let ((spofy-redirect-port 9999))
     (should (equal (spofy-auth--redirect-uri)
-                   "http://localhost:9999/spofy/callback"))))
+                   "http://127.0.0.1:9999/spofy/callback"))))
 
 ;;;; Authorization URL construction
 
@@ -64,8 +64,8 @@
         (spofy-redirect-port 8080))
     (let ((url (spofy-auth--authorize-url)))
       (should (string-match-p "redirect_uri=" url))
-      ;; The redirect URI should contain the localhost callback path
-      (should (string-match-p "localhost.*8080.*/spofy/callback" url)))))
+      ;; The redirect URI should contain the loopback callback path
+      (should (string-match-p "127\\.0\\.0\\.1.*8080.*/spofy/callback" url)))))
 
 (ert-deftest spofy-auth-test-authorize-url-contains-all-scopes ()
   "Authorization URL contains all required scopes."
