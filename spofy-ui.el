@@ -139,9 +139,9 @@ are not configurable.  The columns per view are:
   (mapconcat (lambda (a) (alist-get 'name a)) artists ", "))
 
 (defun spofy-ui-truncate (string max-width)
-  "Truncate STRING to MAX-WIDTH display columns, appending \"...\" if needed."
+  "Truncate STRING to MAX-WIDTH display columns, appending \"~\" if needed."
   (if (> (string-width string) max-width)
-      (truncate-string-to-width string max-width nil nil "...")
+      (truncate-string-to-width string max-width nil nil "~")
     string))
 
 (defun spofy-ui-propertize-playing (string)
