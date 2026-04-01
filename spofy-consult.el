@@ -39,6 +39,27 @@
 (declare-function spofy-view-playlist "spofy-browse" (playlist-id))
 (declare-function spofy-ui-format-artists "spofy-ui" (artists))
 (declare-function spofy-api-put "spofy-api" (endpoint &optional data callback))
+(declare-function spofy-auth-access-token "spofy-auth" ())
+
+;;;; Synchronous API helper
+
+(defun spofy-consult--api-get-sync (endpoint params)
+  "Synchronous GET from the Spotify API.
+ENDPOINT is a relative path.  PARAMS is an alist of query parameters.
+Return the parsed JSON response, or nil on error."
+  (let* ((url (spofy-api--build-url endpoint params))
+         (url-request-method "GET")
+         (url-request-extra-headers
+          `(("Authorization" . ,(format "Bearer %s" (spofy-auth-access-token)))))
+         (url-show-status nil)
+         (buf (url-retrieve-synchronously url t nil 10)))
+    (when buf
+      (unwind-protect
+          (with-current-buffer buf
+            (let ((status (spofy-api--response-status)))
+              (when (and status (>= status 200) (< status 300))
+                (spofy-api--parse-response))))
+        (kill-buffer buf)))))
 
 ;;;; Helpers
 
@@ -98,24 +119,20 @@ The full entity is stored as a text property."
   "Extract the spofy entity from CANDIDATE text properties."
   (get-text-property 0 'spofy-entity candidate))
 
-;;;; Async search builder
+;;;; Collection builders
 
 (defun spofy-consult--search-collection (type format-fn)
-  "Return a dynamic collection function searching Spotify for TYPE.
-FORMAT-FN is called on each result item to produce a candidate string.
-The returned function accepts INPUT and CALLBACK arguments as required
-by `consult--dynamic-collection'."
-  (lambda (input callback)
-    (spofy-api-get
-     "search"
-     `(("q" . ,input) ("type" . ,type) ("limit" . "20"))
-     (lambda (response)
-       (let* ((section-key (intern (concat type "s")))
-              (section (alist-get section-key response))
-              (items (alist-get 'items section))
-              (candidates (when items
-                            (mapcar format-fn (append items nil)))))
-         (funcall callback (or candidates nil)))))))
+  "Return a synchronous dynamic collection function searching Spotify for TYPE.
+FORMAT-FN is called on each result item to produce a candidate string."
+  (lambda (input)
+    (let* ((response (spofy-consult--api-get-sync
+                      "search"
+                      `(("q" . ,input) ("type" . ,type) ("limit" . "20"))))
+           (section-key (intern (concat type "s")))
+           (section (alist-get section-key response))
+           (items (alist-get 'items section)))
+      (when items
+        (mapcar format-fn (append items nil))))))
 
 ;;;; Track source
 
@@ -202,23 +219,18 @@ by `consult--dynamic-collection'."
       (spofy-view-playlist playlist-id))))
 
 (defun spofy-consult--my-playlist-collection ()
-  "Return a dynamic collection function for the user's playlists.
-Results are fetched once from the API and filtered client-side."
-  (let ((cache nil)
-        (fetched nil))
-    (lambda (_input callback)
-      (if fetched
-          (funcall callback cache)
-        (spofy-api-get
-         "me/playlists" '(("limit" . "50"))
-         (lambda (response)
-           (let* ((items (alist-get 'items response))
-                  (candidates (when items
-                                (mapcar #'spofy-consult--format-playlist
-                                        (append items nil)))))
-             (setq cache (or candidates nil))
-             (setq fetched t)
-             (funcall callback cache))))))))
+  "Return a synchronous dynamic collection for the user's playlists.
+Results are fetched once and cached for subsequent calls."
+  (let ((cache nil))
+    (lambda (_input)
+      (or cache
+          (setq cache
+                (let* ((response (spofy-consult--api-get-sync
+                                  "me/playlists" '(("limit" . "50"))))
+                       (items (alist-get 'items response)))
+                  (when items
+                    (mapcar #'spofy-consult--format-playlist
+                            (append items nil)))))))))
 
 ;;;###autoload
 (defun consult-spofy-my-playlist ()
@@ -240,23 +252,18 @@ Results are fetched once from the API and filtered client-side."
 ;;;; Device source (synchronous -- fetches available devices)
 
 (defun spofy-consult--device-collection ()
-  "Return a dynamic collection function for Spotify devices.
-Results are fetched once from the API and filtered client-side."
-  (let ((cache nil)
-        (fetched nil))
-    (lambda (_input callback)
-      (if fetched
-          (funcall callback cache)
-        (spofy-api-get
-         "me/player/devices" nil
-         (lambda (data)
-           (let* ((devices (alist-get 'devices data))
-                  (candidates (when devices
-                                (mapcar #'spofy-consult--format-device
-                                        (append devices nil)))))
-             (setq cache (or candidates nil))
-             (setq fetched t)
-             (funcall callback cache))))))))
+  "Return a synchronous dynamic collection for Spotify devices.
+Results are fetched once and cached for subsequent calls."
+  (let ((cache nil))
+    (lambda (_input)
+      (or cache
+          (setq cache
+                (let* ((data (spofy-consult--api-get-sync
+                              "me/player/devices" nil))
+                       (devices (alist-get 'devices data)))
+                  (when devices
+                    (mapcar #'spofy-consult--format-device
+                            (append devices nil)))))))))
 
 ;;;###autoload
 (defun consult-spofy-device ()
