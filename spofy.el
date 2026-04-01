@@ -422,8 +422,12 @@ authentication, starts polling, and displays the dashboard buffer."
     ("b" "Previous"      spofy-previous)
     ("f" "Seek forward"  spofy-seek-forward)
     ("r" "Seek backward" spofy-seek-backward)]
+   ["Search"
+    ("s t" "Tracks"    spofy-search-tracks)
+    ("s a" "Albums"    spofy-search-albums)
+    ("s A" "Artists"   spofy-search-artists)
+    ("s p" "Playlists" spofy-search-playlists)]
    ["Browse"
-    ("s"  "Search"    spofy--transient-search)
     ("l"  "Library"   spofy--transient-library)
     ("P"  "Playlists" spofy-list-playlists)
     ("d"  "Devices"   spofy-select-device)]
@@ -439,16 +443,6 @@ authentication, starts polling, and displays the dashboard buffer."
     "Other"
     ("D" "Dashboard" spofy)
     ("q" "Quit"      transient-quit-one)]])
-
-;;;###autoload (autoload 'spofy--transient-search "spofy" nil t)
-(transient-define-prefix spofy--transient-search ()
-  "Spofy search sub-menu."
-  ["Search"
-   ("t" "Tracks"    spofy-search-tracks)
-   ("a" "Albums"    spofy-search-albums)
-   ("A" "Artists"   spofy-search-artists)
-   ("p" "Playlists" spofy-search-playlists)
-   ("q" "Back"      transient-quit-one)])
 
 ;;;###autoload (autoload 'spofy--transient-library "spofy" nil t)
 (transient-define-prefix spofy--transient-library ()
