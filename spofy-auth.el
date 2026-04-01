@@ -223,6 +223,8 @@ on success, or signals an error on failure."
 Updates the stored tokens on success."
   (unless spofy-auth--refresh-token
     (error "Spofy: no refresh token available; please re-authenticate with `spofy-authenticate'"))
+  (unless (and spofy-client-id spofy-client-secret)
+    (error "Spofy: `spofy-client-id' and `spofy-client-secret' must be set"))
   (let ((url-request-method "POST")
         (url-request-extra-headers
          '(("Content-Type" . "application/x-www-form-urlencoded")))

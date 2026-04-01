@@ -556,7 +556,7 @@ These functions are the building blocks for all of Spofy's features.  Advanced u
 
 The function ~spofy-auth-access-token~ returns the current OAuth2 access token, or ~nil~ if unavailable or expired.  If the token has expired and a refresh token is available, it automatically attempts a refresh before returning ~nil~.
 
-The function ~spofy-auth-refresh-token~ explicitly uses the stored refresh token to obtain a new access token from Spotify.  This is called automatically when needed, but can be invoked manually if you encounter authentication issues.
+The function ~spofy-auth-refresh-token~ explicitly uses the stored refresh token to obtain a new access token from Spotify.  It requires ~spofy-client-id~ and ~spofy-client-secret~ to be set, and signals an error if either is missing.  This is called automatically when needed, but can be invoked manually if you encounter authentication issues.
 
 ** Formatting utilities
 :PROPERTIES:
