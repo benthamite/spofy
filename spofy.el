@@ -256,6 +256,15 @@ WIDTH is the total character width of the bar (excluding brackets)."
 (defvar spofy--dashboard-now-playing-end-marker nil
   "Marker for the end of the now-playing section in the dashboard.")
 
+(defvar spofy--dashboard-recent-marker nil
+  "Marker for the start of the recently-played section.")
+
+(defvar spofy--dashboard-playlist-marker nil
+  "Marker for the start of the playlists section.")
+
+(defvar spofy--dashboard-hint-marker nil
+  "Marker for the start of the hints section.")
+
 (defvar spofy--dashboard-progress-timer nil
   "Timer for updating the progress bar every second.")
 
@@ -275,8 +284,11 @@ Called from `spofy-player-state-changed-hook' and the progress timer."
                            spofy--dashboard-now-playing-end-marker)
             (goto-char spofy--dashboard-now-playing-marker)
             (spofy--dashboard-insert-now-playing)
-            (set-marker spofy--dashboard-now-playing-end-marker
-                        (point))
+            (let ((end (point)))
+              (set-marker spofy--dashboard-now-playing-end-marker end)
+              ;; Keep section markers in sync after re-render
+              (when (markerp spofy--dashboard-recent-marker)
+                (set-marker spofy--dashboard-recent-marker end)))
             (goto-char (min pos (point-max)))))))))
 
 (defun spofy--dashboard-start-progress-timer ()
@@ -302,49 +314,39 @@ Assumes the current buffer is in `spofy-dashboard-mode'."
     (setq-local spofy--dashboard-now-playing-marker (point-marker))
     (spofy--dashboard-insert-now-playing)
     (setq-local spofy--dashboard-now-playing-end-marker (point-marker))
-    ;; Fetch recently played and playlists asynchronously, then
-    ;; insert them.  We store placeholders and fill them in.
-    (let ((recent-marker (point-marker))
-          (buf (current-buffer)))
-      ;; Insert placeholder for recently played
-      (insert (propertize "\nLoading recently played..." 'face 'spofy-muted) "\n")
-      (let ((playlist-marker (point-marker)))
-        ;; Insert placeholder for playlists
-        (insert (propertize "\nLoading playlists..." 'face 'spofy-muted) "\n")
-        (let ((hint-marker (point-marker)))
-          ;; Insert hints immediately
-          (spofy--dashboard-insert-hints)
-          ;; Fetch recently played
-          (spofy-api-get
-           "me/player/recently-played"
-           '(("limit" . "10"))
-           (lambda (response)
-             (when (buffer-live-p buf)
-               (with-current-buffer buf
-                 (let ((inhibit-read-only t)
-                       (items (alist-get 'items response)))
-                   ;; Replace the placeholder between recent-marker
-                   ;; and playlist-marker
-                   (delete-region recent-marker playlist-marker)
-                   (goto-char recent-marker)
-                   (spofy--dashboard-insert-recently-played items)
-                   ;; Update playlist-marker (it auto-advances since
-                   ;; it's an end marker set with insertion-type)
-                   )))))
-          ;; Fetch playlists
-          (spofy-api-get
-           "me/playlists"
-           '(("limit" . "10"))
-           (lambda (response)
-             (when (buffer-live-p buf)
-               (with-current-buffer buf
-                 (let ((inhibit-read-only t)
-                       (items (alist-get 'items response)))
-                   ;; Replace the placeholder between playlist-marker
-                   ;; and hint-marker
-                   (delete-region playlist-marker hint-marker)
-                   (goto-char playlist-marker)
-                   (spofy--dashboard-insert-playlists items)))))))))))
+    ;; Fetch recently played and playlists asynchronously.
+    (setq-local spofy--dashboard-recent-marker (point-marker))
+    (insert (propertize "\nLoading recently played..." 'face 'spofy-muted) "\n")
+    (setq-local spofy--dashboard-playlist-marker (point-marker))
+    (insert (propertize "\nLoading playlists..." 'face 'spofy-muted) "\n")
+    (setq-local spofy--dashboard-hint-marker (point-marker))
+    (spofy--dashboard-insert-hints)
+    (let ((buf (current-buffer)))
+      (spofy-api-get
+       "me/player/recently-played"
+       '(("limit" . "10"))
+       (lambda (response)
+         (when (buffer-live-p buf)
+           (with-current-buffer buf
+             (let ((inhibit-read-only t)
+                   (items (alist-get 'items response)))
+               (delete-region spofy--dashboard-recent-marker
+                              spofy--dashboard-playlist-marker)
+               (goto-char spofy--dashboard-recent-marker)
+               (spofy--dashboard-insert-recently-played items)
+               (set-marker spofy--dashboard-playlist-marker (point)))))))
+      (spofy-api-get
+       "me/playlists"
+       '(("limit" . "10"))
+       (lambda (response)
+         (when (buffer-live-p buf)
+           (with-current-buffer buf
+             (let ((inhibit-read-only t)
+                   (items (alist-get 'items response)))
+               (delete-region spofy--dashboard-playlist-marker
+                              spofy--dashboard-hint-marker)
+               (goto-char spofy--dashboard-playlist-marker)
+               (spofy--dashboard-insert-playlists items)))))))))
 
 ;;;;; Dashboard: interactive commands
 

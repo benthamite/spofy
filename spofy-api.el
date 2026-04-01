@@ -137,14 +137,17 @@ if the header is absent."
 
 (defun spofy-api--parse-response ()
   "Parse the JSON body from the current HTTP response buffer.
-Return the parsed data as an alist, or nil if the body is empty."
+Return the parsed data as an alist, or nil if the body is empty
+or not valid JSON."
   (save-excursion
     (goto-char (point-min))
     ;; Skip past the HTTP headers (separated from body by a blank line)
     (when (re-search-forward "\r?\n\r?\n" nil t)
       (let ((body (buffer-substring-no-properties (point) (point-max))))
         (when (and body (not (string-empty-p (string-trim body))))
-          (json-parse-string body :object-type 'alist :array-type 'array))))))
+          (condition-case nil
+              (json-parse-string body :object-type 'alist :array-type 'array)
+            (json-parse-error nil)))))))
 
 ;;;; URL construction
 
@@ -200,13 +203,16 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
         ;; Return cached result
         (when callback
           (funcall callback (spofy-api--cache-get cache-key)))
-      ;; Make the actual request
-      (let ((url-request-method method)
-            (url-request-extra-headers
-             `(("Authorization" . ,(format "Bearer %s" (spofy-auth-access-token)))
-               ("Content-Type" . "application/json")))
-            (url-request-data (when data (json-serialize data)))
-            (url-show-status nil))
+      ;; Make the actual request.  Spotify requires a JSON body (even
+      ;; "{}") on PUT/POST/DELETE; omitting it causes "Malformed json".
+      (let* ((has-body (not (equal method "GET")))
+             (url-request-method method)
+             (url-request-extra-headers
+              `(("Authorization" . ,(format "Bearer %s" (spofy-auth-access-token)))
+                ,@(when has-body '(("Content-Type" . "application/json")))))
+             (url-request-data (cond (data (json-serialize data))
+                                     (has-body "{}")))
+             (url-show-status nil))
         (url-retrieve
          full-url
          (lambda (_status)
