@@ -53,7 +53,7 @@
 Each entry is (TYPE . (COL1 COL2 ...)).  The columns vary by type:
 
   track:    Name, Artist(s), Album  (Duration is not truncated)
-  album:    Name, Artist(s), Year
+  album:    Name, Year, Artist(s)
   artist:   Name, Genres
   playlist: Name, Owner
   device:   Name
@@ -139,9 +139,9 @@ The full entity is stored as a text property."
            (spofy-consult--pad
             (propertize (spofy-ui-truncate name w1) 'face 'spofy-album-name) (+ w1 2))
            (spofy-consult--pad
-            (propertize (spofy-ui-truncate artist-str w2) 'face 'spofy-artist-name) (+ w2 2))
-           (spofy-consult--pad
             (propertize year 'face 'spofy-muted) w3)
+           (spofy-consult--pad
+            (propertize (spofy-ui-truncate artist-str w2) 'face 'spofy-artist-name) (+ w2 2))
            (propertize (number-to-string total-tracks) 'face 'spofy-muted))))
     (propertize candidate 'spofy-entity album)))
 

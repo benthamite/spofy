@@ -596,7 +596,7 @@ All candidates are displayed in aligned tabular columns with faces matching the 
 
 The command ~consult-spofy-track~ lets you search for tracks with live narrowing as you type (debounced at 300ms to avoid excessive API calls).  Candidates show Name, Artist(s), Album, and Duration columns.  Selecting a track plays it immediately.
 
-The command ~consult-spofy-album~ provides the same experience for albums, with Name, Artist(s), Year, and number of tracks columns.  Selecting an album opens the album view ([[#h:album-view][Album view]]).
+The command ~consult-spofy-album~ provides the same experience for albums, with Name, Year, Artist(s), and number of tracks columns.  Selecting an album opens the album view ([[#h:album-view][Album view]]).
 
 The command ~consult-spofy-artist~ searches artists, with Name, Genres, and Followers columns.  Selecting an artist opens the artist view ([[#h:artist-view][Artist view]]).
 
