@@ -220,9 +220,9 @@ The user option @code{spofy-mode-line-format} is a format string that controls w
 @item @samp{%p}
 @tab Play/pause icon (▶ or ⏸)
 @item @samp{%s}
-@tab Shuffle indicator (🔀 when on, empty when off)
+@tab Shuffle indicator (⇌ when on, empty when off)
 @item @samp{%r}
-@tab Repeat indicator (🔁 for context, 🔂 for track, empty)
+@tab Repeat indicator (↻ for context, ↻₁ for track, empty)
 @end multitable
 
 The user option @code{spofy-mode-line-max-length} sets the maximum character length of the mode-line string.  It defaults to @code{40}.  Longer strings are truncated with an ellipsis.  Increase this if you have a wide frame and want to see more of the track and artist names.

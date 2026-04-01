@@ -114,8 +114,8 @@ The user option ~spofy-mode-line-format~ is a format string that controls what t
 | =%a=      | Artist name                                             |
 | =%b=      | Album name                                              |
 | =%p=      | Play/pause icon (⏸ when playing, ▶ when paused)        |
-| =%s=      | Shuffle indicator (🔀 when on, empty when off)          |
-| =%r=      | Repeat indicator (🔁 for context, 🔂 for track, empty) |
+| =%s=      | Shuffle indicator (⇌ when on, empty when off)           |
+| =%r=      | Repeat indicator (↻ for context, ↻₁ for track, empty)  |
 
 The user option ~spofy-mode-line-max-length~ sets the maximum character length of the mode-line string.  It defaults to ~40~.  Longer strings are truncated with an ellipsis.  Increase this if you have a wide frame and want to see more of the track and artist names.
 

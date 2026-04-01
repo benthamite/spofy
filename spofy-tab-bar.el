@@ -45,8 +45,8 @@ The following format specifiers are supported:
   %a  artist name
   %b  album name
   %p  play/pause icon (⏸ when playing, ▶ when paused)
-  %s  shuffle indicator (🔀 when on, empty when off)
-  %r  repeat indicator (🔁 for context, 🔂 for track, empty for off)
+  %s  shuffle indicator (⇌ when on, empty when off)
+  %r  repeat indicator (↻ for context, ↻₁ for track, empty for off)
   %g  progress bar"
   :type 'string
   :group 'spofy)
@@ -89,13 +89,13 @@ When `right', the segment is placed after
 
 (defun spofy-tab-bar--shuffle-indicator (state)
   "Return the shuffle indicator based on STATE."
-  (if (alist-get 'shuffle state) "🔀" ""))
+  (if (alist-get 'shuffle state) "⇌" ""))
 
 (defun spofy-tab-bar--repeat-indicator (state)
   "Return the repeat indicator based on STATE."
   (pcase (alist-get 'repeat state)
-    ("context" "🔁")
-    ("track"   "🔂")
+    ("context" "↻")
+    ("track"   "↻₁")
     (_         "")))
 
 (defun spofy-tab-bar--construct-string ()
