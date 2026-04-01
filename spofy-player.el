@@ -107,16 +107,21 @@ device, volume, track-id.")
   "Handle the poll response DATA.
 Compare to previous state and run appropriate hooks."
   (let ((new-state (spofy-player--extract-state data)))
-    (when new-state
-      ;; Record the wall-clock time of this poll for progress interpolation
-      (setf (alist-get 'poll-time new-state) (float-time))
-      (let ((old-state spofy-player--current-state))
-        (setq spofy-player--current-state new-state)
-        (unless (equal old-state new-state)
-          (run-hooks 'spofy-player-state-changed-hook)
-          (unless (equal (alist-get 'track-id old-state)
-                         (alist-get 'track-id new-state))
-            (run-hooks 'spofy-player-track-changed-hook)))))))
+    (if new-state
+        (progn
+          ;; Record the wall-clock time of this poll for progress interpolation
+          (setf (alist-get 'poll-time new-state) (float-time))
+          (let ((old-state spofy-player--current-state))
+            (setq spofy-player--current-state new-state)
+            (unless (equal old-state new-state)
+              (run-hooks 'spofy-player-state-changed-hook)
+              (unless (equal (alist-get 'track-id old-state)
+                             (alist-get 'track-id new-state))
+                (run-hooks 'spofy-player-track-changed-hook)))))
+      ;; No active player session (API returned 204) — clear stale state
+      (when spofy-player--current-state
+        (setq spofy-player--current-state nil)
+        (run-hooks 'spofy-player-state-changed-hook)))))
 
 ;;;###autoload
 (defun spofy-player-start-polling ()

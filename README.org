@@ -264,7 +264,7 @@ The command ~spofy-play-track~ plays a specific track by its Spotify URI.  If an
 #+findex: spofy-player-start-polling
 #+findex: spofy-player-stop-polling
 
-The command ~spofy-player-start-polling~ starts a timer that polls the Spotify player state at ~spofy-poll-interval~ second intervals.  Polling is necessary because the Spotify Web API does not support push notifications.  When the player state changes, Spofy runs ~spofy-player-state-changed-hook~.  When the track changes specifically, it also runs ~spofy-player-track-changed-hook~.
+The command ~spofy-player-start-polling~ starts a timer that polls the Spotify player state at ~spofy-poll-interval~ second intervals.  Polling is necessary because the Spotify Web API does not support push notifications.  When the player state changes, Spofy runs ~spofy-player-state-changed-hook~.  When the track changes specifically, it also runs ~spofy-player-track-changed-hook~.  When the API reports no active player session (e.g. playback ended or the device went idle), Spofy clears the player state and runs ~spofy-player-state-changed-hook~ so that the mode line and tab bar reflect that nothing is playing.
 
 The command ~spofy-player-stop-polling~ cancels the polling timer.  Polling is started automatically by the ~spofy~ command and ~spofy-global-mode~, and stopped by ~spofy-stop~.
 
