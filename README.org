@@ -595,11 +595,11 @@ The command ~consult-spofy-artist~ searches artists, formatted as "Artist (Genre
 
 The command ~consult-spofy-playlist~ searches all Spotify playlists with live narrowing, formatted as "Playlist (N tracks)".  Selecting a playlist opens the playlist detail view ([[#h:playlist-detail-view][Playlist detail view]]).
 
-The command ~consult-spofy-my-playlist~ fetches the user's own playlists (this is not a search — it presents the full list) formatted as "Playlist (N tracks)".  Selecting a playlist opens the playlist detail view.
+The command ~consult-spofy-my-playlist~ fetches the user's own playlists with incremental narrowing, formatted as "Playlist (N tracks)".  The full list is fetched once from the API and filtered client-side as you type.  Selecting a playlist opens the playlist detail view.
 
-The command ~consult-spofy-device~ fetches available playback devices, formatted as "Device (Type)".  Selecting a device transfers playback to it.
+The command ~consult-spofy-device~ fetches available playback devices with incremental narrowing, formatted as "Device (Type)".  Selecting a device transfers playback to it.
 
-All six commands store the full Spotify entity in a text property on each candidate, making them compatible with the embark integration ([[#h:embark-integration][Embark integration]]).
+All six commands use ~consult--dynamic-collection~ for incremental search and store the full Spotify entity in a text property on each candidate, making them compatible with the embark integration ([[#h:embark-integration][Embark integration]]).
 
 * Embark integration
 :PROPERTIES:

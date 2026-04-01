@@ -201,55 +201,85 @@ by `consult--dynamic-collection'."
                 (playlist-id (alist-get 'id entity)))
       (spofy-view-playlist playlist-id))))
 
+(defun spofy-consult--my-playlist-collection ()
+  "Return a dynamic collection function for the user's playlists.
+Results are fetched once from the API and filtered client-side."
+  (let ((cache nil)
+        (fetched nil))
+    (lambda (_input callback)
+      (if fetched
+          (funcall callback cache)
+        (spofy-api-get
+         "me/playlists" '(("limit" . "50"))
+         (lambda (response)
+           (let* ((items (alist-get 'items response))
+                  (candidates (when items
+                                (mapcar #'spofy-consult--format-playlist
+                                        (append items nil)))))
+             (setq cache (or candidates nil))
+             (setq fetched t)
+             (funcall callback cache))))))))
+
 ;;;###autoload
 (defun consult-spofy-my-playlist ()
   "Pick from the user's Spotify playlists and open the selected one."
   (interactive)
-  (spofy-api-get
-   "me/playlists" '(("limit" . "50"))
-   (lambda (response)
-     (let* ((items (alist-get 'items response))
-            (candidates (when items
-                          (mapcar #'spofy-consult--format-playlist
-                                  (append items nil))))
-            (selected (consult--read
-                       candidates
-                       :prompt "Spofy my playlist: "
-                       :category 'spofy-playlist
-                       :sort nil
-                       :require-match t)))
-       (when-let* ((entity (spofy-consult--get-entity selected))
-                   (playlist-id (alist-get 'id entity)))
-         (spofy-view-playlist playlist-id))))))
+  (let* ((selected
+          (consult--read
+           (consult--dynamic-collection
+            (spofy-consult--my-playlist-collection)
+            :min-input 0)
+           :prompt "Spofy my playlist: "
+           :category 'spofy-playlist
+           :sort nil
+           :require-match t)))
+    (when-let* ((entity (spofy-consult--get-entity selected))
+                (playlist-id (alist-get 'id entity)))
+      (spofy-view-playlist playlist-id))))
 
 ;;;; Device source (synchronous -- fetches available devices)
+
+(defun spofy-consult--device-collection ()
+  "Return a dynamic collection function for Spotify devices.
+Results are fetched once from the API and filtered client-side."
+  (let ((cache nil)
+        (fetched nil))
+    (lambda (_input callback)
+      (if fetched
+          (funcall callback cache)
+        (spofy-api-get
+         "me/player/devices" nil
+         (lambda (data)
+           (let* ((devices (alist-get 'devices data))
+                  (candidates (when devices
+                                (mapcar #'spofy-consult--format-device
+                                        (append devices nil)))))
+             (setq cache (or candidates nil))
+             (setq fetched t)
+             (funcall callback cache))))))))
 
 ;;;###autoload
 (defun consult-spofy-device ()
   "Pick a Spotify playback device and transfer playback to it."
   (interactive)
-  (spofy-api-get
-   "me/player/devices" nil
-   (lambda (data)
-     (let* ((devices (alist-get 'devices data))
-            (candidates (when devices
-                          (mapcar #'spofy-consult--format-device
-                                  (append devices nil))))
-            (selected (consult--read
-                       candidates
-                       :prompt "Spofy device: "
-                       :category 'spofy-device
-                       :sort nil
-                       :require-match t)))
-       (when-let* ((entity (spofy-consult--get-entity selected))
-                   (device-id (alist-get 'id entity))
-                   (device-name (alist-get 'name entity)))
-         (spofy-api-put "me/player"
-                        `((device_ids . [,device-id])
-                          (play . t))
-                        (lambda (_)
-                          (message "Spofy: transferred playback to %s"
-                                   device-name))))))))
+  (let* ((selected
+          (consult--read
+           (consult--dynamic-collection
+            (spofy-consult--device-collection)
+            :min-input 0)
+           :prompt "Spofy device: "
+           :category 'spofy-device
+           :sort nil
+           :require-match t)))
+    (when-let* ((entity (spofy-consult--get-entity selected))
+                (device-id (alist-get 'id entity))
+                (device-name (alist-get 'name entity)))
+      (spofy-api-put "me/player"
+                     `((device_ids . [,device-id])
+                       (play . t))
+                     (lambda (_)
+                       (message "Spofy: transferred playback to %s"
+                                device-name))))))
 
 (provide 'spofy-consult)
 ;;; spofy-consult.el ends here
