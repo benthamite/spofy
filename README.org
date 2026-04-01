@@ -291,10 +291,12 @@ When no active device is found, Spofy's behavior depends on ~spofy-no-device-act
 
 Spofy provides four search commands, each targeting a specific entity type:
 
-- ~spofy-search-tracks~ prompts for a query and displays matching tracks.
-- ~spofy-search-albums~ prompts for a query and displays matching albums.
-- ~spofy-search-artists~ prompts for a query and displays matching artists.
-- ~spofy-search-playlists~ prompts for a query and displays matching playlists.
+- ~spofy-search-tracks~ searches for matching tracks.
+- ~spofy-search-albums~ searches for matching albums.
+- ~spofy-search-artists~ searches for matching artists.
+- ~spofy-search-playlists~ searches for matching playlists.
+
+When ~spofy-consult~ is loaded, these commands use incremental search via ~consult--dynamic-collection~: the minibuffer appears immediately and candidates update live as you type.  Without ~spofy-consult~, they fall back to prompting for a query string and displaying results in a tabulated list.
 
 Each command creates a =*Spofy Search: TYPE*= buffer using ~tabulated-list-mode~.  The columns vary by entity type:
 

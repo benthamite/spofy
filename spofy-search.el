@@ -40,6 +40,10 @@
 (declare-function spofy-playlist-add-track "spofy-playlist" (track-uri))
 (declare-function spofy-library-save "spofy-library" (uri))
 (declare-function spofy-library-unsave "spofy-library" (uri))
+(declare-function consult-spofy-track "spofy-consult" ())
+(declare-function consult-spofy-album "spofy-consult" ())
+(declare-function consult-spofy-artist "spofy-consult" ())
+(declare-function consult-spofy-playlist "spofy-consult" ())
 
 ;;;; Buffer-local variables
 
@@ -245,27 +249,47 @@ NEXT-URL is the URL for the next page of results, or nil."
 
 ;;;###autoload
 (defun spofy-search-tracks (query)
-  "Search Spotify for tracks matching QUERY."
-  (interactive "sSearch tracks: ")
-  (spofy-search--perform "track" query))
+  "Search Spotify for tracks matching QUERY.
+When `spofy-consult' is loaded, use incremental search instead."
+  (interactive
+   (list (unless (require 'spofy-consult nil t)
+           (read-string "Search tracks: "))))
+  (if query
+      (spofy-search--perform "track" query)
+    (consult-spofy-track)))
 
 ;;;###autoload
 (defun spofy-search-albums (query)
-  "Search Spotify for albums matching QUERY."
-  (interactive "sSearch albums: ")
-  (spofy-search--perform "album" query))
+  "Search Spotify for albums matching QUERY.
+When `spofy-consult' is loaded, use incremental search instead."
+  (interactive
+   (list (unless (require 'spofy-consult nil t)
+           (read-string "Search albums: "))))
+  (if query
+      (spofy-search--perform "album" query)
+    (consult-spofy-album)))
 
 ;;;###autoload
 (defun spofy-search-artists (query)
-  "Search Spotify for artists matching QUERY."
-  (interactive "sSearch artists: ")
-  (spofy-search--perform "artist" query))
+  "Search Spotify for artists matching QUERY.
+When `spofy-consult' is loaded, use incremental search instead."
+  (interactive
+   (list (unless (require 'spofy-consult nil t)
+           (read-string "Search artists: "))))
+  (if query
+      (spofy-search--perform "artist" query)
+    (consult-spofy-artist)))
 
 ;;;###autoload
 (defun spofy-search-playlists (query)
-  "Search Spotify for playlists matching QUERY."
-  (interactive "sSearch playlists: ")
-  (spofy-search--perform "playlist" query))
+  "Search Spotify for playlists matching QUERY.
+When `spofy-consult' is loaded, use incremental search instead."
+  (interactive
+   (list (unless (require 'spofy-consult nil t)
+           (read-string "Search playlists: "))))
+  (if query
+      (spofy-search--perform "playlist" query)
+    (consult-spofy-playlist)))
 
 ;;;; Actions
 
