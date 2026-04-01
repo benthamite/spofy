@@ -431,8 +431,8 @@ authentication, starts polling, and displays the dashboard buffer."
     ("P"  "Playlists"        spofy-list-playlists)
     ("d"  "Devices"          spofy-select-device)]
    ["Volume"
-    ("+" "Volume up"   spofy-volume-up)
-    ("-" "Volume down" spofy-volume-down)
+    ("+" "Volume up"   spofy-volume-up :transient t)
+    ("-" "Volume down" spofy-volume-down :transient t)
     ("v" "Set volume"  spofy-volume-set)
     ""
     "Mode"

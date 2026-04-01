@@ -207,7 +207,7 @@ The popup is organized into three columns:
 
 - *Playback:* play/pause, next, previous, seek forward, seek backward.
 - *Browse:* search tracks/albums/artists/playlists, library, playlists list, device selection.
-- *Volume, Mode & Other:* volume controls, shuffle/repeat toggles, dashboard, quit.
+- *Volume, Mode & Other:* volume controls (volume up/down keep the menu open), shuffle/repeat toggles, dashboard, quit.
 
 A sub-transient for the library ([[#h:library-management][Library management]]) is available from the browse column.
 
