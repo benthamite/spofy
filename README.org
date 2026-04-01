@@ -245,7 +245,7 @@ When disabled, it reverses all of these effects.  The ~spofy~ command enables th
 #+findex: spofy-play-track
 #+findex: spofy-play-context
 
-The command ~spofy-play-pause~ toggles playback between playing and paused.  It checks the current state and sends the appropriate API call.
+The command ~spofy-play-pause~ toggles playback between playing and paused.  It checks the current state and sends the appropriate API call.  On success, the local player state is updated immediately so that the mode line and tab bar reflect the change without waiting for the next poll cycle.
 
 The commands ~spofy-next~ and ~spofy-previous~ skip to the next or previous track, respectively.
 

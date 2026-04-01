@@ -97,6 +97,12 @@ device, volume, track-id.")
         (volume    . ,(alist-get 'volume_percent device))
         (track-id  . ,(alist-get 'id item))))))
 
+(defun spofy-player--update-state (key value)
+  "Set KEY to VALUE in the current player state and run hooks."
+  (when spofy-player--current-state
+    (setf (alist-get key spofy-player--current-state) value)
+    (run-hooks 'spofy-player-state-changed-hook)))
+
 ;;;; Polling
 
 (defun spofy-player--poll ()
@@ -218,9 +224,13 @@ If no device is found, take action based on `spofy-no-device-action':
   (spofy-player--ensure-device)
   (if (spofy-player-playing-p)
       (spofy-api-put "me/player/pause" nil
-                     (lambda (_) (message "Spofy: paused")))
+                     (lambda (_)
+                       (spofy-player--update-state 'is-playing nil)
+                       (message "Spofy: paused")))
     (spofy-api-put "me/player/play" nil
-                   (lambda (_) (message "Spofy: playing")))))
+                   (lambda (_)
+                     (spofy-player--update-state 'is-playing t)
+                     (message "Spofy: playing")))))
 
 ;;;###autoload
 (defun spofy-next ()
