@@ -55,10 +55,22 @@ ellipsis.  Set to nil to disable truncation."
   :type '(choice integer (const :tag "No truncation" nil))
   :group 'spofy)
 
+(defcustom spofy-tab-bar-alignment 'left
+  "Alignment of the Spofy segment in the tab bar.
+When `left', the segment is placed before any right-aligned entries.
+When `right', the segment is placed after
+`tab-bar-format-align-right', inserting it if necessary."
+  :type '(choice (const :tag "Left" left)
+                 (const :tag "Right" right))
+  :group 'spofy)
+
 ;;;; Internal state
 
 (defvar spofy-tab-bar--string nil
   "Cached tab-bar string, updated on player state changes.")
+
+(defvar spofy-tab-bar--added-align-right nil
+  "Non-nil if this mode inserted `tab-bar-format-align-right'.")
 
 ;;;; Building the tab-bar string
 
@@ -115,6 +127,45 @@ Returns nil if no player state is available."
   (setq spofy-tab-bar--string (spofy-tab-bar--construct-string))
   (force-mode-line-update t))
 
+;;;; Tab-bar format management
+
+(defun spofy-tab-bar--insert-into-format ()
+  "Insert `tab-bar-format-spofy' into `tab-bar-format'.
+Respects `spofy-tab-bar-alignment'."
+  (unless (memq 'tab-bar-format-spofy tab-bar-format)
+    (pcase spofy-tab-bar-alignment
+      ('left (spofy-tab-bar--insert-left))
+      ('right (spofy-tab-bar--insert-right)))))
+
+(defun spofy-tab-bar--insert-left ()
+  "Insert the Spofy segment before any right-aligned entries."
+  (if-let* ((tail (memq 'tab-bar-format-align-right tab-bar-format))
+            (pos (- (length tab-bar-format) (length tail))))
+      (setq tab-bar-format
+            (append (take pos tab-bar-format)
+                    '(tab-bar-format-spofy)
+                    tail))
+    (setq tab-bar-format
+          (append tab-bar-format '(tab-bar-format-spofy)))))
+
+(defun spofy-tab-bar--insert-right ()
+  "Insert the Spofy segment at the end, adding alignment if needed."
+  (unless (memq 'tab-bar-format-align-right tab-bar-format)
+    (setq tab-bar-format
+          (append tab-bar-format '(tab-bar-format-align-right)))
+    (setq spofy-tab-bar--added-align-right t))
+  (setq tab-bar-format
+        (append tab-bar-format '(tab-bar-format-spofy))))
+
+(defun spofy-tab-bar--remove-from-format ()
+  "Remove `tab-bar-format-spofy' from `tab-bar-format'.
+Also removes `tab-bar-format-align-right' if it was added by this mode."
+  (setq tab-bar-format (delq 'tab-bar-format-spofy tab-bar-format))
+  (when spofy-tab-bar--added-align-right
+    (setq tab-bar-format
+          (delq 'tab-bar-format-align-right tab-bar-format))
+    (setq spofy-tab-bar--added-align-right nil)))
+
 ;;;; Global minor mode
 
 ;;;###autoload
@@ -124,11 +175,10 @@ Returns nil if no player state is available."
   :group 'spofy
   (if spofy-tab-bar-mode
       (progn
-        (unless (memq 'tab-bar-format-spofy tab-bar-format)
-          (setq tab-bar-format (append tab-bar-format '(tab-bar-format-spofy))))
+        (spofy-tab-bar--insert-into-format)
         (add-hook 'spofy-player-state-changed-hook #'spofy-tab-bar--update)
         (spofy-tab-bar--update))
-    (setq tab-bar-format (delq 'tab-bar-format-spofy tab-bar-format))
+    (spofy-tab-bar--remove-from-format)
     (remove-hook 'spofy-player-state-changed-hook #'spofy-tab-bar--update)
     (setq spofy-tab-bar--string nil)
     (force-mode-line-update t)))
