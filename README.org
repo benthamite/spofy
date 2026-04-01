@@ -206,11 +206,10 @@ The command ~spofy-menu~ opens a transient popup that provides quick access to a
 The popup is organized into columns:
 
 - *Playback:* play/pause, next, previous, seek forward, seek backward.
-- *Search* (=s= prefix): search tracks, albums, artists, playlists.
-- *Browse:* library, playlists list, device selection.
+- *Browse:* search (=s=, opens a sub-menu), library, playlists list, device selection.
 - *Volume, Mode & Other:* volume controls (volume up/down keep the menu open), shuffle/repeat toggles, dashboard, quit.
 
-A sub-transient for the library ([[#h:library-management][Library management]]) is available from the browse group.
+Sub-transients for search and the library ([[#h:library-management][Library management]]) are available from the browse group.
 
 ** Global minor mode
 :PROPERTIES:
