@@ -205,62 +205,71 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
           (funcall callback (spofy-api--cache-get cache-key)))
       ;; Make the actual request.  Spotify requires a JSON body (even
       ;; "{}") on PUT/POST/DELETE; omitting it causes "Malformed json".
-      (let* ((has-body (not (equal method "GET")))
-             (url-request-method method)
-             (url-request-extra-headers
-              `(("Authorization" . ,(format "Bearer %s" (spofy-auth-access-token)))
-                ,@(when has-body '(("Content-Type" . "application/json")))))
-             (url-request-data (cond (data (json-serialize data))
-                                     (has-body "{}")))
-             (url-show-status nil))
-        (url-retrieve
-         full-url
-         (lambda (_status)
-           (let ((buf (current-buffer))
-                 (status-code (spofy-api--response-status)))
-             (cond
-              ;; Success (2xx)
-              ((and status-code (>= status-code 200) (< status-code 300))
-               (let ((parsed (spofy-api--parse-response)))
-                 (kill-buffer buf)
-                 ;; Cache GET responses (unless skip-cache)
-                 (when (and (equal method "GET")
-                            (not (spofy-api--skip-cache-p full-url)))
-                   (spofy-api--cache-put cache-key parsed
-                                         (spofy-api--cache-ttl full-url)))
-                 (when callback
-                   (funcall callback parsed))))
-              ;; Unauthorized (401): refresh token and retry once
-              ((and (eql status-code 401) (not refreshed-p))
-               (kill-buffer buf)
-               (spofy-auth-refresh-token)
-               (spofy-api--request-with-retries
-                method url params data callback retry-count t))
-              ;; Rate limited (429): retry after delay
-              ((eql status-code 429)
-               (let ((delay (spofy-api--parse-retry-after)))
-                 (kill-buffer buf)
-                 (run-at-time delay nil
-                              #'spofy-api--request-with-retries
-                              method url params data callback
-                              retry-count refreshed-p)))
-              ;; Server error (5xx): exponential backoff
-              ((and status-code (>= status-code 500)
-                    (< retry-count spofy-api--max-retries))
-               (let ((delay (spofy-api--backoff-delay retry-count)))
-                 (kill-buffer buf)
-                 (run-at-time delay nil
-                              #'spofy-api--request-with-retries
-                              method url params data callback
-                              (1+ retry-count) refreshed-p)))
-              ;; All retries exhausted or unrecoverable error
-              (t
-               (kill-buffer buf)
-               (let ((last (gethash full-url spofy-api--last-error-times 0)))
-                 (when (> (- (float-time) last) spofy-api--error-cooldown)
-                   (puthash full-url (float-time) spofy-api--last-error-times)
-                   (message "Spofy: API request failed (HTTP %s): %s %s"
-                            (or status-code "?") method full-url))))))))))))
+      (let* ((token (spofy-auth-access-token))
+             (has-body (not (equal method "GET"))))
+        (if (null token)
+            ;; No valid token — cannot make request
+            (let ((last (gethash full-url spofy-api--last-error-times 0)))
+              (when (> (- (float-time) last) spofy-api--error-cooldown)
+                (puthash full-url (float-time) spofy-api--last-error-times)
+                (message "Spofy: no valid access token; try M-x spofy-authenticate")))
+          (let* ((url-request-method method)
+                 (url-request-extra-headers
+                  `(("Authorization" . ,(concat "Bearer " token))
+                    ,@(when has-body '(("Content-Type" . "application/json")))))
+                 (url-request-data (cond (data (json-serialize data))
+                                         (has-body "{}")))
+                 (url-show-status nil))
+            (url-retrieve
+             full-url
+             (lambda (_status)
+               (let ((buf (current-buffer))
+                     (status-code (spofy-api--response-status)))
+                 (cond
+                  ;; Success (2xx)
+                  ((and status-code (>= status-code 200) (< status-code 300))
+                   (let ((parsed (spofy-api--parse-response)))
+                     (kill-buffer buf)
+                     ;; Cache GET responses (unless skip-cache)
+                     (when (and (equal method "GET")
+                                (not (spofy-api--skip-cache-p full-url)))
+                       (spofy-api--cache-put cache-key parsed
+                                             (spofy-api--cache-ttl full-url)))
+                     (when callback
+                       (funcall callback parsed))))
+                  ;; Unauthorized (401): refresh token and retry once
+                  ((and (eql status-code 401) (not refreshed-p))
+                   (kill-buffer buf)
+                   (condition-case nil
+                       (spofy-auth-refresh-token)
+                     (error nil))
+                   (spofy-api--request-with-retries
+                    method url params data callback retry-count t))
+                  ;; Rate limited (429): retry after delay
+                  ((eql status-code 429)
+                   (let ((delay (spofy-api--parse-retry-after)))
+                     (kill-buffer buf)
+                     (run-at-time delay nil
+                                  #'spofy-api--request-with-retries
+                                  method url params data callback
+                                  retry-count refreshed-p)))
+                  ;; Server error (5xx): exponential backoff
+                  ((and status-code (>= status-code 500)
+                        (< retry-count spofy-api--max-retries))
+                   (let ((delay (spofy-api--backoff-delay retry-count)))
+                     (kill-buffer buf)
+                     (run-at-time delay nil
+                                  #'spofy-api--request-with-retries
+                                  method url params data callback
+                                  (1+ retry-count) refreshed-p)))
+                  ;; All retries exhausted or unrecoverable error
+                  (t
+                   (kill-buffer buf)
+                   (let ((last (gethash full-url spofy-api--last-error-times 0)))
+                     (when (> (- (float-time) last) spofy-api--error-cooldown)
+                       (puthash full-url (float-time) spofy-api--last-error-times)
+                       (message "Spofy: API request failed (HTTP %s): %s %s"
+                                (or status-code "?") method full-url))))))))))))))
 
 ;;;; High-level helpers
 
@@ -274,19 +283,20 @@ CALLBACK is called with the parsed JSON response."
 (defun spofy-api-get-sync (endpoint &optional params)
   "Synchronously GET ENDPOINT with optional query PARAMS.
 Return the parsed JSON response, or nil on error."
-  (let* ((url (spofy-api--build-url endpoint params))
-         (url-request-method "GET")
-         (url-request-extra-headers
-          `(("Authorization" . ,(format "Bearer %s" (spofy-auth-access-token)))))
-         (url-show-status nil)
-         (buf (url-retrieve-synchronously url t nil 5)))
-    (when buf
-      (unwind-protect
-          (with-current-buffer buf
-            (let ((status (spofy-api--response-status)))
-              (when (and status (>= status 200) (< status 300))
-                (spofy-api--parse-response))))
-        (kill-buffer buf)))))
+  (when-let* ((token (spofy-auth-access-token)))
+    (let* ((url (spofy-api--build-url endpoint params))
+           (url-request-method "GET")
+           (url-request-extra-headers
+            `(("Authorization" . ,(concat "Bearer " token))))
+           (url-show-status nil)
+           (buf (url-retrieve-synchronously url t nil 5)))
+      (when buf
+        (unwind-protect
+            (with-current-buffer buf
+              (let ((status (spofy-api--response-status)))
+                (when (and status (>= status 200) (< status 300))
+                  (spofy-api--parse-response))))
+          (kill-buffer buf))))))
 
 (defun spofy-api-put (endpoint &optional data callback)
   "Send a PUT request to ENDPOINT with optional JSON body DATA.

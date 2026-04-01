@@ -55,10 +55,12 @@ Register at `https://developer.spotify.com/dashboard'."
   :type 'integer
   :group 'spofy)
 
-(defcustom spofy-token-file (locate-user-emacs-file "spofy-tokens.gpg")
+(defcustom spofy-token-file (locate-user-emacs-file "spofy-tokens.el")
   "File for storing Spotify OAuth tokens.
-The .gpg extension causes Emacs to encrypt the file automatically
-via EasyPG.  Use a plain .el extension to store tokens unencrypted."
+Tokens are stored as a Lisp alist with restrictive file permissions
+\(600).  For additional security, use a .gpg extension to have Emacs
+encrypt the file automatically via EasyPG (requires a configured GPG
+key)."
   :type 'file
   :group 'spofy)
 
@@ -140,11 +142,16 @@ type, and a random state parameter."
                 (token-expiry . ,spofy-auth--token-expiry)))
         (file (expand-file-name spofy-token-file))
         (epa-file-select-keys 'silent))
-    (with-temp-file file
-      (let ((print-length nil)
-            (print-level nil))
-        (prin1 data (current-buffer))))
-    (set-file-modes file #o600)))
+    (condition-case err
+        (progn
+          (with-temp-file file
+            (let ((print-length nil)
+                  (print-level nil))
+              (prin1 data (current-buffer))))
+          (set-file-modes file #o600))
+      (error
+       (message "Spofy: failed to persist tokens to %s: %s" file
+                (error-message-string err))))))
 
 (defun spofy-auth--store-tokens (access-token refresh-token expires-in)
   "Store ACCESS-TOKEN, REFRESH-TOKEN and compute expiry from EXPIRES-IN.
@@ -238,17 +245,20 @@ Updates the stored tokens on success."
             ("refresh_token" ,spofy-auth--refresh-token)
             ("client_id" ,spofy-client-id)
             ("client_secret" ,spofy-client-secret)))))
-    (with-current-buffer
-        (url-retrieve-synchronously "https://accounts.spotify.com/api/token")
-      (goto-char url-http-end-of-headers)
-      (let* ((json (json-parse-buffer :object-type 'alist))
-             (access-token (alist-get 'access_token json))
-             (new-refresh (alist-get 'refresh_token json))
-             (expires-in (alist-get 'expires_in json)))
-        (when access-token
-          (spofy-auth--store-tokens access-token
-                                    (or new-refresh spofy-auth--refresh-token)
-                                    expires-in))))))
+    (when-let* ((buf (url-retrieve-synchronously
+                      "https://accounts.spotify.com/api/token" t nil 10)))
+      (unwind-protect
+          (with-current-buffer buf
+            (goto-char url-http-end-of-headers)
+            (let* ((json (json-parse-buffer :object-type 'alist))
+                   (access-token (alist-get 'access_token json))
+                   (new-refresh (alist-get 'refresh_token json))
+                   (expires-in (alist-get 'expires_in json)))
+              (when access-token
+                (spofy-auth--store-tokens access-token
+                                          (or new-refresh spofy-auth--refresh-token)
+                                          expires-in))))
+        (kill-buffer buf)))))
 
 ;;;; Callback parsing
 
