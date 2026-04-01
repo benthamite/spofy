@@ -545,7 +545,7 @@ The API client in =spofy-api.el= provides four high-level functions for interact
 - ~spofy-api-post~ sends a POST request with an optional JSON body.
 - ~spofy-api-delete~ sends a DELETE request with an optional JSON body.
 
-All four accept an endpoint path (relative to =https://api.spotify.com/v1/=), optional data, and a callback function that receives the parsed JSON response.  They handle authentication headers, token refresh, rate limiting (429 responses), and transient error retry automatically.
+All four accept an endpoint path (relative to =https://api.spotify.com/v1/=), optional data, and a callback function that receives the parsed JSON response.  They handle authentication headers, token refresh, rate limiting (429 responses), transient error retry, and response buffer cleanup automatically.
 
 These functions are the building blocks for all of Spofy's features.  Advanced users who want to extend Spofy with custom API calls can use them directly.
 

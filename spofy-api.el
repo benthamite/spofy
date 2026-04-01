@@ -216,11 +216,13 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
         (url-retrieve
          full-url
          (lambda (_status)
-           (let ((status-code (spofy-api--response-status)))
+           (let ((buf (current-buffer))
+                 (status-code (spofy-api--response-status)))
              (cond
               ;; Success (2xx)
               ((and status-code (>= status-code 200) (< status-code 300))
                (let ((parsed (spofy-api--parse-response)))
+                 (kill-buffer buf)
                  ;; Cache GET responses (unless skip-cache)
                  (when (and (equal method "GET")
                             (not (spofy-api--skip-cache-p full-url)))
@@ -230,12 +232,14 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
                    (funcall callback parsed))))
               ;; Unauthorized (401): refresh token and retry once
               ((and (eql status-code 401) (not refreshed-p))
+               (kill-buffer buf)
                (spofy-auth-refresh-token)
                (spofy-api--request-with-retries
                 method url params data callback retry-count t))
               ;; Rate limited (429): retry after delay
               ((eql status-code 429)
                (let ((delay (spofy-api--parse-retry-after)))
+                 (kill-buffer buf)
                  (run-at-time delay nil
                               #'spofy-api--request-with-retries
                               method url params data callback
@@ -244,12 +248,14 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
               ((and status-code (>= status-code 500)
                     (< retry-count spofy-api--max-retries))
                (let ((delay (spofy-api--backoff-delay retry-count)))
+                 (kill-buffer buf)
                  (run-at-time delay nil
                               #'spofy-api--request-with-retries
                               method url params data callback
                               (1+ retry-count) refreshed-p)))
               ;; All retries exhausted or unrecoverable error
               (t
+               (kill-buffer buf)
                (let ((last (gethash full-url spofy-api--last-error-times 0)))
                  (when (> (- (float-time) last) spofy-api--error-cooldown)
                    (puthash full-url (float-time) spofy-api--last-error-times)
