@@ -142,7 +142,7 @@ The full entity is stored as a text property."
             (propertize (spofy-ui-truncate artist-str w2) 'face 'spofy-artist-name) (+ w2 2))
            (spofy-consult--pad
             (propertize year 'face 'spofy-muted) w3)
-           (propertize (format "%d tracks" total-tracks) 'face 'spofy-muted))))
+           (propertize (number-to-string total-tracks) 'face 'spofy-muted))))
     (propertize candidate 'spofy-entity album)))
 
 (defun spofy-consult--format-artist (artist)
@@ -182,7 +182,7 @@ The full entity is stored as a text property."
             (propertize (spofy-ui-truncate name w1) 'face 'spofy-track-name) (+ w1 2))
            (spofy-consult--pad
             (propertize (spofy-ui-truncate owner-name w2) 'face 'spofy-muted) (+ w2 2))
-           (propertize (format "%d tracks" total) 'face 'spofy-muted))))
+           (propertize (number-to-string total) 'face 'spofy-muted))))
     (propertize candidate 'spofy-entity playlist)))
 
 (defun spofy-consult--format-device (device)
