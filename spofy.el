@@ -424,8 +424,8 @@ authentication, starts polling, and displays the dashboard buffer."
     ("r" "Seek backward" spofy-seek-backward)]
    ["Search"
     ("s t" "Tracks"    spofy-search-tracks)
-    ("s a" "Albums"    spofy-search-albums)
-    ("s A" "Artists"   spofy-search-artists)
+    ("s l" "Albums"    spofy-search-albums)
+    ("s a" "Artists"   spofy-search-artists)
     ("s p" "Playlists" spofy-search-playlists)]
    ["Browse"
     ("l"  "Library"   spofy--transient-library)
