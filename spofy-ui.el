@@ -138,15 +138,91 @@ are not configurable.  The columns per view are:
   "Format ARTISTS (a list of alists with a `name' key) as a comma-separated string."
   (mapconcat (lambda (a) (alist-get 'name a)) artists ", "))
 
-(defun spofy-ui-truncate (string max-width)
-  "Truncate STRING to MAX-WIDTH display columns, appending \"~\" if needed."
-  (if (> (string-width string) max-width)
-      (truncate-string-to-width string max-width nil nil "~")
-    string))
+(defun spofy-ui--blend-color (fg bg ratio)
+  "Blend FG toward BG by RATIO (0.0 = pure FG, 1.0 = pure BG).
+Return a hex color string, or nil if either color is unresolvable."
+  (let ((fv (color-values fg))
+        (bv (color-values bg)))
+    (when (and fv bv)
+      (format "#%02x%02x%02x"
+              (ash (round (+ (* (- 1.0 ratio) (nth 0 fv))
+                             (* ratio (nth 0 bv))))
+                   -8)
+              (ash (round (+ (* (- 1.0 ratio) (nth 1 fv))
+                             (* ratio (nth 1 bv))))
+                   -8)
+              (ash (round (+ (* (- 1.0 ratio) (nth 2 fv))
+                             (* ratio (nth 2 bv))))
+                   -8)))))
 
-(defun spofy-ui-propertize-playing (string)
-  "Propertize STRING with the `spofy-playing' face."
-  (propertize string 'face 'spofy-playing))
+(defun spofy-ui-truncate (string max-width &optional face)
+  "Truncate STRING to MAX-WIDTH display columns with optional FACE.
+When FACE is non-nil, apply it to the result.  If the string was
+truncated, mark the last three characters with the `spofy-fade'
+text property for post-rendering color blending."
+  (let* ((truncated (> (string-width string) max-width))
+         (result (if truncated
+                     (truncate-string-to-width string max-width)
+                   string)))
+    (when face
+      (setq result (propertize result 'face face))
+      (when truncated
+        (let ((len (length result)))
+          (when (>= len 3)
+            (dotimes (i 3)
+              (put-text-property (+ (- len 3) i) (+ (- len 3) i 1)
+                                 'spofy-fade (1+ i) result))))))
+    result))
+
+(defvar-local spofy-ui--fade-overlays nil
+  "Overlays for the truncation fade effect in the current buffer.")
+
+(defun spofy-ui--apply-buffer-fades ()
+  "Create fade overlays for characters marked with `spofy-fade'.
+Each marked character gets an overlay whose foreground is the base
+face's foreground blended toward the default background.  Levels
+1, 2, 3 blend at 25%, 50%, 75% respectively."
+  (mapc #'delete-overlay spofy-ui--fade-overlays)
+  (setq spofy-ui--fade-overlays nil)
+  (let ((bg (face-background 'default nil t)))
+    (when bg
+      (save-excursion
+        (goto-char (point-min))
+        (let ((pos (point-min)))
+          (while (< pos (point-max))
+            (let ((level (get-text-property pos 'spofy-fade)))
+              (if (not level)
+                  (setq pos (or (next-single-property-change
+                                 pos 'spofy-fade nil (point-max))
+                                (point-max)))
+                (let* ((face-val (get-text-property pos 'face))
+                       (base-face (cond
+                                   ((symbolp face-val) face-val)
+                                   ((consp face-val)
+                                    (seq-find #'symbolp face-val))
+                                   (t 'default)))
+                       (fg (or (face-foreground base-face nil t)
+                               (face-foreground 'default nil t)))
+                       (ratio (* 0.25 level))
+                       (blended (when fg
+                                  (spofy-ui--blend-color fg bg ratio))))
+                  (when blended
+                    (let ((ov (make-overlay pos (1+ pos))))
+                      (overlay-put ov 'face (list :foreground blended))
+                      (overlay-put ov 'spofy-fade t)
+                      (push ov spofy-ui--fade-overlays))))
+                (setq pos (1+ pos))))))))))
+
+(defun spofy-ui--refresh-fades (&rest _)
+  "Recompute fade overlays in all Spofy buffers.
+Intended for `enable-theme-functions'."
+  (dolist (buf (buffer-list))
+    (with-current-buffer buf
+      (when (string-prefix-p "*Spofy" (buffer-name))
+        (spofy-ui--apply-buffer-fades)))))
+
+(add-hook 'enable-theme-functions #'spofy-ui--refresh-fades)
+
 
 (defun spofy-ui-progress-bar (progress-ms duration-ms width)
   "Build a text progress bar for PROGRESS-MS out of DURATION-MS.
@@ -212,10 +288,13 @@ user they can press \\`m' to load more results."
         (insert (propertize "\n[m] Load more" 'face 'spofy-muted))))))
 
 (defun spofy-ui--after-tabulated-list-print (&rest _)
-  "Insert the pagination footer in Spofy tabulated-list buffers.
+  "Post-process Spofy tabulated-list buffers after printing.
+Insert the pagination footer and apply truncation fade overlays.
 Added as :after advice on `tabulated-list-print'."
   (when (local-variable-p 'spofy-ui--next-page-url)
-    (spofy-ui-insert-pagination-footer)))
+    (spofy-ui-insert-pagination-footer))
+  (when (string-prefix-p "*Spofy" (buffer-name))
+    (spofy-ui--apply-buffer-fades)))
 
 (advice-add 'tabulated-list-print :after #'spofy-ui--after-tabulated-list-print)
 

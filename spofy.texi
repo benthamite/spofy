@@ -225,7 +225,7 @@ The user option @code{spofy-mode-line-format} is a format string that controls w
 @tab Repeat indicator (↻ for context, ↻₁ for track, empty)
 @end multitable
 
-The user option @code{spofy-mode-line-max-length} sets the maximum character length of the mode-line string.  It defaults to @code{40}.  Longer strings are truncated with a @code{~} suffix.  Increase this if you have a wide frame and want to see more of the track and artist names.
+The user option @code{spofy-mode-line-max-length} sets the maximum character length of the mode-line string.  It defaults to @code{40}.  Longer strings are silently truncated.  Increase this if you have a wide frame and want to see more of the track and artist names.
 
 The user option @code{spofy-mode-line-separator} is the string inserted before the Spofy segment in the mode line.  It defaults to a single space.
 
@@ -237,7 +237,7 @@ The user option @code{spofy-mode-line-separator} is the string inserted before t
 
 The user option @code{spofy-tab-bar-format} is a format string that controls what the tab-bar segment displays.  It defaults to @code{"%p %t — %a"}.  The same format specifiers as @code{spofy-mode-line-format} are supported (@ref{Mode-line}).
 
-The user option @code{spofy-tab-bar-max-length} sets the maximum character length of the tab-bar string.  It defaults to @code{50}.  Longer strings are truncated with a @code{~} suffix.  Set it to @code{nil} to disable truncation entirely.
+The user option @code{spofy-tab-bar-max-length} sets the maximum character length of the tab-bar string.  It defaults to @code{50}.  Longer strings are silently truncated.  Set it to @code{nil} to disable truncation entirely.
 
 @node Global key and mode-line activation
 @section Global key and mode-line activation
@@ -837,7 +837,7 @@ The function @code{spofy-ui-format-duration-ms} takes a duration in milliseconds
 
 The function @code{spofy-ui-format-artists} takes a list of artist alists (as returned by the Spotify API) and formats them as a comma-separated string of names.
 
-The function @code{spofy-ui-truncate} truncates a string to a given maximum display width, appending @code{~} if truncation occurs.  It uses @code{truncate-string-to-width} internally, so column alignment is correct even with variable-width characters.  All entry formatting functions in the browse, library, and playlist modules apply @code{spofy-ui-truncate} to long string columns (names, artists, albums, genres, owners) before passing them to @code{propertize}, so that truncation uses a single ASCII character instead of the Unicode ``…'' character that @code{tabulated-list-mode} would otherwise insert.  This prevents the column misalignment that arises because ``…'' has inconsistent display width across fonts.
+The function @code{spofy-ui-truncate} truncates a string to a given maximum display width.  It accepts an optional FACE argument; when provided, the face is applied to the result and, if truncation occurred, the last three characters are marked with the @code{spofy-fade} text property (levels 1, 2, 3).  After @code{tabulated-list-print}, the advice function @code{spofy-ui--after-tabulated-list-print} calls @code{spofy-ui--apply-buffer-fades}, which creates overlays on the marked characters with foreground colors blended toward the default background at 25%, 50%, and 75% respectively.  This produces a smooth fade-out effect instead of a hard cut or an explicit ellipsis character.  Because the color blending happens at display time via overlays rather than being baked into text properties, the fade automatically adapts when the user switches themes: @code{spofy-ui--refresh-fades} is registered on @code{enable-theme-functions} and recomputes all fade overlays in Spofy buffers.  It uses @code{truncate-string-to-width} internally, so column alignment is correct even with variable-width characters.  All entry formatting functions in the browse, library, search, consult, and playlist modules pass the appropriate face to @code{spofy-ui-truncate}, which handles both truncation and propertizing in one call.  The mode-line and tab-bar modules call it without a face, so truncation there is silent.
 
 @node Consult integration
 @chapter Consult integration

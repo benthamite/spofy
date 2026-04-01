@@ -103,10 +103,10 @@ Return a list of (ID [COLUMNS...])."
                       " ")))
     (list uri
           (vector play-icon
-                  (propertize (spofy-ui-truncate name (spofy-ui-col 'search-track 0)) 'face
-                              (if playing-p 'spofy-playing 'spofy-track-name))
-                  (propertize (spofy-ui-truncate artist-str (spofy-ui-col 'search-track 1)) 'face 'spofy-artist-name)
-                  (propertize (spofy-ui-truncate album-name (spofy-ui-col 'search-track 2)) 'face 'spofy-album-name)
+                  (spofy-ui-truncate name (spofy-ui-col 'search-track 0)
+                                     (if playing-p 'spofy-playing 'spofy-track-name))
+                  (spofy-ui-truncate artist-str (spofy-ui-col 'search-track 1) 'spofy-artist-name)
+                  (spofy-ui-truncate album-name (spofy-ui-col 'search-track 2) 'spofy-album-name)
                   (propertize duration-str 'face 'spofy-muted)))))
 
 (defun spofy-search--format-album-entry (album)
@@ -122,8 +122,8 @@ Return a list of (ID [COLUMNS...])."
                  release-date))
          (total-tracks (or (alist-get 'total_tracks album) 0)))
     (list uri
-          (vector (propertize (spofy-ui-truncate name (spofy-ui-col 'search-album 0)) 'face 'spofy-album-name)
-                  (propertize (spofy-ui-truncate artist-str (spofy-ui-col 'search-album 1)) 'face 'spofy-artist-name)
+          (vector (spofy-ui-truncate name (spofy-ui-col 'search-album 0) 'spofy-album-name)
+                  (spofy-ui-truncate artist-str (spofy-ui-col 'search-album 1) 'spofy-artist-name)
                   (propertize year 'face 'spofy-muted)
                   (propertize (number-to-string total-tracks) 'face 'spofy-muted)))))
 
@@ -138,8 +138,8 @@ Return a list of (ID [COLUMNS...])."
          (follower-count (or (and followers (alist-get 'total followers)) 0))
          (followers-str (number-to-string follower-count)))
     (list uri
-          (vector (propertize (spofy-ui-truncate name (spofy-ui-col 'search-artist 0)) 'face 'spofy-artist-name)
-                  (propertize (spofy-ui-truncate genres-str (spofy-ui-col 'search-artist 1)) 'face 'spofy-muted)
+          (vector (spofy-ui-truncate name (spofy-ui-col 'search-artist 0) 'spofy-artist-name)
+                  (spofy-ui-truncate genres-str (spofy-ui-col 'search-artist 1) 'spofy-muted)
                   (propertize followers-str 'face 'spofy-muted)))))
 
 (defun spofy-search--format-playlist-entry (playlist)
@@ -154,8 +154,8 @@ Return a list of (ID [COLUMNS...])."
          (public-p (alist-get 'public playlist))
          (public-str (if public-p "Yes" "No")))
     (list uri
-          (vector (propertize (spofy-ui-truncate name (spofy-ui-col 'search-playlist 0)) 'face 'spofy-track-name)
-                  (propertize (spofy-ui-truncate owner-name (spofy-ui-col 'search-playlist 1)) 'face 'spofy-muted)
+          (vector (spofy-ui-truncate name (spofy-ui-col 'search-playlist 0) 'spofy-track-name)
+                  (spofy-ui-truncate owner-name (spofy-ui-col 'search-playlist 1) 'spofy-muted)
                   (propertize (number-to-string total-tracks) 'face 'spofy-muted)
                   (propertize public-str 'face 'spofy-muted)))))
 

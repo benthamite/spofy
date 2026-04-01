@@ -144,15 +144,12 @@ ITEM is the wrapper alist from /me/tracks which contains a `track' key."
     (spofy-library--store-entity uri track)
     (list uri
           (vector playing
-                  (if (string-empty-p playing)
-                      (propertize (spofy-ui-truncate name (spofy-ui-col 'library-track 0)) 'face 'spofy-track-name)
-                    (spofy-ui-propertize-playing (spofy-ui-truncate name (spofy-ui-col 'library-track 0))))
-                  (if (string-empty-p playing)
-                      (propertize (spofy-ui-truncate artist-str (spofy-ui-col 'library-track 1)) 'face 'spofy-artist-name)
-                    (spofy-ui-propertize-playing (spofy-ui-truncate artist-str (spofy-ui-col 'library-track 1))))
-                  (if (string-empty-p playing)
-                      (propertize (spofy-ui-truncate album-name (spofy-ui-col 'library-track 2)) 'face 'spofy-album-name)
-                    (spofy-ui-propertize-playing (spofy-ui-truncate album-name (spofy-ui-col 'library-track 2))))
+                  (spofy-ui-truncate name (spofy-ui-col 'library-track 0)
+                                     (if (string-empty-p playing) 'spofy-track-name 'spofy-playing))
+                  (spofy-ui-truncate artist-str (spofy-ui-col 'library-track 1)
+                                     (if (string-empty-p playing) 'spofy-artist-name 'spofy-playing))
+                  (spofy-ui-truncate album-name (spofy-ui-col 'library-track 2)
+                                     (if (string-empty-p playing) 'spofy-album-name 'spofy-playing))
                   (propertize duration-str 'face 'spofy-muted)))))
 
 (defun spofy-library--render-tracks (response)
@@ -290,8 +287,8 @@ ITEM is the wrapper alist from /me/albums which contains an `album' key."
          (total-tracks (or (alist-get 'total_tracks album) 0)))
     (spofy-library--store-entity uri album)
     (list uri
-          (vector (propertize (spofy-ui-truncate name (spofy-ui-col 'library-album 0)) 'face 'spofy-album-name)
-                  (propertize (spofy-ui-truncate artist-str (spofy-ui-col 'library-album 1)) 'face 'spofy-artist-name)
+          (vector (spofy-ui-truncate name (spofy-ui-col 'library-album 0) 'spofy-album-name)
+                  (spofy-ui-truncate artist-str (spofy-ui-col 'library-album 1) 'spofy-artist-name)
                   (propertize year 'face 'spofy-muted)
                   (propertize (number-to-string total-tracks)
                               'face 'spofy-muted)))))
