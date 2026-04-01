@@ -103,10 +103,10 @@ Return a list of (ID [COLUMNS...])."
                       " ")))
     (list uri
           (vector play-icon
-                  (propertize (spofy-ui-truncate name 35) 'face
+                  (propertize (spofy-ui-truncate name (spofy-ui-col 'search-track 0)) 'face
                               (if playing-p 'spofy-playing 'spofy-track-name))
-                  (propertize (spofy-ui-truncate artist-str 25) 'face 'spofy-artist-name)
-                  (propertize (spofy-ui-truncate album-name 25) 'face 'spofy-album-name)
+                  (propertize (spofy-ui-truncate artist-str (spofy-ui-col 'search-track 1)) 'face 'spofy-artist-name)
+                  (propertize (spofy-ui-truncate album-name (spofy-ui-col 'search-track 2)) 'face 'spofy-album-name)
                   (propertize duration-str 'face 'spofy-muted)))))
 
 (defun spofy-search--format-album-entry (album)
@@ -122,8 +122,8 @@ Return a list of (ID [COLUMNS...])."
                  release-date))
          (total-tracks (or (alist-get 'total_tracks album) 0)))
     (list uri
-          (vector (propertize (spofy-ui-truncate name 35) 'face 'spofy-album-name)
-                  (propertize (spofy-ui-truncate artist-str 25) 'face 'spofy-artist-name)
+          (vector (propertize (spofy-ui-truncate name (spofy-ui-col 'search-album 0)) 'face 'spofy-album-name)
+                  (propertize (spofy-ui-truncate artist-str (spofy-ui-col 'search-album 1)) 'face 'spofy-artist-name)
                   (propertize year 'face 'spofy-muted)
                   (propertize (number-to-string total-tracks) 'face 'spofy-muted)))))
 
@@ -138,8 +138,8 @@ Return a list of (ID [COLUMNS...])."
          (follower-count (or (and followers (alist-get 'total followers)) 0))
          (followers-str (number-to-string follower-count)))
     (list uri
-          (vector (propertize (spofy-ui-truncate name 35) 'face 'spofy-artist-name)
-                  (propertize (spofy-ui-truncate genres-str 30) 'face 'spofy-muted)
+          (vector (propertize (spofy-ui-truncate name (spofy-ui-col 'search-artist 0)) 'face 'spofy-artist-name)
+                  (propertize (spofy-ui-truncate genres-str (spofy-ui-col 'search-artist 1)) 'face 'spofy-muted)
                   (propertize followers-str 'face 'spofy-muted)))))
 
 (defun spofy-search--format-playlist-entry (playlist)
@@ -154,28 +154,40 @@ Return a list of (ID [COLUMNS...])."
          (public-p (alist-get 'public playlist))
          (public-str (if public-p "Yes" "No")))
     (list uri
-          (vector (propertize (spofy-ui-truncate name 35) 'face 'spofy-track-name)
-                  (propertize (spofy-ui-truncate owner-name 20) 'face 'spofy-muted)
+          (vector (propertize (spofy-ui-truncate name (spofy-ui-col 'search-playlist 0)) 'face 'spofy-track-name)
+                  (propertize (spofy-ui-truncate owner-name (spofy-ui-col 'search-playlist 1)) 'face 'spofy-muted)
                   (propertize (number-to-string total-tracks) 'face 'spofy-muted)
                   (propertize public-str 'face 'spofy-muted)))))
 
 ;;;; Column definitions
 
-(defconst spofy-search--track-columns
-  [(" " 2 nil) ("Name" 35 nil) ("Artist(s)" 25 nil) ("Album" 25 nil) ("Duration" 6 nil)]
-  "Column format for track search results.")
+(defun spofy-search--track-columns ()
+  "Return column format for track search results."
+  (vector '(" " 2 nil)
+          `("Name"      ,(spofy-ui-col 'search-track 0) nil)
+          `("Artist(s)" ,(spofy-ui-col 'search-track 1) nil)
+          `("Album"     ,(spofy-ui-col 'search-track 2) nil)
+          '("Duration"  6 nil)))
 
-(defconst spofy-search--album-columns
-  [("Name" 35 nil) ("Artist(s)" 25 nil) ("Year" 6 nil) ("Tracks" 6 nil)]
-  "Column format for album search results.")
+(defun spofy-search--album-columns ()
+  "Return column format for album search results."
+  (vector `("Name"      ,(spofy-ui-col 'search-album 0) nil)
+          `("Artist(s)" ,(spofy-ui-col 'search-album 1) nil)
+          '("Year"      6 nil)
+          '("Tracks"    6 nil)))
 
-(defconst spofy-search--artist-columns
-  [("Name" 35 nil) ("Genres" 30 nil) ("Followers" 12 nil)]
-  "Column format for artist search results.")
+(defun spofy-search--artist-columns ()
+  "Return column format for artist search results."
+  (vector `("Name"      ,(spofy-ui-col 'search-artist 0) nil)
+          `("Genres"    ,(spofy-ui-col 'search-artist 1) nil)
+          '("Followers" 12 nil)))
 
-(defconst spofy-search--playlist-columns
-  [("Name" 35 nil) ("Owner" 20 nil) ("Tracks" 8 nil) ("Public" 7 nil)]
-  "Column format for playlist search results.")
+(defun spofy-search--playlist-columns ()
+  "Return column format for playlist search results."
+  (vector `("Name"   ,(spofy-ui-col 'search-playlist 0) nil)
+          `("Owner"  ,(spofy-ui-col 'search-playlist 1) nil)
+          '("Tracks" 8 nil)
+          '("Public" 7 nil)))
 
 ;;;; Search internals
 
@@ -186,10 +198,10 @@ Return a list of (ID [COLUMNS...])."
 (defun spofy-search--columns-for-type (type)
   "Return the column format vector for search TYPE."
   (pcase type
-    ("track" spofy-search--track-columns)
-    ("album" spofy-search--album-columns)
-    ("artist" spofy-search--artist-columns)
-    ("playlist" spofy-search--playlist-columns)))
+    ("track" (spofy-search--track-columns))
+    ("album" (spofy-search--album-columns))
+    ("artist" (spofy-search--artist-columns))
+    ("playlist" (spofy-search--playlist-columns))))
 
 (defun spofy-search--format-entry (type entity)
   "Format ENTITY according to search TYPE.

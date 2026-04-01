@@ -105,10 +105,11 @@ Buffer-local in `spofy-playlists-mode' buffers.")
   "Major mode for listing the user's Spotify playlists.
 Derived from `tabulated-list-mode'."
   :group 'spofy
-  (setq tabulated-list-format [("Name"   35 t)
-                                ("Owner"  20 t)
-                                ("Tracks"  8 nil :right-align t)
-                                ("Public"  7 t)]
+  (setq tabulated-list-format
+        (vector `("Name"   ,(spofy-ui-col 'playlist-list 0) t)
+                `("Owner"  ,(spofy-ui-col 'playlist-list 1) t)
+                '("Tracks"  8 nil :right-align t)
+                '("Public"  7 t))
         tabulated-list-padding 2)
   (setq-local spofy-playlist--entities (make-hash-table :test #'equal))
   (tabulated-list-init-header))
@@ -128,8 +129,8 @@ Return a list of (ID [COLUMNS...])."
          (public-str (if public-p "Yes" "No")))
     (spofy-playlist--store-entity uri playlist)
     (list uri
-          (vector (propertize (spofy-ui-truncate name 35) 'face 'spofy-track-name)
-                  (propertize (spofy-ui-truncate owner-name 20) 'face 'spofy-muted)
+          (vector (propertize (spofy-ui-truncate name (spofy-ui-col 'playlist-list 0)) 'face 'spofy-track-name)
+                  (propertize (spofy-ui-truncate owner-name (spofy-ui-col 'playlist-list 1)) 'face 'spofy-muted)
                   (propertize (number-to-string total-tracks) 'face 'spofy-muted)
                   (propertize public-str 'face 'spofy-muted)))))
 

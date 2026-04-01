@@ -117,11 +117,12 @@ Shows a play icon if TRACK-URI matches the currently playing track."
   "Spofy Library Tracks"
   "Major mode for viewing saved tracks in the user's Spotify library."
   :group 'spofy
-  (setq tabulated-list-format [(" "          2 nil)
-                                ("Name"       35 t)
-                                ("Artist(s)"  25 t)
-                                ("Album"      25 t)
-                                ("Duration"    6 nil :right-align t)]
+  (setq tabulated-list-format
+        (vector '(" "         2 nil)
+                `("Name"      ,(spofy-ui-col 'library-track 0) t)
+                `("Artist(s)" ,(spofy-ui-col 'library-track 1) t)
+                `("Album"     ,(spofy-ui-col 'library-track 2) t)
+                '("Duration"  6 nil :right-align t))
         tabulated-list-padding 2)
   (setq-local spofy-library--entities (make-hash-table :test #'equal))
   (setq-local spofy-ui--entity-type 'track)
@@ -144,14 +145,14 @@ ITEM is the wrapper alist from /me/tracks which contains a `track' key."
     (list uri
           (vector playing
                   (if (string-empty-p playing)
-                      (propertize (spofy-ui-truncate name 35) 'face 'spofy-track-name)
-                    (spofy-ui-propertize-playing (spofy-ui-truncate name 35)))
+                      (propertize (spofy-ui-truncate name (spofy-ui-col 'library-track 0)) 'face 'spofy-track-name)
+                    (spofy-ui-propertize-playing (spofy-ui-truncate name (spofy-ui-col 'library-track 0))))
                   (if (string-empty-p playing)
-                      (propertize (spofy-ui-truncate artist-str 25) 'face 'spofy-artist-name)
-                    (spofy-ui-propertize-playing (spofy-ui-truncate artist-str 25)))
+                      (propertize (spofy-ui-truncate artist-str (spofy-ui-col 'library-track 1)) 'face 'spofy-artist-name)
+                    (spofy-ui-propertize-playing (spofy-ui-truncate artist-str (spofy-ui-col 'library-track 1))))
                   (if (string-empty-p playing)
-                      (propertize (spofy-ui-truncate album-name 25) 'face 'spofy-album-name)
-                    (spofy-ui-propertize-playing (spofy-ui-truncate album-name 25)))
+                      (propertize (spofy-ui-truncate album-name (spofy-ui-col 'library-track 2)) 'face 'spofy-album-name)
+                    (spofy-ui-propertize-playing (spofy-ui-truncate album-name (spofy-ui-col 'library-track 2))))
                   (propertize duration-str 'face 'spofy-muted)))))
 
 (defun spofy-library--render-tracks (response)
@@ -266,10 +267,11 @@ in a tabulated-list buffer."
   "Spofy Library Albums"
   "Major mode for viewing saved albums in the user's Spotify library."
   :group 'spofy
-  (setq tabulated-list-format [("Name"       35 t)
-                                ("Artist(s)"  25 t)
-                                ("Year"        6 t)
-                                ("Tracks"      6 nil :right-align t)]
+  (setq tabulated-list-format
+        (vector `("Name"      ,(spofy-ui-col 'library-album 0) t)
+                `("Artist(s)" ,(spofy-ui-col 'library-album 1) t)
+                '("Year"      6 t)
+                '("Tracks"    6 nil :right-align t))
         tabulated-list-padding 2)
   (setq-local spofy-library--entities (make-hash-table :test #'equal))
   (setq-local spofy-ui--entity-type 'album)
@@ -290,8 +292,8 @@ ITEM is the wrapper alist from /me/albums which contains an `album' key."
          (total-tracks (or (alist-get 'total_tracks album) 0)))
     (spofy-library--store-entity uri album)
     (list uri
-          (vector (propertize (spofy-ui-truncate name 35) 'face 'spofy-album-name)
-                  (propertize (spofy-ui-truncate artist-str 25) 'face 'spofy-artist-name)
+          (vector (propertize (spofy-ui-truncate name (spofy-ui-col 'library-album 0)) 'face 'spofy-album-name)
+                  (propertize (spofy-ui-truncate artist-str (spofy-ui-col 'library-album 1)) 'face 'spofy-artist-name)
                   (propertize year 'face 'spofy-muted)
                   (propertize (number-to-string total-tracks)
                               'face 'spofy-muted)))))

@@ -108,10 +108,11 @@ Shows a play icon if TRACK-URI matches the currently playing track."
 (define-derived-mode spofy-album-mode tabulated-list-mode "Spofy Album"
   "Major mode for viewing a Spotify album's tracks."
   :group 'spofy
-  (setq tabulated-list-format [("#"        4 nil :right-align t)
-                                ("Name"     40 t)
-                                ("Artist(s)" 25 t)
-                                ("Duration"  6 nil :right-align t)]
+  (setq tabulated-list-format
+        (vector '("#"        4 nil :right-align t)
+                `("Name"     ,(spofy-ui-col 'album-track 0) t)
+                `("Artist(s)" ,(spofy-ui-col 'album-track 1) t)
+                '("Duration"  6 nil :right-align t))
         tabulated-list-padding 2)
   (tabulated-list-init-header))
 
@@ -136,11 +137,11 @@ ALBUM-URI is the album context URI for playback."
           (vector (if (string-empty-p playing) num-str
                     (propertize num-str 'face 'spofy-playing))
                   (if (string-empty-p playing)
-                      (propertize (spofy-ui-truncate name 40) 'face 'spofy-track-name)
-                    (spofy-ui-propertize-playing (spofy-ui-truncate name 40)))
+                      (propertize (spofy-ui-truncate name (spofy-ui-col 'album-track 0)) 'face 'spofy-track-name)
+                    (spofy-ui-propertize-playing (spofy-ui-truncate name (spofy-ui-col 'album-track 0))))
                   (if (string-empty-p playing)
-                      (propertize (spofy-ui-truncate artists-str 25) 'face 'spofy-artist-name)
-                    (spofy-ui-propertize-playing (spofy-ui-truncate artists-str 25)))
+                      (propertize (spofy-ui-truncate artists-str (spofy-ui-col 'album-track 1)) 'face 'spofy-artist-name)
+                    (spofy-ui-propertize-playing (spofy-ui-truncate artists-str (spofy-ui-col 'album-track 1))))
                   (propertize dur-str 'face 'spofy-muted)))))
 
 (defun spofy-album--render (album)
@@ -261,10 +262,11 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
 (define-derived-mode spofy-artist-mode tabulated-list-mode "Spofy Artist"
   "Major mode for viewing a Spotify artist's albums."
   :group 'spofy
-  (setq tabulated-list-format [("Name"   40 t)
-                                ("Year"    6 t)
-                                ("Type"    8 t)
-                                ("Tracks"  6 nil :right-align t)]
+  (setq tabulated-list-format
+        (vector `("Name"   ,(spofy-ui-col 'artist-album 0) t)
+                '("Year"    6 t)
+                '("Type"    8 t)
+                '("Tracks"  6 nil :right-align t))
         tabulated-list-padding 2)
   (tabulated-list-init-header))
 
@@ -277,7 +279,7 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
          (total-tracks (alist-get 'total_tracks album)))
     (spofy-browse--store-entity uri album)
     (list uri
-          (vector (propertize (spofy-ui-truncate name 40) 'face 'spofy-album-name)
+          (vector (propertize (spofy-ui-truncate name (spofy-ui-col 'artist-album 0)) 'face 'spofy-album-name)
                   (propertize year 'face 'spofy-muted)
                   album-type
                   (propertize (if total-tracks
@@ -410,10 +412,11 @@ Fetches artist info and albums, then displays in a tabulated-list buffer."
   "Spofy Top Tracks"
   "Major mode for viewing an artist's top tracks."
   :group 'spofy
-  (setq tabulated-list-format [(" "        2 nil)
-                                ("Name"     35 t)
-                                ("Album"    25 t)
-                                ("Duration"  6 nil :right-align t)]
+  (setq tabulated-list-format
+        (vector '(" "        2 nil)
+                `("Name"     ,(spofy-ui-col 'artist-top-track 0) t)
+                `("Album"    ,(spofy-ui-col 'artist-top-track 1) t)
+                '("Duration"  6 nil :right-align t))
         tabulated-list-padding 2)
   (tabulated-list-init-header))
 
@@ -430,11 +433,11 @@ Fetches artist info and albums, then displays in a tabulated-list buffer."
     (list uri
           (vector playing
                   (if (string-empty-p playing)
-                      (propertize (spofy-ui-truncate name 35) 'face 'spofy-track-name)
-                    (spofy-ui-propertize-playing (spofy-ui-truncate name 35)))
+                      (propertize (spofy-ui-truncate name (spofy-ui-col 'artist-top-track 0)) 'face 'spofy-track-name)
+                    (spofy-ui-propertize-playing (spofy-ui-truncate name (spofy-ui-col 'artist-top-track 0))))
                   (if (string-empty-p playing)
-                      (propertize (spofy-ui-truncate album-name 25) 'face 'spofy-album-name)
-                    (spofy-ui-propertize-playing (spofy-ui-truncate album-name 25)))
+                      (propertize (spofy-ui-truncate album-name (spofy-ui-col 'artist-top-track 1)) 'face 'spofy-album-name)
+                    (spofy-ui-propertize-playing (spofy-ui-truncate album-name (spofy-ui-col 'artist-top-track 1))))
                   (propertize dur-str 'face 'spofy-muted)))))
 
 (defun spofy-top-tracks--render (artist-id artist-name tracks)
@@ -514,13 +517,14 @@ ARTIST-ID is kept for refresh."
   "Spofy Playlist"
   "Major mode for viewing a Spotify playlist's tracks."
   :group 'spofy
-  (setq tabulated-list-format [(" "          2 nil)
-                                ("Name"       30 t)
-                                ("Artist(s)"  20 t)
-                                ("Album"      20 t)
-                                ("Duration"    6 nil :right-align t)
-                                ("Added By"   15 t)
-                                ("Date Added" 12 t)]
+  (setq tabulated-list-format
+        (vector '(" "          2 nil)
+                `("Name"       ,(spofy-ui-col 'playlist-track 0) t)
+                `("Artist(s)"  ,(spofy-ui-col 'playlist-track 1) t)
+                `("Album"      ,(spofy-ui-col 'playlist-track 2) t)
+                '("Duration"    6 nil :right-align t)
+                `("Added By"   ,(spofy-ui-col 'playlist-track 3) t)
+                '("Date Added" 12 t))
         tabulated-list-padding 2)
   (tabulated-list-init-header))
 
@@ -558,16 +562,16 @@ PLAYLIST-URI is the playlist context URI for playback."
         (list uri
               (vector playing
                       (if (string-empty-p playing)
-                          (propertize (spofy-ui-truncate name 30) 'face 'spofy-track-name)
-                        (spofy-ui-propertize-playing (spofy-ui-truncate name 30)))
+                          (propertize (spofy-ui-truncate name (spofy-ui-col 'playlist-track 0)) 'face 'spofy-track-name)
+                        (spofy-ui-propertize-playing (spofy-ui-truncate name (spofy-ui-col 'playlist-track 0))))
                       (if (string-empty-p playing)
-                          (propertize (spofy-ui-truncate artists-str 20) 'face 'spofy-artist-name)
-                        (spofy-ui-propertize-playing (spofy-ui-truncate artists-str 20)))
+                          (propertize (spofy-ui-truncate artists-str (spofy-ui-col 'playlist-track 1)) 'face 'spofy-artist-name)
+                        (spofy-ui-propertize-playing (spofy-ui-truncate artists-str (spofy-ui-col 'playlist-track 1))))
                       (if (string-empty-p playing)
-                          (propertize (spofy-ui-truncate album-name 20) 'face 'spofy-album-name)
-                        (spofy-ui-propertize-playing (spofy-ui-truncate album-name 20)))
+                          (propertize (spofy-ui-truncate album-name (spofy-ui-col 'playlist-track 2)) 'face 'spofy-album-name)
+                        (spofy-ui-propertize-playing (spofy-ui-truncate album-name (spofy-ui-col 'playlist-track 2))))
                       (propertize dur-str 'face 'spofy-muted)
-                      (spofy-ui-truncate added-by 15)
+                      (spofy-ui-truncate added-by (spofy-ui-col 'playlist-track 3))
                       (propertize date-str 'face 'spofy-muted)))))))
 
 (defun spofy-playlist--render (playlist)

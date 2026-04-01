@@ -77,6 +77,44 @@
   "Face for secondary text such as duration and dates."
   :group 'spofy-faces)
 
+;;;; Column widths
+
+(defcustom spofy-columns
+  '((library-track    . (35 25 25))
+    (library-album    . (35 25))
+    (search-track     . (35 25 25))
+    (search-album     . (35 25))
+    (search-artist    . (35 30))
+    (search-playlist  . (35 20))
+    (album-track      . (40 25))
+    (artist-album     . (40))
+    (artist-top-track . (35 25))
+    (playlist-track   . (30 20 20 15))
+    (playlist-list    . (35 20)))
+  "Column widths for tabulated-list buffers.
+Each entry is (VIEW . (COL1 COL2 ...)).  Only variable-width columns
+are listed; fixed-width columns (indicators, duration, year, counts)
+are not configurable.  The columns per view are:
+
+  library-track:    Name, Artist(s), Album
+  library-album:    Name, Artist(s)
+  search-track:     Name, Artist(s), Album
+  search-album:     Name, Artist(s)
+  search-artist:    Name, Genres
+  search-playlist:  Name, Owner
+  album-track:      Name, Artist(s)
+  artist-album:     Name
+  artist-top-track: Name, Album
+  playlist-track:   Name, Artist(s), Album, Added By
+  playlist-list:    Name, Owner"
+  :type '(alist :key-type symbol
+                :value-type (repeat integer))
+  :group 'spofy)
+
+(defun spofy-ui-col (view n)
+  "Return the Nth column width for VIEW from `spofy-columns'."
+  (nth n (alist-get view spofy-columns)))
+
 ;;;; Utilities
 
 (defun spofy-ui-format-duration-ms (ms)

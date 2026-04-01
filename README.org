@@ -151,6 +151,32 @@ The user option ~spofy-enable-mode-line~ controls whether ~spofy-global-mode~ au
 
 The user option ~spofy-enable-tab-bar~ controls whether ~spofy-global-mode~ automatically enables ~spofy-tab-bar-mode~.  It defaults to ~nil~.  Set it to ~t~ to display the currently playing track in the tab bar ([[#h:tab-bar-display][Tab-bar display]]).
 
+** Column widths
+:PROPERTIES:
+:CUSTOM_ID: h:user-options-columns
+:END:
+
+#+vindex: spofy-columns
+#+findex: spofy-ui-col
+
+The user option ~spofy-columns~ controls the width of variable-width columns in all tabulated-list buffers (library, search, browse, and playlist views).  Each entry maps a view symbol to a list of column widths.  These widths govern both the column headers and the text truncation in each cell.  Fixed-width columns such as indicators, duration, year, and track counts are not configurable.  The default value is:
+
+| View              | Columns                          |
+|-------------------+----------------------------------|
+| =library-track=   | Name (35), Artist(s) (25), Album (25)        |
+| =library-album=   | Name (35), Artist(s) (25)                    |
+| =search-track=    | Name (35), Artist(s) (25), Album (25)        |
+| =search-album=    | Name (35), Artist(s) (25)                    |
+| =search-artist=   | Name (35), Genres (30)                       |
+| =search-playlist= | Name (35), Owner (20)                        |
+| =album-track=     | Name (40), Artist(s) (25)                    |
+| =artist-album=    | Name (40)                                    |
+| =artist-top-track= | Name (35), Album (25)                       |
+| =playlist-track=  | Name (30), Artist(s) (20), Album (20), Added By (15) |
+| =playlist-list=   | Name (35), Owner (20)                        |
+
+The function ~spofy-ui-col~ looks up a column width from ~spofy-columns~.  It takes a view symbol and a zero-based column index.
+
 * Commands
 :PROPERTIES:
 :CUSTOM_ID: h:commands
@@ -355,7 +381,7 @@ The Spotify API returns results in pages of 20 items.  The command ~spofy-search
 
 #+findex: spofy-view-album
 
-The command ~spofy-view-album~ displays the tracks of a Spotify album in a =*Spofy Album: NAME*= buffer.  The buffer has a header showing the album name, artist, year, and total track count.  Tracks are listed with their track number, name, artist(s), and duration.
+The command ~spofy-view-album~ displays the tracks of a Spotify album in a =*Spofy Album: NAME*= buffer.  The buffer has a header showing the album name, artist, year, and total track count.  Tracks are listed with their track number, name, artist(s), and duration.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
 
 | Key   | Command                    | Action                         |
 |-------+----------------------------+--------------------------------|
@@ -375,7 +401,7 @@ The command ~spofy-view-album~ displays the tracks of a Spotify album in a =*Spo
 #+findex: spofy-view-artist
 #+findex: spofy-view-artist-top-tracks
 
-The command ~spofy-view-artist~ displays an artist's albums in a =*Spofy Artist: NAME*= buffer.  The header shows the artist name, genres, and follower count.  Albums are listed with their name, year, type (album or single), and track count.
+The command ~spofy-view-artist~ displays an artist's albums in a =*Spofy Artist: NAME*= buffer.  The header shows the artist name, genres, and follower count.  Albums are listed with their name, year, type (album or single), and track count.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
 
 | Key   | Command                       | Action                      |
 |-------+-------------------------------+-----------------------------|
@@ -386,7 +412,7 @@ The command ~spofy-view-artist~ displays an artist's albums in a =*Spofy Artist:
 | =m=   | ~spofy-artist-load-more~      | Load more albums            |
 | =q=   | ~quit-window~                 | Close                       |
 
-The function ~spofy-view-artist-top-tracks~ fetches the artist's top tracks (as determined by Spotify's algorithm) and displays them in a =*Spofy Top Tracks: ARTIST*= buffer.  This buffer uses the same track columns as search results ([[#h:search][Search]]).
+The function ~spofy-view-artist-top-tracks~ fetches the artist's top tracks (as determined by Spotify's algorithm) and displays them in a =*Spofy Top Tracks: ARTIST*= buffer.  Tracks are listed with their name, album, and duration.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
 
 *** Playlist detail view
 :PROPERTIES:
@@ -395,7 +421,7 @@ The function ~spofy-view-artist-top-tracks~ fetches the artist's top tracks (as 
 
 #+findex: spofy-view-playlist
 
-The command ~spofy-view-playlist~ displays the tracks of a playlist in a =*Spofy Playlist: NAME*= buffer.  The header shows the playlist name, owner, description, and total track count.  Columns include the track name, artist(s), album, duration, who added the track, and the date it was added.
+The command ~spofy-view-playlist~ displays the tracks of a playlist in a =*Spofy Playlist: NAME*= buffer.  The header shows the playlist name, owner, description, and total track count.  Columns include the track name, artist(s), album, duration, who added the track, and the date it was added.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
 
 | Key   | Command                            | Action                         |
 |-------+------------------------------------+--------------------------------|
@@ -462,7 +488,7 @@ The command ~spofy-follow-playlist~ prompts for a playlist ID or URI and follows
 #+findex: spofy-library-save
 #+findex: spofy-library-unsave
 
-The command ~spofy-library-saved-tracks~ displays the user's saved tracks in a =*Spofy Saved Tracks*= buffer.  Columns include a play indicator, track name, artist(s), album, and duration.  The currently playing track is highlighted, just like in search results.  Both library buffers show a =[m] Load more= footer when additional pages are available from the API.
+The command ~spofy-library-saved-tracks~ displays the user's saved tracks in a =*Spofy Saved Tracks*= buffer.  Columns include a play indicator, track name, artist(s), album, and duration.  The currently playing track is highlighted, just like in search results.  Both library buffers show a =[m] Load more= footer when additional pages are available from the API.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
 
 | Key   | Command                               | Action                    |
 |-------+---------------------------------------+---------------------------|
