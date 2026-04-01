@@ -229,15 +229,13 @@ If no device is found, take action based on `spofy-no-device-action':
   (spofy-player--ensure-device)
   (unless spofy-player--current-state
     (spofy-player--poll-sync))
-  (if (spofy-player-playing-p)
-      (spofy-api-put "me/player/pause" nil
-                     (lambda (_)
-                       (spofy-player--update-state 'is-playing nil)
-                       (message "Spofy: paused")))
-    (spofy-api-put "me/player/play" nil
-                   (lambda (_)
-                     (spofy-player--update-state 'is-playing t)
-                     (message "Spofy: playing")))))
+  (let ((pausing (spofy-player-playing-p)))
+    (spofy-player--update-state 'is-playing (not pausing))
+    (if pausing
+        (spofy-api-put "me/player/pause" nil
+                       (lambda (_) (message "Spofy: paused")))
+      (spofy-api-put "me/player/play" nil
+                     (lambda (_) (message "Spofy: playing"))))))
 
 ;;;###autoload
 (defun spofy-next ()
@@ -310,11 +308,11 @@ If no device is found, take action based on `spofy-no-device-action':
   (interactive)
   (spofy-player--ensure-device)
   (let ((new-state (not (alist-get 'shuffle spofy-player--current-state))))
+    (spofy-player--update-state 'shuffle new-state)
     (spofy-api-put (format "me/player/shuffle?state=%s"
                            (if new-state "true" "false"))
                    nil
                    (lambda (_)
-                     (spofy-player--update-state 'shuffle new-state)
                      (message "Spofy: shuffle %s" (if new-state "on" "off"))))))
 
 ;;;###autoload
@@ -328,9 +326,9 @@ If no device is found, take action based on `spofy-no-device-action':
                  ("context" "track")
                  ("track"   "off")
                  (_         "off"))))
+    (spofy-player--update-state 'repeat next)
     (spofy-api-put (format "me/player/repeat?state=%s" next) nil
                    (lambda (_)
-                     (spofy-player--update-state 'repeat next)
                      (message "Spofy: repeat %s" next)))))
 
 ;;;; Playing context
