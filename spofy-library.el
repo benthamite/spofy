@@ -144,14 +144,14 @@ ITEM is the wrapper alist from /me/tracks which contains a `track' key."
     (list uri
           (vector playing
                   (if (string-empty-p playing)
-                      (propertize name 'face 'spofy-track-name)
-                    (spofy-ui-propertize-playing name))
+                      (propertize (spofy-ui-truncate name 35) 'face 'spofy-track-name)
+                    (spofy-ui-propertize-playing (spofy-ui-truncate name 35)))
                   (if (string-empty-p playing)
-                      (propertize artist-str 'face 'spofy-artist-name)
-                    (spofy-ui-propertize-playing artist-str))
+                      (propertize (spofy-ui-truncate artist-str 25) 'face 'spofy-artist-name)
+                    (spofy-ui-propertize-playing (spofy-ui-truncate artist-str 25)))
                   (if (string-empty-p playing)
-                      (propertize album-name 'face 'spofy-album-name)
-                    (spofy-ui-propertize-playing album-name))
+                      (propertize (spofy-ui-truncate album-name 25) 'face 'spofy-album-name)
+                    (spofy-ui-propertize-playing (spofy-ui-truncate album-name 25)))
                   (propertize duration-str 'face 'spofy-muted)))))
 
 (defun spofy-library--render-tracks (response)
@@ -288,8 +288,8 @@ ITEM is the wrapper alist from /me/albums which contains an `album' key."
          (total-tracks (or (alist-get 'total_tracks album) 0)))
     (spofy-library--store-entity uri album)
     (list uri
-          (vector (propertize name 'face 'spofy-album-name)
-                  (propertize artist-str 'face 'spofy-artist-name)
+          (vector (propertize (spofy-ui-truncate name 35) 'face 'spofy-album-name)
+                  (propertize (spofy-ui-truncate artist-str 25) 'face 'spofy-artist-name)
                   (propertize year 'face 'spofy-muted)
                   (propertize (number-to-string total-tracks)
                               'face 'spofy-muted)))))

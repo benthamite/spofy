@@ -136,11 +136,11 @@ ALBUM-URI is the album context URI for playback."
           (vector (if (string-empty-p playing) num-str
                     (propertize num-str 'face 'spofy-playing))
                   (if (string-empty-p playing)
-                      (propertize name 'face 'spofy-track-name)
-                    (spofy-ui-propertize-playing name))
+                      (propertize (spofy-ui-truncate name 40) 'face 'spofy-track-name)
+                    (spofy-ui-propertize-playing (spofy-ui-truncate name 40)))
                   (if (string-empty-p playing)
-                      (propertize artists-str 'face 'spofy-artist-name)
-                    (spofy-ui-propertize-playing artists-str))
+                      (propertize (spofy-ui-truncate artists-str 25) 'face 'spofy-artist-name)
+                    (spofy-ui-propertize-playing (spofy-ui-truncate artists-str 25)))
                   (propertize dur-str 'face 'spofy-muted)))))
 
 (defun spofy-album--render (album)
@@ -277,7 +277,7 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
          (total-tracks (alist-get 'total_tracks album)))
     (spofy-browse--store-entity uri album)
     (list uri
-          (vector (propertize name 'face 'spofy-album-name)
+          (vector (propertize (spofy-ui-truncate name 40) 'face 'spofy-album-name)
                   (propertize year 'face 'spofy-muted)
                   album-type
                   (propertize (if total-tracks
@@ -430,11 +430,11 @@ Fetches artist info and albums, then displays in a tabulated-list buffer."
     (list uri
           (vector playing
                   (if (string-empty-p playing)
-                      (propertize name 'face 'spofy-track-name)
-                    (spofy-ui-propertize-playing name))
+                      (propertize (spofy-ui-truncate name 35) 'face 'spofy-track-name)
+                    (spofy-ui-propertize-playing (spofy-ui-truncate name 35)))
                   (if (string-empty-p playing)
-                      (propertize album-name 'face 'spofy-album-name)
-                    (spofy-ui-propertize-playing album-name))
+                      (propertize (spofy-ui-truncate album-name 25) 'face 'spofy-album-name)
+                    (spofy-ui-propertize-playing (spofy-ui-truncate album-name 25)))
                   (propertize dur-str 'face 'spofy-muted)))))
 
 (defun spofy-top-tracks--render (artist-id artist-name tracks)
@@ -558,16 +558,16 @@ PLAYLIST-URI is the playlist context URI for playback."
         (list uri
               (vector playing
                       (if (string-empty-p playing)
-                          (propertize name 'face 'spofy-track-name)
-                        (spofy-ui-propertize-playing name))
+                          (propertize (spofy-ui-truncate name 30) 'face 'spofy-track-name)
+                        (spofy-ui-propertize-playing (spofy-ui-truncate name 30)))
                       (if (string-empty-p playing)
-                          (propertize artists-str 'face 'spofy-artist-name)
-                        (spofy-ui-propertize-playing artists-str))
+                          (propertize (spofy-ui-truncate artists-str 20) 'face 'spofy-artist-name)
+                        (spofy-ui-propertize-playing (spofy-ui-truncate artists-str 20)))
                       (if (string-empty-p playing)
-                          (propertize album-name 'face 'spofy-album-name)
-                        (spofy-ui-propertize-playing album-name))
+                          (propertize (spofy-ui-truncate album-name 20) 'face 'spofy-album-name)
+                        (spofy-ui-propertize-playing (spofy-ui-truncate album-name 20)))
                       (propertize dur-str 'face 'spofy-muted)
-                      added-by
+                      (spofy-ui-truncate added-by 15)
                       (propertize date-str 'face 'spofy-muted)))))))
 
 (defun spofy-playlist--render (playlist)

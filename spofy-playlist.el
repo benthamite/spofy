@@ -128,8 +128,8 @@ Return a list of (ID [COLUMNS...])."
          (public-str (if public-p "Yes" "No")))
     (spofy-playlist--store-entity uri playlist)
     (list uri
-          (vector (propertize name 'face 'spofy-track-name)
-                  (propertize owner-name 'face 'spofy-muted)
+          (vector (propertize (spofy-ui-truncate name 35) 'face 'spofy-track-name)
+                  (propertize (spofy-ui-truncate owner-name 20) 'face 'spofy-muted)
                   (propertize (number-to-string total-tracks) 'face 'spofy-muted)
                   (propertize public-str 'face 'spofy-muted)))))
 

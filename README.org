@@ -557,7 +557,7 @@ The function ~spofy-ui-format-duration-ms~ takes a duration in milliseconds and 
 
 The function ~spofy-ui-format-artists~ takes a list of artist alists (as returned by the Spotify API) and formats them as a comma-separated string of names.
 
-The function ~spofy-ui-truncate~ truncates a string to a given maximum display width, appending "..." if truncation occurs.  It uses ~truncate-string-to-width~ internally, so column alignment is correct even with variable-width characters.
+The function ~spofy-ui-truncate~ truncates a string to a given maximum display width, appending "..." if truncation occurs.  It uses ~truncate-string-to-width~ internally, so column alignment is correct even with variable-width characters.  All entry formatting functions in the browse, library, and playlist modules apply ~spofy-ui-truncate~ to long string columns (names, artists, albums, genres, owners) before passing them to ~propertize~, so that truncation uses ASCII "..." instead of the Unicode "…" character that ~tabulated-list-mode~ would otherwise insert.  This prevents the column misalignment that arises because "…" has inconsistent display width across fonts.
 
 * Consult integration
 :PROPERTIES:
