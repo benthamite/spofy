@@ -42,7 +42,7 @@ The following format specifiers are supported:
   %t  track name
   %a  artist name
   %b  album name
-  %p  play/pause icon (▶ or ⏸)
+  %p  play/pause icon (⏸ when playing, ▶ when paused)
   %s  shuffle indicator (🔀 when on, empty when off)
   %r  repeat indicator (🔁 for context, 🔂 for track, empty for off)"
   :type 'string
@@ -64,7 +64,7 @@ ellipsis.  Set to nil to disable truncation."
 
 (defun spofy-tab-bar--play-pause-icon (state)
   "Return the play/pause icon based on STATE."
-  (if (alist-get 'is-playing state) "▶" "⏸"))
+  (if (alist-get 'is-playing state) "⏸" "▶"))
 
 (defun spofy-tab-bar--shuffle-indicator (state)
   "Return the shuffle indicator based on STATE."
