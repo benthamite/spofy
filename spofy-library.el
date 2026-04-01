@@ -169,6 +169,7 @@ ITEM is the wrapper alist from /me/tracks which contains a `track' key."
             (cl-loop for item across items
                      collect (spofy-library--format-saved-track item)))
       (tabulated-list-print t)
+      (spofy-ui-insert-pagination-footer)
       (goto-char (point-min))
       (pop-to-buffer (current-buffer)))))
 
@@ -241,6 +242,7 @@ in a tabulated-list buffer."
                (setq tabulated-list-entries
                      (append tabulated-list-entries new-entries))
                (tabulated-list-print t)
+               (spofy-ui-insert-pagination-footer)
                (message "Spofy: loaded %d more tracks."
                         (length new-entries))))))))))
 
@@ -309,6 +311,7 @@ ITEM is the wrapper alist from /me/albums which contains an `album' key."
             (cl-loop for item across items
                      collect (spofy-library--format-saved-album item)))
       (tabulated-list-print t)
+      (spofy-ui-insert-pagination-footer)
       (goto-char (point-min))
       (pop-to-buffer (current-buffer)))))
 
@@ -374,6 +377,7 @@ in a tabulated-list buffer."
                (setq tabulated-list-entries
                      (append tabulated-list-entries new-entries))
                (tabulated-list-print t)
+               (spofy-ui-insert-pagination-footer)
                (message "Spofy: loaded %d more albums."
                         (length new-entries))))))))))
 

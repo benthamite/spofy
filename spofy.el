@@ -428,7 +428,7 @@ authentication, starts polling, and displays the dashboard buffer."
     ("s a" "Artists"   spofy-search-artists)
     ("s p" "Playlists" spofy-search-playlists)]
    ["Browse"
-    ("l"  "Library"   spofy--transient-library)
+    ("l"  "Library"   spofy-library-menu)
     ("P"  "Playlists" spofy-list-playlists)
     ("d"  "Devices"   spofy-select-device)]
    ["Volume"
@@ -455,8 +455,8 @@ authentication, starts polling, and displays the dashboard buffer."
     ("D" "Dashboard" spofy)
     ("q" "Quit"      transient-quit-one)]])
 
-;;;###autoload (autoload 'spofy--transient-library "spofy" nil t)
-(transient-define-prefix spofy--transient-library ()
+;;;###autoload (autoload 'spofy-library-menu "spofy" nil t)
+(transient-define-prefix spofy-library-menu ()
   "Spofy library sub-menu."
   ["Library"
    ("t" "Saved tracks" spofy-library-saved-tracks)

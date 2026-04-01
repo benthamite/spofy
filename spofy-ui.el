@@ -119,5 +119,19 @@ LINES is a list of strings, each displayed on its own line with the
       (insert (propertize line 'face 'spofy-header) "\n"))
     (insert "\n")))
 
+(defun spofy-ui-insert-pagination-footer ()
+  "Insert a pagination hint at the end of the current buffer.
+When `spofy-ui--next-page-url' is non-nil, append a line telling the
+user they can press \\`m' to load more results."
+  (let ((inhibit-read-only t))
+    (save-excursion
+      (goto-char (point-max))
+      ;; Remove any existing footer first.
+      (when (re-search-backward "^\\[m\\] Load more" nil t)
+        (delete-region (line-beginning-position) (point-max)))
+      (when spofy-ui--next-page-url
+        (goto-char (point-max))
+        (insert (propertize "\n[m] Load more" 'face 'spofy-muted))))))
+
 (provide 'spofy-ui)
 ;;; spofy-ui.el ends here
