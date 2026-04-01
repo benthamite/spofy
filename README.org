@@ -588,7 +588,7 @@ The function ~spofy-ui-truncate~ truncates a string to a given maximum display w
 #+findex: consult-spofy-my-playlist
 #+findex: consult-spofy-device
 
-The file =spofy-consult.el= provides six ~consult~ completion sources for searching and selecting Spotify entities from the minibuffer.  These require the =consult= package.
+The file =spofy-consult.el= provides six ~consult~ completion sources for searching and selecting Spotify entities from the minibuffer.  These require the =consult= package.  The dependency is soft-loaded so that byte-compilation of the main Spofy package succeeds even when =consult= is not in the load path; at runtime, =consult= must be installed for these commands to work.
 
 #+vindex: spofy-consult-columns
 
@@ -615,7 +615,7 @@ All six commands use ~consult--dynamic-collection~ for incremental search with s
 
 #+findex: spofy-embark-copy-uri
 
-The file =spofy-embark.el= registers four entity categories with =embark=, each with a keymap of contextual actions.  These actions work on Spotify entities selected through ~consult~ ([[#h:consult-integration][Consult integration]]) or in ~tabulated-list~ buffers.
+The file =spofy-embark.el= registers four entity categories with =embark=, each with a keymap of contextual actions.  Like =spofy-consult.el=, the =embark= dependency is soft-loaded for byte-compilation compatibility.  These actions work on Spotify entities selected through ~consult~ ([[#h:consult-integration][Consult integration]]) or in ~tabulated-list~ buffers.
 
 The *spofy-track* category provides actions to play the track, add it to a playlist, save it to the library, view its album, view its artist, or copy its Spotify URI.
 

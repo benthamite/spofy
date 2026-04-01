@@ -29,8 +29,12 @@
 
 ;;; Code:
 
-(require 'consult)
+(require 'consult nil t)
 (require 'spofy-api)
+
+(declare-function consult--read "consult")
+(declare-function consult--dynamic-collection "consult")
+(declare-function consult--lookup-member "consult")
 
 (declare-function spofy-play-track "spofy-player" (uri &optional context-uri))
 (declare-function spofy-play-context "spofy-player" (context-uri))

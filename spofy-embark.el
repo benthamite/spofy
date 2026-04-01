@@ -29,7 +29,10 @@
 
 ;;; Code:
 
-(require 'embark)
+(require 'embark nil t)
+
+(defvar embark-general-map)
+(defvar embark-keymap-alist)
 
 (declare-function spofy-play-track "spofy-player" (uri &optional context-uri))
 (declare-function spofy-play-context "spofy-player" (context-uri))
