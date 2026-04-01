@@ -38,7 +38,7 @@
 
 ;;;; Customization
 
-(defcustom spofy-tab-bar-format "%p %t — %a %s%r"
+(defcustom spofy-tab-bar-format "%p %t %a %s%r"
   "Format string for the Spofy tab-bar segment.
 The following format specifiers are supported:
   %t  track name

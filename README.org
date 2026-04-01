@@ -131,7 +131,7 @@ The user option ~spofy-mode-line-separator~ is the string inserted before the Sp
 #+vindex: spofy-tab-bar-max-length
 #+vindex: spofy-tab-bar-alignment
 
-The user option ~spofy-tab-bar-format~ is a format string that controls what the tab-bar segment displays.  It defaults to ~"%p %t — %a %s%r"~, which includes the shuffle and repeat indicators after the artist name.  The same format specifiers as ~spofy-mode-line-format~ are supported ([[#h:user-options-mode-line][Mode-line]]), plus an additional specifier =%g= that inserts a Unicode progress bar showing the current playback position.
+The user option ~spofy-tab-bar-format~ is a format string that controls what the tab-bar segment displays.  It defaults to ~"%p %t %a %s%r"~, which includes the shuffle and repeat indicators after the artist name.  The same format specifiers as ~spofy-mode-line-format~ are supported ([[#h:user-options-mode-line][Mode-line]]), plus an additional specifier =%g= that inserts a Unicode progress bar showing the current playback position.
 
 The user option ~spofy-tab-bar-progress-width~ sets the width in characters of the progress bar in the tab bar.  It defaults to ~10~.  This option is only relevant when the format string contains =%g=.
 
