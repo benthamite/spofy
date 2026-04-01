@@ -45,7 +45,7 @@
   :type 'integer
   :group 'spofy)
 
-(defcustom spofy-volume-step 10
+(defcustom spofy-volume-step 5
   "Volume increment/decrement step (0-100)."
   :type 'integer
   :group 'spofy)
