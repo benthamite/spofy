@@ -127,10 +127,13 @@ The user option ~spofy-mode-line-separator~ is the string inserted before the Sp
 :END:
 
 #+vindex: spofy-tab-bar-format
+#+vindex: spofy-tab-bar-progress-width
 #+vindex: spofy-tab-bar-max-length
 #+vindex: spofy-tab-bar-alignment
 
-The user option ~spofy-tab-bar-format~ is a format string that controls what the tab-bar segment displays.  It defaults to ~"%p %t — %a %s%r"~, which includes the shuffle and repeat indicators after the artist name.  The same format specifiers as ~spofy-mode-line-format~ are supported ([[#h:user-options-mode-line][Mode-line]]).
+The user option ~spofy-tab-bar-format~ is a format string that controls what the tab-bar segment displays.  It defaults to ~"%p %t — %a %s%r"~, which includes the shuffle and repeat indicators after the artist name.  The same format specifiers as ~spofy-mode-line-format~ are supported ([[#h:user-options-mode-line][Mode-line]]), plus an additional specifier =%g= that inserts a Unicode progress bar showing the current playback position.
+
+The user option ~spofy-tab-bar-progress-width~ sets the width in characters of the progress bar in the tab bar.  It defaults to ~10~.  This option is only relevant when the format string contains =%g=.
 
 The user option ~spofy-tab-bar-max-length~ sets the maximum character length of the tab-bar string.  It defaults to ~50~.  Longer strings are truncated with an ellipsis.  Set it to ~nil~ to disable truncation entirely.
 
@@ -204,7 +207,7 @@ After successful authentication, Spofy runs ~spofy-authenticated-hook~.  You onl
 
 The command ~spofy~ is the main entry point.  It ensures that the user is authenticated (prompting if not), starts player state polling, and opens the =*Spofy*= dashboard buffer.  The dashboard displays three sections:
 
-1. *Now playing:* the current track name, artist, album, a text progress bar, and playback state indicators (play/pause, shuffle, repeat).
+1. *Now playing:* the current track name, artist, album, a Unicode block-character progress bar with sub-character precision, and playback state indicators (play/pause, shuffle, repeat).
 2. *Recently played:* the last 10 tracks, each a clickable button that replays the track.
 3. *Your playlists:* the user's first 10 playlists, each a clickable button that opens the playlist detail view.  A "View all playlists..." link at the bottom opens the full playlists list.
 
@@ -601,6 +604,7 @@ The function ~spofy-auth-refresh-token~ explicitly uses the stored refresh token
 #+findex: spofy-ui-format-duration-ms
 #+findex: spofy-ui-format-artists
 #+findex: spofy-ui-truncate
+#+findex: spofy-ui-progress-bar
 #+findex: spofy-ui-insert-pagination-footer
 #+findex: spofy-ui--after-tabulated-list-print
 
@@ -609,6 +613,8 @@ The function ~spofy-ui-format-duration-ms~ takes a duration in milliseconds and 
 The function ~spofy-ui-format-artists~ takes a list of artist alists (as returned by the Spotify API) and formats them as a comma-separated string of names.
 
 The function ~spofy-ui-truncate~ truncates a string to a given maximum display width, appending "..." if truncation occurs.  It uses ~truncate-string-to-width~ internally, so column alignment is correct even with variable-width characters.  All entry formatting functions in the browse, library, and playlist modules apply ~spofy-ui-truncate~ to long string columns (names, artists, albums, genres, owners) before passing them to ~propertize~, so that truncation uses ASCII "..." instead of the Unicode "…" character that ~tabulated-list-mode~ would otherwise insert.  This prevents the column misalignment that arises because "…" has inconsistent display width across fonts.
+
+The function ~spofy-ui-progress-bar~ builds a text progress bar for a given progress and duration (both in milliseconds) at a given character width.  It uses Unicode left-block characters (U+2588 through U+258F) to achieve sub-character precision, dividing each character cell into 8 slices.  The filled portion uses the ~spofy-progress-filled~ face and the empty portion uses ~spofy-progress-empty~ with the light shade character (U+2591) as a visual track.  A time display in ~"M:SS / M:SS"~ format is appended after the bar.  This function is shared between the dashboard and the tab-bar =%g= format specifier.
 
 The function ~spofy-ui-insert-pagination-footer~ appends a =[m] Load more= line at the end of a ~tabulated-list-mode~ buffer when ~spofy-ui--next-page-url~ is non-nil.  It removes any existing footer before inserting, so it is safe to call after each render or load-more cycle.  The function ~spofy-ui--after-tabulated-list-print~ is installed as =:after= advice on ~tabulated-list-print~, so the footer is inserted automatically in every Spofy buffer that sets ~spofy-ui--next-page-url~.  Individual modules do not need to call ~spofy-ui-insert-pagination-footer~ manually.
 
@@ -691,6 +697,8 @@ The function ~spofy-org-export~ generates appropriate links for export backends.
 #+vindex: spofy-playing
 #+vindex: spofy-playing-icon
 #+vindex: spofy-header
+#+vindex: spofy-progress-filled
+#+vindex: spofy-progress-empty
 #+vindex: spofy-muted
 
 Spofy defines a set of faces in the ~spofy-faces~ customization group for controlling the appearance of its buffers:
@@ -701,6 +709,8 @@ Spofy defines a set of faces in the ~spofy-faces~ customization group for contro
 - ~spofy-playing~ marks the currently playing track in any listing.  It uses bold weight and the Spotify green color (=#1DB954=).
 - ~spofy-playing-icon~ is used for the ▶ icon on the currently playing track.  It inherits from ~spofy-playing~.
 - ~spofy-header~ is used for the header area in album, artist, and playlist detail views.  It inherits from ~header-line~.
+- ~spofy-progress-filled~ is used for the filled portion of the progress bar.  It inherits from ~success~.
+- ~spofy-progress-empty~ is used for the empty portion of the progress bar.  It inherits from ~shadow~.
 - ~spofy-muted~ is used for secondary text like durations and dates.  It inherits from ~shadow~.
 
 All faces can be customized with =M-x customize-group RET spofy-faces RET=.
@@ -742,7 +752,7 @@ The mode is enabled automatically when ~spofy-global-mode~ is active and ~spofy-
 
 The command ~spofy-tab-bar-mode~ toggles a global minor mode that adds a Spofy segment to the tab bar.  The segment shows the currently playing track formatted according to ~spofy-tab-bar-format~ ([[#h:user-options-tab-bar][Tab-bar options]]).
 
-When enabled, the mode inserts a ~tab-bar-format-spofy~ entry into ~tab-bar-format~ at a position determined by ~spofy-tab-bar-alignment~ ([[#h:user-options-tab-bar][Tab-bar options]]) and hooks into ~spofy-player-state-changed-hook~ to rebuild the tab-bar string whenever the player state changes.  When disabled, it removes the entry and cleans up any ~tab-bar-format-align-right~ entry that was added automatically.
+When enabled, the mode inserts a ~tab-bar-format-spofy~ entry into ~tab-bar-format~ at a position determined by ~spofy-tab-bar-alignment~ ([[#h:user-options-tab-bar][Tab-bar options]]) and hooks into ~spofy-player-state-changed-hook~ to rebuild the tab-bar string whenever the player state changes.  When the format string contains =%g=, a 1-second timer is also started to update the progress bar smoothly between poll cycles.  When disabled, it removes the entry, stops the progress timer, and cleans up any ~tab-bar-format-align-right~ entry that was added automatically.
 
 The mode is enabled automatically when ~spofy-global-mode~ is active and ~spofy-enable-tab-bar~ is non-nil ([[#h:user-options-global][Global options]]).
 

@@ -148,6 +148,36 @@ are not configurable.  The columns per view are:
   "Propertize STRING with the `spofy-playing' face."
   (propertize string 'face 'spofy-playing))
 
+(defun spofy-ui-progress-bar (progress-ms duration-ms width)
+  "Build a text progress bar for PROGRESS-MS out of DURATION-MS.
+WIDTH is the total character width of the bar.  Uses Unicode block
+characters for sub-character precision: each character position is
+divided into 8 slices using U+2588..U+258F.
+
+The time display (e.g. \"1:23 / 3:45\") is appended after the bar."
+  (let* ((progress (or progress-ms 0))
+         (duration (max 1 (or duration-ms 1)))
+         (fraction (min 1.0 (/ (float progress) duration)))
+         (total-eighths (round (* fraction width 8)))
+         (full (/ total-eighths 8))
+         (remainder (% total-eighths 8))
+         (empty (- width full (if (> remainder 0) 1 0)))
+         ;; U+2588 (full) down to U+258F (1/8), indexed 0..7
+         (partial-chars [?\u2588 ?\u2589 ?\u258A ?\u258B ?\u258C ?\u258D ?\u258E ?\u258F])
+         (filled-str (propertize (make-string (max 0 full) ?\u2588)
+                                 'face 'spofy-progress-filled))
+         (partial-str (if (> remainder 0)
+                          (propertize (string (aref partial-chars (- 8 remainder)))
+                                     'face 'spofy-progress-filled)
+                        ""))
+         (empty-str (propertize (make-string (max 0 empty) ?\u2591)
+                                'face 'spofy-progress-empty))
+         (progress-str (spofy-ui-format-duration-ms progress))
+         (duration-str (spofy-ui-format-duration-ms duration)))
+    (format "%s%s%s %s / %s"
+            filled-str partial-str empty-str
+            progress-str duration-str)))
+
 (defvar-local spofy-ui--next-page-url nil
   "URL for the next page of results in this buffer.")
 

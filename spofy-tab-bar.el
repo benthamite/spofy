@@ -31,6 +31,8 @@
 
 (require 'spofy-ui)
 
+(declare-function spofy-player-interpolated-progress "spofy-player" ())
+
 (defvar spofy-player--current-state)
 (defvar spofy-player-state-changed-hook)
 
@@ -44,8 +46,15 @@ The following format specifiers are supported:
   %b  album name
   %p  play/pause icon (⏸ when playing, ▶ when paused)
   %s  shuffle indicator (🔀 when on, empty when off)
-  %r  repeat indicator (🔁 for context, 🔂 for track, empty for off)"
+  %r  repeat indicator (🔁 for context, 🔂 for track, empty for off)
+  %g  progress bar"
   :type 'string
+  :group 'spofy)
+
+(defcustom spofy-tab-bar-progress-width 10
+  "Width in characters of the progress bar in the tab bar.
+Only used when the format string contains %g."
+  :type 'integer
   :group 'spofy)
 
 (defcustom spofy-tab-bar-max-length 50
@@ -108,6 +117,15 @@ Returns nil if no player state is available."
       (setq result (string-replace "%p" play-pause result))
       (setq result (string-replace "%s" shuffle result))
       (setq result (string-replace "%r" repeat result))
+      (when (string-search "%g" result)
+        (let* ((progress (and (fboundp 'spofy-player-interpolated-progress)
+                              (spofy-player-interpolated-progress)))
+               (duration (alist-get 'duration state)))
+          (setq result (string-replace "%g"
+                                       (spofy-ui-progress-bar
+                                        (or progress 0) (or duration 0)
+                                        spofy-tab-bar-progress-width)
+                                       result))))
       (if spofy-tab-bar-max-length
           (spofy-ui-truncate result spofy-tab-bar-max-length)
         result))))
@@ -166,6 +184,28 @@ Also removes `tab-bar-format-align-right' if it was added by this mode."
           (delq 'tab-bar-format-align-right tab-bar-format))
     (setq spofy-tab-bar--added-align-right nil)))
 
+;;;; Progress timer
+
+(defvar spofy-tab-bar--progress-timer nil
+  "Timer for updating the tab-bar progress bar every second.")
+
+(defun spofy-tab-bar--needs-progress-timer-p ()
+  "Return non-nil if the tab-bar format includes a progress bar."
+  (string-search "%g" spofy-tab-bar-format))
+
+(defun spofy-tab-bar--start-progress-timer ()
+  "Start a 1-second timer to refresh the tab-bar progress bar."
+  (spofy-tab-bar--stop-progress-timer)
+  (when (spofy-tab-bar--needs-progress-timer-p)
+    (setq spofy-tab-bar--progress-timer
+          (run-with-timer 1 1 #'spofy-tab-bar--update))))
+
+(defun spofy-tab-bar--stop-progress-timer ()
+  "Stop the tab-bar progress timer."
+  (when spofy-tab-bar--progress-timer
+    (cancel-timer spofy-tab-bar--progress-timer)
+    (setq spofy-tab-bar--progress-timer nil)))
+
 ;;;; Global minor mode
 
 ;;;###autoload
@@ -177,7 +217,9 @@ Also removes `tab-bar-format-align-right' if it was added by this mode."
       (progn
         (spofy-tab-bar--insert-into-format)
         (add-hook 'spofy-player-state-changed-hook #'spofy-tab-bar--update)
-        (spofy-tab-bar--update))
+        (spofy-tab-bar--update)
+        (spofy-tab-bar--start-progress-timer))
+    (spofy-tab-bar--stop-progress-timer)
     (spofy-tab-bar--remove-from-format)
     (remove-hook 'spofy-player-state-changed-hook #'spofy-tab-bar--update)
     (setq spofy-tab-bar--string nil)

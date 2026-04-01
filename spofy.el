@@ -140,22 +140,6 @@ When `spofy-global-mode' is enabled, this key opens `spofy-menu'."
 
 ;;;;; Dashboard: now-playing section
 
-(defun spofy--dashboard-progress-bar (progress-ms duration-ms width)
-  "Build a text progress bar for PROGRESS-MS out of DURATION-MS.
-WIDTH is the total character width of the bar (excluding brackets)."
-  (let* ((progress (or progress-ms 0))
-         (duration (max 1 (or duration-ms 1)))
-         (fraction (min 1.0 (/ (float progress) duration)))
-         (filled (round (* fraction width)))
-         (empty (- width filled))
-         (progress-str (spofy-ui-format-duration-ms progress))
-         (duration-str (spofy-ui-format-duration-ms duration)))
-    (format "[%s%s%s] %s / %s"
-            (make-string (max 0 (1- filled)) ?=)
-            (if (> filled 0) ">" "")
-            (make-string (max 0 empty) ? )
-            progress-str duration-str)))
-
 (defun spofy--dashboard-insert-now-playing ()
   "Insert the now-playing section into the current buffer."
   (let* ((state (and (boundp 'spofy-player--current-state)
@@ -178,9 +162,7 @@ WIDTH is the total character width of the bar (excluding brackets)."
               "\n")
       (insert "  " (propertize (or album "") 'face 'spofy-album-name) "\n")
       (insert "  "
-              (propertize (spofy--dashboard-progress-bar
-                           progress (or duration 0) 20)
-                          'face 'spofy-muted)
+              (spofy-ui-progress-bar progress (or duration 0) 20)
               "\n")
       (insert "  "
               (if is-playing "⏸" "▶")
