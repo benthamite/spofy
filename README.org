@@ -129,7 +129,7 @@ The user option ~spofy-mode-line-separator~ is the string inserted before the Sp
 #+vindex: spofy-tab-bar-format
 #+vindex: spofy-tab-bar-max-length
 
-The user option ~spofy-tab-bar-format~ is a format string that controls what the tab-bar segment displays.  It defaults to ~"%p %t — %a"~.  The same format specifiers as ~spofy-mode-line-format~ are supported ([[#h:user-options-mode-line][Mode-line]]).
+The user option ~spofy-tab-bar-format~ is a format string that controls what the tab-bar segment displays.  It defaults to ~"%p %t — %a %s%r"~, which includes the shuffle and repeat indicators after the artist name.  The same format specifiers as ~spofy-mode-line-format~ are supported ([[#h:user-options-mode-line][Mode-line]]).
 
 The user option ~spofy-tab-bar-max-length~ sets the maximum character length of the tab-bar string.  It defaults to ~50~.  Longer strings are truncated with an ellipsis.  Set it to ~nil~ to disable truncation entirely.
 
@@ -253,7 +253,7 @@ The commands ~spofy-seek-forward~ and ~spofy-seek-backward~ move the playback po
 
 The commands ~spofy-volume-up~ and ~spofy-volume-down~ adjust the volume by ~spofy-volume-step~ percent.  The command ~spofy-volume-set~ prompts for an exact volume level between 0 and 100.
 
-The command ~spofy-toggle-shuffle~ toggles shuffle mode on or off.  The command ~spofy-toggle-repeat~ cycles through three repeat states: off, context (repeat the current album/playlist), and track (repeat the current track).
+The command ~spofy-toggle-shuffle~ toggles shuffle mode on or off.  The command ~spofy-toggle-repeat~ cycles through three repeat states: off, context (repeat the current album/playlist), and track (repeat the current track).  Both commands update the local player state immediately on success, so the mode line, tab bar, and transient menu reflect the new state without waiting for the next poll.  In the transient popup ([[#h:transient-popup][Transient popup]]), the current state is shown with the ~transient-value~ face, and both suffixes remain transient so that the user can toggle repeatedly without reopening the menu.
 
 The command ~spofy-play-track~ plays a specific track by its Spotify URI.  If an optional context URI is provided (an album or playlist URI), playback starts within that context at the specified track.  The command ~spofy-play-context~ plays an entire context (album, playlist, or artist) from the beginning.  Both commands are used internally by the browse and search interfaces.
 

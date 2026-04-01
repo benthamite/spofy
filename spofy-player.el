@@ -307,6 +307,7 @@ If no device is found, take action based on `spofy-no-device-action':
                            (if new-state "true" "false"))
                    nil
                    (lambda (_)
+                     (spofy-player--update-state 'shuffle new-state)
                      (message "Spofy: shuffle %s" (if new-state "on" "off"))))))
 
 ;;;###autoload
@@ -321,7 +322,9 @@ If no device is found, take action based on `spofy-no-device-action':
                  ("track"   "off")
                  (_         "off"))))
     (spofy-api-put (format "me/player/repeat?state=%s" next) nil
-                   (lambda (_) (message "Spofy: repeat %s" next)))))
+                   (lambda (_)
+                     (spofy-player--update-state 'repeat next)
+                     (message "Spofy: repeat %s" next)))))
 
 ;;;; Playing context
 

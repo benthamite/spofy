@@ -437,8 +437,19 @@ authentication, starts polling, and displays the dashboard buffer."
     ("v" "Set volume"  spofy-volume-set)
     ""
     "Mode"
-    ("S" "Toggle shuffle" spofy-toggle-shuffle)
-    ("R" "Toggle repeat"  spofy-toggle-repeat)
+    ("S" spofy-toggle-shuffle
+     :description (lambda ()
+                    (if (alist-get 'shuffle spofy-player--current-state)
+                        (concat "Shuffle " (propertize "on" 'face 'transient-value))
+                      "Shuffle off"))
+     :transient t)
+    ("R" spofy-toggle-repeat
+     :description (lambda ()
+                    (let ((state (or (alist-get 'repeat spofy-player--current-state) "off")))
+                      (if (equal state "off")
+                          "Repeat off"
+                        (concat "Repeat " (propertize state 'face 'transient-value)))))
+     :transient t)
     ""
     "Other"
     ("D" "Dashboard" spofy)
