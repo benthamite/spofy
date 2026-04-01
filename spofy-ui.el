@@ -90,10 +90,10 @@
   "Format ARTISTS (a list of alists with a `name' key) as a comma-separated string."
   (mapconcat (lambda (a) (alist-get 'name a)) artists ", "))
 
-(defun spofy-ui-truncate (string max-length)
-  "Truncate STRING to MAX-LENGTH, appending \"…\" if truncated."
-  (if (> (length string) max-length)
-      (concat (substring string 0 (- max-length 1)) "…")
+(defun spofy-ui-truncate (string max-width)
+  "Truncate STRING to MAX-WIDTH display columns, appending \"...\" if needed."
+  (if (> (string-width string) max-width)
+      (truncate-string-to-width string max-width nil nil "...")
     string))
 
 (defun spofy-ui-propertize-playing (string)
