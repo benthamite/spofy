@@ -131,7 +131,7 @@ The user option ~spofy-mode-line-separator~ is the string inserted before the Sp
 
 The user option ~spofy-tab-bar-format~ is a format string that controls what the tab-bar segment displays.  It defaults to ~"%p %t — %a"~.  The same format specifiers as ~spofy-mode-line-format~ are supported ([[#h:user-options-mode-line][Mode-line]]).
 
-The user option ~spofy-tab-bar-max-length~ sets the maximum character length of the tab-bar string.  It defaults to ~50~.  Longer strings are truncated with an ellipsis.
+The user option ~spofy-tab-bar-max-length~ sets the maximum character length of the tab-bar string.  It defaults to ~50~.  Longer strings are truncated with an ellipsis.  Set it to ~nil~ to disable truncation entirely.
 
 ** Global key and mode-line activation
 :PROPERTIES:

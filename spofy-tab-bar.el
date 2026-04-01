@@ -51,8 +51,8 @@ The following format specifiers are supported:
 (defcustom spofy-tab-bar-max-length 50
   "Maximum length of the Spofy tab-bar string.
 If the formatted string exceeds this length, it is truncated with an
-ellipsis."
-  :type 'integer
+ellipsis.  Set to nil to disable truncation."
+  :type '(choice integer (const :tag "No truncation" nil))
   :group 'spofy)
 
 ;;;; Internal state
@@ -96,7 +96,9 @@ Returns nil if no player state is available."
       (setq result (string-replace "%p" play-pause result))
       (setq result (string-replace "%s" shuffle result))
       (setq result (string-replace "%r" repeat result))
-      (spofy-ui-truncate result spofy-tab-bar-max-length))))
+      (if spofy-tab-bar-max-length
+          (spofy-ui-truncate result spofy-tab-bar-max-length)
+        result))))
 
 ;;;; Tab-bar format function
 
