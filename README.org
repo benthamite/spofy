@@ -589,7 +589,9 @@ The function ~spofy-ui-truncate~ truncates a string to a given maximum display w
 
 The file =spofy-consult.el= provides six ~consult~ completion sources for searching and selecting Spotify entities from the minibuffer.  These require the =consult= package.
 
-All candidates are displayed in aligned tabular columns with faces matching the search result buffers:
+#+vindex: spofy-consult-columns
+
+All candidates are displayed in aligned tabular columns with faces matching the search result buffers.  The user option ~spofy-consult-columns~ controls the column widths per entity type; see its docstring for the column layout of each type.
 
 The command ~consult-spofy-track~ lets you search for tracks with live narrowing as you type (debounced at 300ms to avoid excessive API calls).  Candidates show Name, Artist(s), Album, and Duration columns.  Selecting a track plays it immediately.
 
