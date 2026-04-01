@@ -30,6 +30,7 @@
 ;;; Code:
 
 (require 'consult nil t)
+(require 'seq)
 (require 'spofy-api)
 
 (declare-function consult--read "consult")
@@ -208,6 +209,10 @@ The full entity is stored as a text property."
 
 ;;;; Collection builders
 
+(defun spofy-consult--null-p (item)
+  "Return non-nil if ITEM is a JSON null (the keyword :null)."
+  (eq item :null))
+
 (defun spofy-consult--search-collection (type format-fn)
   "Return a synchronous dynamic collection function searching Spotify for TYPE.
 FORMAT-FN is called on each result item to produce a candidate string."
@@ -219,7 +224,8 @@ FORMAT-FN is called on each result item to produce a candidate string."
            (section (alist-get section-key response))
            (items (alist-get 'items section)))
       (when items
-        (mapcar format-fn (append items nil))))))
+        (mapcar format-fn (seq-remove #'spofy-consult--null-p
+                                      (append items nil)))))))
 
 ;;;; Track source
 
@@ -321,7 +327,8 @@ Results are fetched once and cached for subsequent calls."
                        (items (alist-get 'items response)))
                   (when items
                     (mapcar #'spofy-consult--format-playlist
-                            (append items nil)))))))))
+                            (seq-remove #'spofy-consult--null-p
+                                        (append items nil))))))))))
 
 ;;;###autoload
 (defun consult-spofy-my-playlist ()
