@@ -63,19 +63,35 @@ Return the parsed JSON response, or nil on error."
 
 ;;;; Helpers
 
+(defun spofy-consult--pad (string width)
+  "Pad STRING to WIDTH display columns."
+  (let ((cur (string-width string)))
+    (if (>= cur width)
+        string
+      (concat string (make-string (- width cur) ?\s)))))
+
 (defun spofy-consult--format-track (track)
-  "Format TRACK alist as a consult candidate string.
+  "Format TRACK alist as a tabular consult candidate string.
 The full entity is stored as a text property."
   (let* ((name (or (alist-get 'name track) ""))
          (artists (or (alist-get 'artists track) []))
          (album (alist-get 'album track))
          (album-name (or (and album (alist-get 'name album)) ""))
          (artist-str (spofy-ui-format-artists artists))
-         (candidate (format "%s \u2014 %s (%s)" name artist-str album-name)))
+         (duration-ms (or (alist-get 'duration_ms track) 0))
+         (candidate
+          (concat
+           (spofy-consult--pad
+            (propertize (spofy-ui-truncate name 35) 'face 'spofy-track-name) 37)
+           (spofy-consult--pad
+            (propertize (spofy-ui-truncate artist-str 25) 'face 'spofy-artist-name) 27)
+           (spofy-consult--pad
+            (propertize (spofy-ui-truncate album-name 25) 'face 'spofy-album-name) 27)
+           (propertize (spofy-ui-format-duration-ms duration-ms) 'face 'spofy-muted))))
     (propertize candidate 'spofy-entity track)))
 
 (defun spofy-consult--format-album (album)
-  "Format ALBUM alist as a consult candidate string.
+  "Format ALBUM alist as a tabular consult candidate string.
 The full entity is stored as a text property."
   (let* ((name (or (alist-get 'name album) ""))
          (artists (or (alist-get 'artists album) []))
@@ -84,35 +100,64 @@ The full entity is stored as a text property."
          (year (if (>= (length release-date) 4)
                    (substring release-date 0 4)
                  release-date))
-         (candidate (format "%s \u2014 %s (%s)" name artist-str year)))
+         (total-tracks (or (alist-get 'total_tracks album) 0))
+         (candidate
+          (concat
+           (spofy-consult--pad
+            (propertize (spofy-ui-truncate name 35) 'face 'spofy-album-name) 37)
+           (spofy-consult--pad
+            (propertize (spofy-ui-truncate artist-str 25) 'face 'spofy-artist-name) 27)
+           (spofy-consult--pad
+            (propertize year 'face 'spofy-muted) 6)
+           (propertize (format "%d tracks" total-tracks) 'face 'spofy-muted))))
     (propertize candidate 'spofy-entity album)))
 
 (defun spofy-consult--format-artist (artist)
-  "Format ARTIST alist as a consult candidate string.
+  "Format ARTIST alist as a tabular consult candidate string.
 The full entity is stored as a text property."
   (let* ((name (or (alist-get 'name artist) ""))
          (genres (or (alist-get 'genres artist) []))
          (genres-str (if (> (length genres) 0)
                          (mapconcat #'identity genres ", ")
                        ""))
-         (candidate (format "%s (%s)" name genres-str)))
+         (followers (or (alist-get 'followers artist) nil))
+         (follower-count (or (and followers (alist-get 'total followers)) 0))
+         (candidate
+          (concat
+           (spofy-consult--pad
+            (propertize (spofy-ui-truncate name 35) 'face 'spofy-artist-name) 37)
+           (spofy-consult--pad
+            (propertize (spofy-ui-truncate genres-str 30) 'face 'spofy-muted) 32)
+           (propertize (number-to-string follower-count) 'face 'spofy-muted))))
     (propertize candidate 'spofy-entity artist)))
 
 (defun spofy-consult--format-playlist (playlist)
-  "Format PLAYLIST alist as a consult candidate string.
+  "Format PLAYLIST alist as a tabular consult candidate string.
 The full entity is stored as a text property."
   (let* ((name (or (alist-get 'name playlist) ""))
+         (owner (alist-get 'owner playlist))
+         (owner-name (or (and owner (alist-get 'display_name owner)) ""))
          (tracks-info (alist-get 'tracks playlist))
          (total (or (and tracks-info (alist-get 'total tracks-info)) 0))
-         (candidate (format "%s (%d tracks)" name total)))
+         (candidate
+          (concat
+           (spofy-consult--pad
+            (propertize (spofy-ui-truncate name 35) 'face 'spofy-track-name) 37)
+           (spofy-consult--pad
+            (propertize (spofy-ui-truncate owner-name 20) 'face 'spofy-muted) 22)
+           (propertize (format "%d tracks" total) 'face 'spofy-muted))))
     (propertize candidate 'spofy-entity playlist)))
 
 (defun spofy-consult--format-device (device)
-  "Format DEVICE alist as a consult candidate string.
+  "Format DEVICE alist as a tabular consult candidate string.
 The full entity is stored as a text property."
   (let* ((name (or (alist-get 'name device) ""))
          (type (or (alist-get 'type device) ""))
-         (candidate (format "%s (%s)" name type)))
+         (candidate
+          (concat
+           (spofy-consult--pad
+            (propertize (spofy-ui-truncate name 30) 'face 'spofy-track-name) 32)
+           (propertize type 'face 'spofy-muted))))
     (propertize candidate 'spofy-entity device)))
 
 (defun spofy-consult--get-entity (candidate)

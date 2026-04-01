@@ -589,17 +589,19 @@ The function ~spofy-ui-truncate~ truncates a string to a given maximum display w
 
 The file =spofy-consult.el= provides six ~consult~ completion sources for searching and selecting Spotify entities from the minibuffer.  These require the =consult= package.
 
-The command ~consult-spofy-track~ lets you search for tracks with live narrowing as you type (debounced at 300ms to avoid excessive API calls).  Candidates are formatted as "Track — Artist (Album)".  Selecting a track plays it immediately.
+All candidates are displayed in aligned tabular columns with faces matching the search result buffers:
 
-The command ~consult-spofy-album~ provides the same experience for albums, formatted as "Album — Artist (Year)".  Selecting an album opens the album view ([[#h:album-view][Album view]]).
+The command ~consult-spofy-track~ lets you search for tracks with live narrowing as you type (debounced at 300ms to avoid excessive API calls).  Candidates show Name, Artist(s), Album, and Duration columns.  Selecting a track plays it immediately.
 
-The command ~consult-spofy-artist~ searches artists, formatted as "Artist (Genres)".  Selecting an artist opens the artist view ([[#h:artist-view][Artist view]]).
+The command ~consult-spofy-album~ provides the same experience for albums, with Name, Artist(s), Year, and track count columns.  Selecting an album opens the album view ([[#h:album-view][Album view]]).
 
-The command ~consult-spofy-playlist~ searches all Spotify playlists with live narrowing, formatted as "Playlist (N tracks)".  Selecting a playlist opens the playlist detail view ([[#h:playlist-detail-view][Playlist detail view]]).
+The command ~consult-spofy-artist~ searches artists, with Name, Genres, and Followers columns.  Selecting an artist opens the artist view ([[#h:artist-view][Artist view]]).
 
-The command ~consult-spofy-my-playlist~ fetches the user's own playlists with incremental narrowing, formatted as "Playlist (N tracks)".  The full list is fetched once from the API and filtered client-side as you type.  Selecting a playlist opens the playlist detail view.
+The command ~consult-spofy-playlist~ searches all Spotify playlists with live narrowing, with Name, Owner, and track count columns.  Selecting a playlist opens the playlist detail view ([[#h:playlist-detail-view][Playlist detail view]]).
 
-The command ~consult-spofy-device~ fetches available playback devices with incremental narrowing, formatted as "Device (Type)".  Selecting a device transfers playback to it.
+The command ~consult-spofy-my-playlist~ fetches the user's own playlists with incremental narrowing, with Name, Owner, and track count columns.  The full list is fetched once from the API and filtered client-side as you type.  Selecting a playlist opens the playlist detail view.
+
+The command ~consult-spofy-device~ fetches available playback devices with incremental narrowing, with Name and Type columns.  Selecting a device transfers playback to it.
 
 All six commands use ~consult--dynamic-collection~ for incremental search with synchronous API requests (via ~url-retrieve-synchronously~), as required by consult's dynamic collection contract.  Each candidate stores the full Spotify entity in a text property, making them compatible with the embark integration ([[#h:embark-integration][Embark integration]]).
 
