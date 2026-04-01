@@ -52,7 +52,7 @@ Then configure Spofy in your init file:
 (setq spofy-client-secret "your-client-secret")
 #+end_src
 
-Run =M-x spofy-authenticate= to authorize Spofy with your Spotify account.  This opens your browser to the Spotify authorization page.  After granting access, the browser redirects to the local server and Spofy stores the tokens in ~spofy-token-file~ (defaults to =spofy-tokens.gpg= in the user Emacs directory, encrypted via EasyPG).  Subsequent sessions reuse the stored tokens automatically.
+Run =M-x spofy-authenticate= to authorize Spofy with your Spotify account.  This opens your browser to the Spotify authorization page.  After granting access, the browser redirects to the local server and Spofy stores the tokens and their expiry time in ~spofy-token-file~ (defaults to =spofy-tokens.gpg= in the user Emacs directory, encrypted via EasyPG).  Subsequent sessions reuse the stored tokens automatically, refreshing only when the persisted expiry time indicates the access token has lapsed.
 
 Once authenticated, run =M-x spofy= to open the dashboard.
 
@@ -77,7 +77,7 @@ The user option ~spofy-client-secret~ holds the Client Secret of your registered
 
 The user option ~spofy-redirect-port~ controls the port on which Spofy's temporary OAuth2 callback server listens.  It defaults to ~8080~.  Change this if port 8080 is already in use on your machine.  The redirect URI registered in the Spotify Developer Dashboard must match the port you configure here.
 
-The user option ~spofy-token-file~ specifies where Spofy stores OAuth tokens.  It defaults to =spofy-tokens.gpg= in the user Emacs directory.  The =.gpg= extension causes Emacs to encrypt the file via EasyPG; use a plain =.el= extension to store tokens unencrypted.
+The user option ~spofy-token-file~ specifies where Spofy stores OAuth tokens and the access-token expiry time.  It defaults to =spofy-tokens.gpg= in the user Emacs directory.  The =.gpg= extension causes Emacs to encrypt the file via EasyPG; use a plain =.el= extension to store tokens unencrypted.  When writing to a =.gpg= file, Spofy binds ~epa-file-select-keys~ to ~silent~ to suppress the interactive GPG recipient selection dialog; encryption uses ~epa-file-encrypt-to~ if set, or falls back to symmetric encryption.
 
 ** Playback
 :PROPERTIES:
@@ -163,7 +163,7 @@ The user option ~spofy-enable-tab-bar~ controls whether ~spofy-global-mode~ auto
 
 #+findex: spofy-authenticate
 
-The command ~spofy-authenticate~ initiates the Spotify OAuth2 authorization flow.  It starts a temporary HTTP server on ~spofy-redirect-port~, opens the user's default browser to Spotify's authorization page, and waits for the redirect callback.  Once the user grants access, Spofy exchanges the authorization code for access and refresh tokens, stores them in ~spofy-token-file~, and shuts down the temporary server.
+The command ~spofy-authenticate~ initiates the Spotify OAuth2 authorization flow.  It starts a temporary HTTP server on ~spofy-redirect-port~, opens the user's default browser to Spotify's authorization page, and waits for the redirect callback.  The server silently ignores non-OAuth requests (such as the browser's =favicon.ico= request) and only processes callbacks that carry the expected query parameters.  Once the user grants access, Spofy exchanges the authorization code for access and refresh tokens, stores them along with the expiry time in ~spofy-token-file~, and shuts down the temporary server.
 
 After successful authentication, Spofy runs ~spofy-authenticated-hook~.  You only need to authenticate once; subsequent sessions reuse the stored refresh token to obtain new access tokens automatically.
 
@@ -560,7 +560,7 @@ These functions are the building blocks for all of Spofy's features.  Advanced u
 #+findex: spofy-auth-access-token
 #+findex: spofy-auth-refresh-token
 
-The function ~spofy-auth-access-token~ returns the current OAuth2 access token, or ~nil~ if unavailable or expired.  If the token has expired and a refresh token is available, it automatically attempts a refresh before returning ~nil~.
+The function ~spofy-auth-access-token~ returns the current OAuth2 access token, or ~nil~ if unavailable or expired.  Because the token expiry is persisted to disk alongside the tokens, this function can determine after an Emacs restart whether the stored access token is still valid without contacting Spotify.  If the token has expired and a refresh token is available, it automatically attempts a refresh before returning ~nil~.
 
 The function ~spofy-auth-refresh-token~ explicitly uses the stored refresh token to obtain a new access token from Spotify.  It requires ~spofy-client-id~ and ~spofy-client-secret~ to be set, and signals an error if either is missing.  This is called automatically when needed, but can be invoked manually if you encounter authentication issues.
 

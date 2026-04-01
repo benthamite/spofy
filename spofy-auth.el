@@ -134,10 +134,12 @@ type, and a random state parameter."
 ;;;; Token storage
 
 (defun spofy-auth--persist-tokens ()
-  "Persist tokens to `spofy-token-file'."
+  "Persist tokens and expiry to `spofy-token-file'."
   (let ((data `((access-token . ,spofy-auth--access-token)
-                (refresh-token . ,spofy-auth--refresh-token)))
-        (file (expand-file-name spofy-token-file)))
+                (refresh-token . ,spofy-auth--refresh-token)
+                (token-expiry . ,spofy-auth--token-expiry)))
+        (file (expand-file-name spofy-token-file))
+        (epa-file-select-keys 'silent))
     (with-temp-file file
       (let ((print-length nil)
             (print-level nil))
@@ -165,6 +167,8 @@ Returns non-nil if tokens were found."
             (setq spofy-auth--access-token access))
           (when-let* ((refresh (alist-get 'refresh-token data)))
             (setq spofy-auth--refresh-token refresh))
+          (when-let* ((expiry (alist-get 'token-expiry data)))
+            (setq spofy-auth--token-expiry expiry))
           (and spofy-auth--access-token spofy-auth--refresh-token))))))
 
 ;;;; Token access
@@ -299,6 +303,9 @@ Parses the authorization code and state, verifies state, exchanges
 the code for tokens, and sends an HTTP response to the browser."
   (let ((params (spofy-auth--parse-callback request)))
     (cond
+     ((null params)
+      (spofy-auth--send-response proc 404 "Not found.")
+      nil)
      ((alist-get 'error params)
       (spofy-auth--send-response proc 400
                                   "Authentication failed. You can close this window.")
