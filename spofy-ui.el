@@ -72,6 +72,16 @@
   "Face for header areas in detail views."
   :group 'spofy-faces)
 
+(defface spofy-progress-filled
+  '((t :inherit success))
+  "Face for the filled portion of the progress bar."
+  :group 'spofy-faces)
+
+(defface spofy-progress-empty
+  '((t :inherit shadow))
+  "Face for the empty portion of the progress bar."
+  :group 'spofy-faces)
+
 (defface spofy-muted
   '((t :inherit shadow))
   "Face for secondary text such as duration and dates."
@@ -170,6 +180,14 @@ user they can press \\`m' to load more results."
       (when spofy-ui--next-page-url
         (goto-char (point-max))
         (insert (propertize "\n[m] Load more" 'face 'spofy-muted))))))
+
+(defun spofy-ui--after-tabulated-list-print (&rest _)
+  "Insert the pagination footer in Spofy tabulated-list buffers.
+Added as :after advice on `tabulated-list-print'."
+  (when (local-variable-p 'spofy-ui--next-page-url)
+    (spofy-ui-insert-pagination-footer)))
+
+(advice-add 'tabulated-list-print :after #'spofy-ui--after-tabulated-list-print)
 
 (provide 'spofy-ui)
 ;;; spofy-ui.el ends here
