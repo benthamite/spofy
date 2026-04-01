@@ -100,8 +100,12 @@ device, volume, track-id.")
 ;;;; Polling
 
 (defun spofy-player--poll ()
-  "Poll the Spotify player state and run hooks on changes."
-  (spofy-api-get "me/player" nil #'spofy-player--handle-poll-response))
+  "Poll the Spotify player state and run hooks on changes.
+Errors are caught unconditionally so that `debug-on-error' does not
+prevent the repeat timer from being rescheduled."
+  (condition-case err
+      (spofy-api-get "me/player" nil #'spofy-player--handle-poll-response)
+    (error (message "Spofy: poll error: %S" err))))
 
 (defun spofy-player--handle-poll-response (data)
   "Handle the poll response DATA.
