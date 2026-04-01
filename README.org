@@ -142,7 +142,7 @@ The user option ~spofy-tab-bar-max-length~ sets the maximum character length of 
 #+vindex: spofy-enable-mode-line
 #+vindex: spofy-enable-tab-bar
 
-The user option ~spofy-global-key~ sets the prefix key that ~spofy-global-mode~ binds to ~spofy-transient~.  It defaults to ~"C-c s"~.  Change this if the default conflicts with other bindings.
+The user option ~spofy-global-key~ sets the prefix key that ~spofy-global-mode~ binds to ~spofy-menu~.  It defaults to ~"C-c s"~.  Change this if the default conflicts with other bindings.
 
 The user option ~spofy-enable-mode-line~ controls whether ~spofy-global-mode~ automatically enables ~spofy-mode-line-mode~.  It defaults to ~t~.  Set it to ~nil~ if you prefer a clean mode line and want to access now-playing information only through the dashboard or transient popup.
 
@@ -190,7 +190,7 @@ The dashboard keymap provides these bindings:
 | =p= | ~spofy-play-pause~          |
 | =n= | ~spofy-next~                |
 | =b= | ~spofy-previous~            |
-=/=  | ~spofy-transient~           |
+=/=  | ~spofy-menu~           |
 | =g= | ~spofy-dashboard-refresh~   |
 | =q= | ~quit-window~               |
 
@@ -199,9 +199,9 @@ The dashboard keymap provides these bindings:
 :CUSTOM_ID: h:transient-popup
 :END:
 
-#+findex: spofy-transient
+#+findex: spofy-menu
 
-The command ~spofy-transient~ opens a transient popup that provides quick access to all Spofy commands from any buffer.  The popup header shows the currently playing track.  When ~spofy-global-mode~ is active, this command is bound to ~spofy-global-key~ (default =C-c s=).
+The command ~spofy-menu~ opens a transient popup that provides quick access to all Spofy commands from any buffer.  The popup header shows the currently playing track.  When ~spofy-global-mode~ is active, this command is bound to ~spofy-global-key~ (default =C-c s=).
 
 The popup is organized into groups:
 
@@ -222,7 +222,7 @@ A sub-transient for the library ([[#h:library-management][Library management]]) 
 
 The command ~spofy-global-mode~ toggles a global minor mode.  When enabled, it:
 
-- Binds ~spofy-global-key~ to ~spofy-transient~.
+- Binds ~spofy-global-key~ to ~spofy-menu~.
 - Starts player state polling.
 - Enables the mode-line display (if ~spofy-enable-mode-line~ is non-nil).
 

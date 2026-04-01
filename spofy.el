@@ -107,7 +107,7 @@
 
 (defcustom spofy-global-key "C-c s"
   "Prefix key for `spofy-global-mode'.
-When `spofy-global-mode' is enabled, this key opens `spofy-transient'."
+When `spofy-global-mode' is enabled, this key opens `spofy-menu'."
   :type 'string
   :group 'spofy)
 
@@ -128,7 +128,7 @@ When `spofy-global-mode' is enabled, this key opens `spofy-transient'."
     (define-key map (kbd "p")   #'spofy-play-pause)
     (define-key map (kbd "n")   #'spofy-next)
     (define-key map (kbd "b")   #'spofy-previous)
-    (define-key map (kbd "/")   #'spofy-transient)
+    (define-key map (kbd "/")   #'spofy-menu)
     (define-key map (kbd "g")   #'spofy-dashboard-refresh)
     (define-key map (kbd "q")   #'quit-window)
     map)
@@ -412,8 +412,8 @@ authentication, starts polling, and displays the dashboard buffer."
           (format "Spofy: %s %s — %s" icon (car track-info) (cdr track-info)))
       "Spofy: no track playing")))
 
-;;;###autoload (autoload 'spofy-transient "spofy" nil t)
-(transient-define-prefix spofy-transient ()
+;;;###autoload (autoload 'spofy-menu "spofy" nil t)
+(transient-define-prefix spofy-menu ()
   "Spofy command popup."
   [:description spofy--transient-description]
   ["Playback"
@@ -473,7 +473,7 @@ The actual binding is set up when the mode is enabled.")
 ;;;###autoload
 (define-minor-mode spofy-global-mode
   "Global minor mode for Spofy.
-When enabled, binds `spofy-global-key' to `spofy-transient', starts
+When enabled, binds `spofy-global-key' to `spofy-menu', starts
 polling, and optionally enables the mode-line display."
   :global t
   :group 'spofy
@@ -482,7 +482,7 @@ polling, and optionally enables the mode-line display."
       (progn
         ;; Set up keybinding
         (define-key spofy-global-mode-map
-                    (kbd spofy-global-key) #'spofy-transient)
+                    (kbd spofy-global-key) #'spofy-menu)
         ;; Start polling
         (require 'spofy-player)
         (unless (and (boundp 'spofy-player--timer) spofy-player--timer)
