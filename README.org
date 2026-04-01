@@ -606,7 +606,7 @@ The command ~consult-spofy-my-playlist~ fetches the user's own playlists with in
 
 The command ~consult-spofy-device~ fetches available playback devices with incremental narrowing, with Name and Type columns.  Selecting a device transfers playback to it.
 
-All six commands use ~consult--dynamic-collection~ for incremental search with synchronous API requests (via ~url-retrieve-synchronously~), as required by consult's dynamic collection contract.  Each candidate stores the full Spotify entity in a text property, making them compatible with the embark integration ([[#h:embark-integration][Embark integration]]).
+All six commands use ~consult--dynamic-collection~ for incremental search with synchronous API requests (via ~url-retrieve-synchronously~), as required by consult's dynamic collection contract.  Each candidate stores the full Spotify entity in a text property; the ~:lookup~ mechanism ensures the original propertized candidate is returned on selection, so the entity data is available for the action.  This makes them compatible with the embark integration ([[#h:embark-integration][Embark integration]]).
 
 * Embark integration
 :PROPERTIES:

@@ -233,7 +233,8 @@ FORMAT-FN is called on each result item to produce a candidate string."
            :prompt "Spofy track: "
            :category 'spofy-track
            :sort nil
-           :require-match t)))
+           :require-match t
+           :lookup #'consult--lookup-member)))
     (when-let* ((entity (spofy-consult--get-entity selected))
                 (uri (alist-get 'uri entity)))
       (spofy-play-track uri))))
@@ -254,7 +255,8 @@ FORMAT-FN is called on each result item to produce a candidate string."
            :prompt "Spofy album: "
            :category 'spofy-album
            :sort nil
-           :require-match t)))
+           :require-match t
+           :lookup #'consult--lookup-member)))
     (when-let* ((entity (spofy-consult--get-entity selected))
                 (album-id (alist-get 'id entity)))
       (spofy-view-album album-id))))
@@ -275,7 +277,8 @@ FORMAT-FN is called on each result item to produce a candidate string."
            :prompt "Spofy artist: "
            :category 'spofy-artist
            :sort nil
-           :require-match t)))
+           :require-match t
+           :lookup #'consult--lookup-member)))
     (when-let* ((entity (spofy-consult--get-entity selected))
                 (artist-id (alist-get 'id entity)))
       (spofy-view-artist artist-id))))
@@ -296,7 +299,8 @@ FORMAT-FN is called on each result item to produce a candidate string."
            :prompt "Spofy playlist: "
            :category 'spofy-playlist
            :sort nil
-           :require-match t)))
+           :require-match t
+           :lookup #'consult--lookup-member)))
     (when-let* ((entity (spofy-consult--get-entity selected))
                 (playlist-id (alist-get 'id entity)))
       (spofy-view-playlist playlist-id))))
@@ -327,7 +331,8 @@ Results are fetched once and cached for subsequent calls."
            :prompt "Spofy my playlist: "
            :category 'spofy-playlist
            :sort nil
-           :require-match t)))
+           :require-match t
+           :lookup #'consult--lookup-member)))
     (when-let* ((entity (spofy-consult--get-entity selected))
                 (playlist-id (alist-get 'id entity)))
       (spofy-view-playlist playlist-id))))
@@ -360,7 +365,8 @@ Results are fetched once and cached for subsequent calls."
            :prompt "Spofy device: "
            :category 'spofy-device
            :sort nil
-           :require-match t)))
+           :require-match t
+           :lookup #'consult--lookup-member)))
     (when-let* ((entity (spofy-consult--get-entity selected))
                 (device-id (alist-get 'id entity))
                 (device-name (alist-get 'name entity)))
