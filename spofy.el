@@ -422,21 +422,22 @@ authentication, starts polling, and displays the dashboard buffer."
     ("b" "Previous"      spofy-previous)
     ("f" "Seek forward"  spofy-seek-forward)
     ("r" "Seek backward" spofy-seek-backward)]
+   ["Search"
+    ("st" "Tracks"    spofy-search-tracks)
+    ("sa" "Albums"    spofy-search-albums)
+    ("sA" "Artists"   spofy-search-artists)
+    ("sp" "Playlists" spofy-search-playlists)]
    ["Browse"
-    ("/t" "Search tracks"    spofy-search-tracks)
-    ("/a" "Search albums"    spofy-search-albums)
-    ("/A" "Search artists"   spofy-search-artists)
-    ("/p" "Search playlists" spofy-search-playlists)
-    ("l"  "Library"          spofy--transient-library)
-    ("P"  "Playlists"        spofy-list-playlists)
-    ("d"  "Devices"          spofy-select-device)]
+    ("l"  "Library"   spofy--transient-library)
+    ("P"  "Playlists" spofy-list-playlists)
+    ("d"  "Devices"   spofy-select-device)]
    ["Volume"
     ("+" "Volume up"   spofy-volume-up :transient t)
     ("-" "Volume down" spofy-volume-down :transient t)
     ("v" "Set volume"  spofy-volume-set)
     ""
     "Mode"
-    ("s" "Toggle shuffle" spofy-toggle-shuffle)
+    ("S" "Toggle shuffle" spofy-toggle-shuffle)
     ("R" "Toggle repeat"  spofy-toggle-repeat)
     ""
     "Other"
