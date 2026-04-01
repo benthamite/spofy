@@ -32,6 +32,7 @@ The core capabilities are:
 - *Playlist management:* Full CRUD operations on playlists: create, rename, delete, add, remove, and reorder tracks ([[#h:playlist-management][Playlist management]]).
 - *Library management:* View and manage saved tracks and albums ([[#h:library-management][Library management]]).
 - *Mode-line display:* A configurable mode-line segment showing the currently playing track ([[#h:mode-line-display][Mode-line display]]).
+- *Tab-bar display:* A configurable tab-bar segment showing the currently playing track ([[#h:tab-bar-display][Tab-bar display]]).
 
 ** Getting started
 :PROPERTIES:
@@ -120,6 +121,18 @@ The user option ~spofy-mode-line-max-length~ sets the maximum character length o
 
 The user option ~spofy-mode-line-separator~ is the string inserted before the Spofy segment in the mode line.  It defaults to a single space.
 
+** Tab-bar
+:PROPERTIES:
+:CUSTOM_ID: h:user-options-tab-bar
+:END:
+
+#+vindex: spofy-tab-bar-format
+#+vindex: spofy-tab-bar-max-length
+
+The user option ~spofy-tab-bar-format~ is a format string that controls what the tab-bar segment displays.  It defaults to ~"%p %t — %a"~.  The same format specifiers as ~spofy-mode-line-format~ are supported ([[#h:user-options-mode-line][Mode-line]]).
+
+The user option ~spofy-tab-bar-max-length~ sets the maximum character length of the tab-bar string.  It defaults to ~50~.  Longer strings are truncated with an ellipsis.
+
 ** Global key and mode-line activation
 :PROPERTIES:
 :CUSTOM_ID: h:user-options-global
@@ -127,10 +140,13 @@ The user option ~spofy-mode-line-separator~ is the string inserted before the Sp
 
 #+vindex: spofy-global-key
 #+vindex: spofy-enable-mode-line
+#+vindex: spofy-enable-tab-bar
 
 The user option ~spofy-global-key~ sets the prefix key that ~spofy-global-mode~ binds to ~spofy-transient~.  It defaults to ~"C-c s"~.  Change this if the default conflicts with other bindings.
 
 The user option ~spofy-enable-mode-line~ controls whether ~spofy-global-mode~ automatically enables ~spofy-mode-line-mode~.  It defaults to ~t~.  Set it to ~nil~ if you prefer a clean mode line and want to access now-playing information only through the dashboard or transient popup.
+
+The user option ~spofy-enable-tab-bar~ controls whether ~spofy-global-mode~ automatically enables ~spofy-tab-bar-mode~.  It defaults to ~nil~.  Set it to ~t~ to display the currently playing track in the tab bar ([[#h:tab-bar-display][Tab-bar display]]).
 
 * Commands
 :PROPERTIES:
@@ -568,9 +584,10 @@ The function ~spofy-ui-truncate~ truncates a string to a given maximum display w
 #+findex: consult-spofy-album
 #+findex: consult-spofy-artist
 #+findex: consult-spofy-playlist
+#+findex: consult-spofy-my-playlist
 #+findex: consult-spofy-device
 
-The file =spofy-consult.el= provides five ~consult~ completion sources for searching and selecting Spotify entities from the minibuffer.  These require the =consult= package.
+The file =spofy-consult.el= provides six ~consult~ completion sources for searching and selecting Spotify entities from the minibuffer.  These require the =consult= package.
 
 The command ~consult-spofy-track~ lets you search for tracks with live narrowing as you type (debounced at 300ms to avoid excessive API calls).  Candidates are formatted as "Track — Artist (Album)".  Selecting a track plays it immediately.
 
@@ -578,11 +595,13 @@ The command ~consult-spofy-album~ provides the same experience for albums, forma
 
 The command ~consult-spofy-artist~ searches artists, formatted as "Artist (Genres)".  Selecting an artist opens the artist view ([[#h:artist-view][Artist view]]).
 
-The command ~consult-spofy-playlist~ fetches the user's playlists (this is not a search — it presents the full list) formatted as "Playlist (N tracks)".  Selecting a playlist opens the playlist detail view ([[#h:playlist-detail-view][Playlist detail view]]).
+The command ~consult-spofy-playlist~ searches all Spotify playlists with live narrowing, formatted as "Playlist (N tracks)".  Selecting a playlist opens the playlist detail view ([[#h:playlist-detail-view][Playlist detail view]]).
+
+The command ~consult-spofy-my-playlist~ fetches the user's own playlists (this is not a search — it presents the full list) formatted as "Playlist (N tracks)".  Selecting a playlist opens the playlist detail view.
 
 The command ~consult-spofy-device~ fetches available playback devices, formatted as "Device (Type)".  Selecting a device transfers playback to it.
 
-All five commands store the full Spotify entity in a text property on each candidate, making them compatible with the embark integration ([[#h:embark-integration][Embark integration]]).
+All six commands store the full Spotify entity in a text property on each candidate, making them compatible with the embark integration ([[#h:embark-integration][Embark integration]]).
 
 * Embark integration
 :PROPERTIES:
@@ -672,6 +691,19 @@ The command ~spofy-mode-line-mode~ toggles a global minor mode that adds a Spofy
 When enabled, the mode hooks into ~spofy-player-state-changed-hook~ to rebuild the mode-line string whenever the player state changes, then calls ~force-mode-line-update~ to refresh all frames.
 
 The mode is enabled automatically when ~spofy-global-mode~ is active and ~spofy-enable-mode-line~ is non-nil ([[#h:user-options-global][Global options]]).
+
+* Tab-bar display
+:PROPERTIES:
+:CUSTOM_ID: h:tab-bar-display
+:END:
+
+#+findex: spofy-tab-bar-mode
+
+The command ~spofy-tab-bar-mode~ toggles a global minor mode that adds a Spofy segment to the tab bar.  The segment shows the currently playing track formatted according to ~spofy-tab-bar-format~ ([[#h:user-options-tab-bar][Tab-bar options]]).
+
+When enabled, the mode appends a ~tab-bar-format-spofy~ entry to ~tab-bar-format~ and hooks into ~spofy-player-state-changed-hook~ to rebuild the tab-bar string whenever the player state changes.
+
+The mode is enabled automatically when ~spofy-global-mode~ is active and ~spofy-enable-tab-bar~ is non-nil ([[#h:user-options-global][Global options]]).
 
 * Indices
 :PROPERTIES:

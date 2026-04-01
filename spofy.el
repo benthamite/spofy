@@ -93,6 +93,9 @@
 ;; spofy-mode-line
 (declare-function spofy-mode-line-mode "spofy-mode-line" (&optional arg))
 
+;; spofy-tab-bar
+(declare-function spofy-tab-bar-mode "spofy-tab-bar" (&optional arg))
+
 ;;;; Variables from other modules (for byte-compiler)
 
 (defvar spofy-player--current-state)
@@ -110,6 +113,11 @@ When `spofy-global-mode' is enabled, this key opens `spofy-transient'."
 
 (defcustom spofy-enable-mode-line t
   "Whether to enable `spofy-mode-line-mode' when `spofy-global-mode' is on."
+  :type 'boolean
+  :group 'spofy)
+
+(defcustom spofy-enable-tab-bar nil
+  "Whether to enable `spofy-tab-bar-mode' when `spofy-global-mode' is on."
   :type 'boolean
   :group 'spofy)
 
@@ -482,14 +490,21 @@ polling, and optionally enables the mode-line display."
         ;; Enable mode-line if configured
         (when spofy-enable-mode-line
           (require 'spofy-mode-line)
-          (spofy-mode-line-mode 1)))
+          (spofy-mode-line-mode 1))
+        ;; Enable tab-bar if configured
+        (when spofy-enable-tab-bar
+          (require 'spofy-tab-bar)
+          (spofy-tab-bar-mode 1)))
     ;; Disable
     (define-key spofy-global-mode-map (kbd spofy-global-key) nil)
     (require 'spofy-player)
     (spofy-player-stop-polling)
     (when (and spofy-enable-mode-line
                (fboundp 'spofy-mode-line-mode))
-      (spofy-mode-line-mode -1))))
+      (spofy-mode-line-mode -1))
+    (when (and spofy-enable-tab-bar
+               (fboundp 'spofy-tab-bar-mode))
+      (spofy-tab-bar-mode -1))))
 
 (provide 'spofy)
 ;;; spofy.el ends here

@@ -180,10 +180,29 @@ by `consult--dynamic-collection'."
                 (artist-id (alist-get 'id entity)))
       (spofy-view-artist artist-id))))
 
-;;;; Playlist source (synchronous -- fetches user's playlists)
+;;;; Playlist source
 
 ;;;###autoload
 (defun consult-spofy-playlist ()
+  "Search Spotify playlists and open the selected one."
+  (interactive)
+  (let* ((selected
+          (consult--read
+           (consult--dynamic-collection
+            (spofy-consult--search-collection
+             "playlist" #'spofy-consult--format-playlist)
+            :debounce 0.3
+            :min-input 1)
+           :prompt "Spofy playlist: "
+           :category 'spofy-playlist
+           :sort nil
+           :require-match t)))
+    (when-let* ((entity (spofy-consult--get-entity selected))
+                (playlist-id (alist-get 'id entity)))
+      (spofy-view-playlist playlist-id))))
+
+;;;###autoload
+(defun consult-spofy-my-playlist ()
   "Pick from the user's Spotify playlists and open the selected one."
   (interactive)
   (spofy-api-get
@@ -195,7 +214,7 @@ by `consult--dynamic-collection'."
                                   (append items nil))))
             (selected (consult--read
                        candidates
-                       :prompt "Spofy playlist: "
+                       :prompt "Spofy my playlist: "
                        :category 'spofy-playlist
                        :sort nil
                        :require-match t)))
