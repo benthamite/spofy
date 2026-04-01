@@ -40,6 +40,7 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'transient)
 (require 'spofy-ui)
 
@@ -351,7 +352,7 @@ Assumes the current buffer is in `spofy-dashboard-mode'."
 ;;;;; Dashboard: interactive commands
 
 ;;;###autoload
-(defun spofy ()
+(cl-defun spofy ()
   "Open the Spofy dashboard.
 The main entry point for the Spofy Spotify client.  Ensures
 authentication, starts polling, and displays the dashboard buffer."
