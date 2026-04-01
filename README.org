@@ -203,15 +203,13 @@ The dashboard keymap provides these bindings:
 
 The command ~spofy-menu~ opens a transient popup that provides quick access to all Spofy commands from any buffer.  The popup header shows the currently playing track.  When ~spofy-global-mode~ is active, this command is bound to ~spofy-global-key~ (default =C-c s=).
 
-The popup is organized into groups:
+The popup is organized into three columns:
 
 - *Playback:* play/pause, next, previous, seek forward, seek backward.
-- *Volume:* volume up, volume down, set volume.
-- *Mode:* toggle shuffle, toggle repeat.
 - *Browse:* search tracks/albums/artists/playlists, library, playlists list, device selection.
-- *Other:* dashboard, quit.
+- *Volume, Mode & Other:* volume controls, shuffle/repeat toggles, dashboard, quit.
 
-A sub-transient for the library ([[#h:library-management][Library management]]) is available from the browse group.
+A sub-transient for the library ([[#h:library-management][Library management]]) is available from the browse column.
 
 ** Global minor mode
 :PROPERTIES:

@@ -416,30 +416,32 @@ authentication, starts polling, and displays the dashboard buffer."
 (transient-define-prefix spofy-menu ()
   "Spofy command popup."
   [:description spofy--transient-description]
-  ["Playback"
-   ("p" "Play/Pause"    spofy-play-pause)
-   ("n" "Next"          spofy-next)
-   ("b" "Previous"      spofy-previous)
-   ("f" "Seek forward"  spofy-seek-forward)
-   ("r" "Seek backward" spofy-seek-backward)]
-  ["Volume"
-   ("+" "Volume up"   spofy-volume-up)
-   ("-" "Volume down" spofy-volume-down)
-   ("v" "Set volume"  spofy-volume-set)]
-  ["Mode"
-   ("s" "Toggle shuffle" spofy-toggle-shuffle)
-   ("R" "Toggle repeat"  spofy-toggle-repeat)]
-  ["Browse"
-   ("/t" "Search tracks"    spofy-search-tracks)
-   ("/a" "Search albums"    spofy-search-albums)
-   ("/A" "Search artists"   spofy-search-artists)
-   ("/p" "Search playlists" spofy-search-playlists)
-   ("l"  "Library"          spofy--transient-library)
-   ("P"  "Playlists"        spofy-list-playlists)
-   ("d"  "Devices"          spofy-select-device)]
-  ["Other"
-   ("D" "Dashboard" spofy)
-   ("q" "Quit"      transient-quit-one)])
+  [["Playback"
+    ("p" "Play/Pause"    spofy-play-pause)
+    ("n" "Next"          spofy-next)
+    ("b" "Previous"      spofy-previous)
+    ("f" "Seek forward"  spofy-seek-forward)
+    ("r" "Seek backward" spofy-seek-backward)]
+   ["Browse"
+    ("/t" "Search tracks"    spofy-search-tracks)
+    ("/a" "Search albums"    spofy-search-albums)
+    ("/A" "Search artists"   spofy-search-artists)
+    ("/p" "Search playlists" spofy-search-playlists)
+    ("l"  "Library"          spofy--transient-library)
+    ("P"  "Playlists"        spofy-list-playlists)
+    ("d"  "Devices"          spofy-select-device)]
+   ["Volume"
+    ("+" "Volume up"   spofy-volume-up)
+    ("-" "Volume down" spofy-volume-down)
+    ("v" "Set volume"  spofy-volume-set)
+    ""
+    "Mode"
+    ("s" "Toggle shuffle" spofy-toggle-shuffle)
+    ("R" "Toggle repeat"  spofy-toggle-repeat)
+    ""
+    "Other"
+    ("D" "Dashboard" spofy)
+    ("q" "Quit"      transient-quit-one)]])
 
 ;;;###autoload (autoload 'spofy--transient-library "spofy" nil t)
 (transient-define-prefix spofy--transient-library ()
