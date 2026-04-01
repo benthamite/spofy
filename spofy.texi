@@ -1,0 +1,987 @@
+\input texinfo    @c -*- texinfo -*-
+@c %**start of header
+@setfilename spofy.info
+@settitle Spofy: Spotify player for Emacs
+@documentencoding UTF-8
+@documentlanguage en
+@c %**end of header
+
+@dircategory Emacs misc features
+@direntry
+* Spofy: (spofy).       Spotify player for Emacs.
+@end direntry
+
+@finalout
+@titlepage
+@title Spofy: Spotify player for Emacs
+@author Pablo Stafforini (@email{pablo@@stafforini.com})
+@end titlepage
+
+@contents
+
+@ifnottex
+@node Top
+@top Spofy: Spotify player for Emacs
+
+This manual describes the features and customization options of @samp{spofy}, a Spotify player for Emacs.
+
+@end ifnottex
+
+@menu
+* Overview::
+* User options::
+* Commands::
+* Functions::
+* Consult integration::
+* Embark integration::
+* Org-mode integration::
+* Faces::
+* Hooks::
+* Mode-line display::
+* Tab-bar display::
+* Indices::
+
+@detailmenu
+--- The Detailed Node Listing ---
+
+Overview
+
+* Getting started::
+
+User options
+
+* Authentication: Authentication (1). 
+* Playback::
+* Mode-line::
+* Tab-bar::
+* Global key and mode-line activation::
+
+Commands
+
+* Authentication::
+* Dashboard and global control::
+* Transient popup::
+* Global minor mode::
+* Playback control::
+* Polling::
+* Device management::
+* Search::
+* Browsing::
+* Playlist management::
+* Library management::
+* Cache management::
+
+Search
+
+* Navigating search results::
+
+Browsing
+
+* Album view::
+* Artist view::
+* Playlist detail view::
+
+Functions
+
+* Player state accessors::
+* Entity access in buffers::
+* API client::
+* Authentication helpers::
+* Formatting utilities::
+
+Indices
+
+* Function index::
+* Variable index::
+
+@end detailmenu
+@end menu
+
+@node Overview
+@chapter Overview
+
+Spofy is a full-featured Spotify client that runs entirely inside Emacs.  It communicates with the @uref{https://developer.spotify.com/documentation/web-api, Spotify Web API} to provide playback control, search, browsing, playlist management, and library management without leaving the editor.
+
+The package targets Emacs 30 or later and depends on the @samp{transient} library (available on GNU ELPA) for its command popup.  Optional integrations are provided for @samp{consult} (minibuffer completion), @samp{embark} (contextual actions), and @samp{org-mode} (link storage and export).
+
+Spofy is organized as a multi-file package.  The main entry point is the @samp{spofy} command, which opens a dashboard buffer showing the current track, recently played tracks, and the user's playlists.  From there, the user can search for content, browse albums and artists, manage playlists, and control playback.  A transient popup (@ref{Transient popup}) provides quick access to all commands from any buffer.
+
+The core capabilities are:
+
+@itemize
+@item
+@strong{Authentication:} OAuth2 authorization code flow with a local HTTP callback server and persistent encrypted token storage (@ref{Authentication}).
+@item
+@strong{Playback control:} Play, pause, skip, seek, adjust volume, toggle shuffle and repeat.  Timer-based polling keeps the UI in sync with the player state (@ref{Playback control}).
+@item
+@strong{Search:} Dedicated commands for searching tracks, albums, artists, and playlists, each displaying results in a @code{tabulated-list} buffer (@ref{Search}).
+@item
+@strong{Browsing:} Detail views for albums, artists, and playlists with contextual keybindings (@ref{Browsing}).
+@item
+@strong{Playlist management:} Full CRUD operations on playlists: create, rename, delete, add, remove, and reorder tracks (@ref{Playlist management}).
+@item
+@strong{Library management:} View and manage saved tracks and albums (@ref{Library management}).
+@item
+@strong{Mode-line display:} A configurable mode-line segment showing the currently playing track (@ref{Mode-line display}).
+@item
+@strong{Tab-bar display:} A configurable tab-bar segment showing the currently playing track (@ref{Tab-bar display}).
+@end itemize
+
+@menu
+* Getting started::
+@end menu
+
+@node Getting started
+@section Getting started
+
+Before using Spofy, you must register a Spotify application:
+
+@enumerate
+@item
+Go to the @uref{https://developer.spotify.com/dashboard, Spotify Developer Dashboard} and create a new application.
+@item
+In the application settings, add @samp{http://127.0.0.1:8080/spofy/callback} as a redirect URI (adjust the port if you change @code{spofy-redirect-port}).
+@item
+Note the Client ID and Client Secret.
+@end enumerate
+
+Then configure Spofy in your init file:
+
+@lisp
+(setq spofy-client-id "your-client-id")
+(setq spofy-client-secret "your-client-secret")
+@end lisp
+
+Run @samp{M-x spofy-authenticate} to authorize Spofy with your Spotify account.  This opens your browser to the Spotify authorization page.  After granting access, the browser redirects to the local server and Spofy stores the tokens in @code{spofy-token-file} (defaults to @samp{spofy-tokens.gpg} in the user Emacs directory, encrypted via EasyPG).  Subsequent sessions reuse the stored tokens automatically.
+
+Once authenticated, run @samp{M-x spofy} to open the dashboard.
+
+@node User options
+@chapter User options
+
+@menu
+* Authentication: Authentication (1). 
+* Playback::
+* Mode-line::
+* Tab-bar::
+* Global key and mode-line activation::
+@end menu
+
+@node Authentication (1)
+@section Authentication
+
+@vindex spofy-client-id
+@vindex spofy-client-secret
+@vindex spofy-redirect-port
+@vindex spofy-token-file
+
+The user option @code{spofy-client-id} holds the Client ID of your registered Spotify application.  It defaults to @code{nil}.  Without this value, Spofy cannot communicate with the Spotify API@.  Obtain it from the Spotify Developer Dashboard (@ref{Getting started}).
+
+The user option @code{spofy-client-secret} holds the Client Secret of your registered Spotify application.  It defaults to @code{nil}.  Like the client ID, this is required for the OAuth2 token exchange.
+
+The user option @code{spofy-redirect-port} controls the port on which Spofy's temporary OAuth2 callback server listens.  It defaults to @code{8080}.  Change this if port 8080 is already in use on your machine.  The redirect URI registered in the Spotify Developer Dashboard must match the port you configure here.
+
+The user option @code{spofy-token-file} specifies where Spofy stores OAuth tokens.  It defaults to @samp{spofy-tokens.gpg} in the user Emacs directory.  The @samp{.gpg} extension causes Emacs to encrypt the file via EasyPG; use a plain @samp{.el} extension to store tokens unencrypted.
+
+@node Playback
+@section Playback
+
+@vindex spofy-poll-interval
+@vindex spofy-seek-seconds
+@vindex spofy-volume-step
+@vindex spofy-no-device-action
+
+The user option @code{spofy-poll-interval} sets the number of seconds between player state polls.  It defaults to @code{5}.  Lower values make the UI more responsive to changes (e.g. track transitions) at the cost of more API requests.  The Spotify API does not provide push notifications, so polling is the only way to detect state changes.
+
+The user option @code{spofy-seek-seconds} controls how many seconds @code{spofy-seek-forward} and @code{spofy-seek-backward} jump.  It defaults to @code{10}.
+
+The user option @code{spofy-volume-step} sets the percentage increment for @code{spofy-volume-up} and @code{spofy-volume-down}.  It defaults to @code{5}.  Valid volume values range from 0 to 100.
+
+The user option @code{spofy-no-device-action} determines what happens when Spofy tries to control playback but no active Spotify device is found.  It defaults to the symbol @code{prompt}, which displays a message asking the user to open Spotify on any device.  Setting it to @code{launch} makes Spofy attempt to start the local Spotify desktop application automatically (using @samp{open -a Spotify} on macOS or @samp{spotify} on Linux).
+
+@node Mode-line
+@section Mode-line
+
+@vindex spofy-mode-line-format
+@vindex spofy-mode-line-max-length
+@vindex spofy-mode-line-separator
+
+The user option @code{spofy-mode-line-format} is a format string that controls what the mode-line segment displays.  It defaults to @code{"▶ %t — %a"}.  The following specifiers are available:
+
+@multitable {aaaaaaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+@headitem Specifier
+@tab Meaning
+@item @samp{%t}
+@tab Track name
+@item @samp{%a}
+@tab Artist name
+@item @samp{%b}
+@tab Album name
+@item @samp{%p}
+@tab Play/pause icon (▶ or ⏸)
+@item @samp{%s}
+@tab Shuffle indicator (🔀 when on, empty when off)
+@item @samp{%r}
+@tab Repeat indicator (🔁 for context, 🔂 for track, empty)
+@end multitable
+
+The user option @code{spofy-mode-line-max-length} sets the maximum character length of the mode-line string.  It defaults to @code{40}.  Longer strings are truncated with an ellipsis.  Increase this if you have a wide frame and want to see more of the track and artist names.
+
+The user option @code{spofy-mode-line-separator} is the string inserted before the Spofy segment in the mode line.  It defaults to a single space.
+
+@node Tab-bar
+@section Tab-bar
+
+@vindex spofy-tab-bar-format
+@vindex spofy-tab-bar-max-length
+
+The user option @code{spofy-tab-bar-format} is a format string that controls what the tab-bar segment displays.  It defaults to @code{"%p %t — %a"}.  The same format specifiers as @code{spofy-mode-line-format} are supported (@ref{Mode-line}).
+
+The user option @code{spofy-tab-bar-max-length} sets the maximum character length of the tab-bar string.  It defaults to @code{50}.  Longer strings are truncated with an ellipsis.  Set it to @code{nil} to disable truncation entirely.
+
+@node Global key and mode-line activation
+@section Global key and mode-line activation
+
+@vindex spofy-global-key
+@vindex spofy-enable-mode-line
+@vindex spofy-enable-tab-bar
+
+The user option @code{spofy-global-key} sets the prefix key that @code{spofy-global-mode} binds to @code{spofy-menu}.  It defaults to @code{"C-c s"}.  Change this if the default conflicts with other bindings.
+
+The user option @code{spofy-enable-mode-line} controls whether @code{spofy-global-mode} automatically enables @code{spofy-mode-line-mode}.  It defaults to @code{t}.  Set it to @code{nil} if you prefer a clean mode line and want to access now-playing information only through the dashboard or transient popup.
+
+The user option @code{spofy-enable-tab-bar} controls whether @code{spofy-global-mode} automatically enables @code{spofy-tab-bar-mode}.  It defaults to @code{nil}.  Set it to @code{t} to display the currently playing track in the tab bar (@ref{Tab-bar display}).
+
+@node Commands
+@chapter Commands
+
+@menu
+* Authentication::
+* Dashboard and global control::
+* Transient popup::
+* Global minor mode::
+* Playback control::
+* Polling::
+* Device management::
+* Search::
+* Browsing::
+* Playlist management::
+* Library management::
+* Cache management::
+@end menu
+
+@node Authentication
+@section Authentication
+
+@findex spofy-authenticate
+
+The command @code{spofy-authenticate} initiates the Spotify OAuth2 authorization flow.  It starts a temporary HTTP server on @code{spofy-redirect-port}, opens the user's default browser to Spotify's authorization page, and waits for the redirect callback.  Once the user grants access, Spofy exchanges the authorization code for access and refresh tokens, stores them in @code{spofy-token-file}, and shuts down the temporary server.
+
+After successful authentication, Spofy runs @code{spofy-authenticated-hook}.  You only need to authenticate once; subsequent sessions reuse the stored refresh token to obtain new access tokens automatically.
+
+@node Dashboard and global control
+@section Dashboard and global control
+
+@findex spofy
+@findex spofy-dashboard-refresh
+@findex spofy-stop
+
+The command @code{spofy} is the main entry point.  It ensures that the user is authenticated (prompting if not), starts player state polling, and opens the @samp{*Spofy*} dashboard buffer.  The dashboard displays three sections:
+
+@enumerate
+@item
+@strong{Now playing:} the current track name, artist, album, a text progress bar, and playback state indicators (play/pause, shuffle, repeat).
+@item
+@strong{Recently played:} the last 10 tracks, each a clickable button that replays the track.
+@item
+@strong{Your playlists:} the user's first 10 playlists, each a clickable button that opens the playlist detail view.  A ``View all playlists@dots{}'' link at the bottom opens the full playlists list.
+@end enumerate
+
+The now-playing section refreshes automatically when the player state changes.  The command @code{spofy-dashboard-refresh} forces a full refresh of the entire dashboard.
+
+The command @code{spofy-stop} stops player state polling and disables @code{spofy-global-mode}.  Use it when you are done with Spofy and want to stop all background activity.
+
+The dashboard keymap provides these bindings:
+
+@multitable {aaa} {aaaaaaaaaaaaaaaaaa}
+@headitem Key
+@tab Command
+@item @samp{p}
+@tab @code{spofy-play-pause}
+@item @samp{n}
+@tab @code{spofy-next}
+@item @samp{b}
+@tab @code{spofy-previous}
+@end multitable
+@samp{/}  | @code{spofy-menu}           |
+@multitable {aaa} {aaaaaaaaaaaaaaaaaaaaaaaaa}
+@item @samp{g}
+@tab @code{spofy-dashboard-refresh}
+@item @samp{q}
+@tab @code{quit-window}
+@end multitable
+
+@node Transient popup
+@section Transient popup
+
+@findex spofy-menu
+
+The command @code{spofy-menu} opens a transient popup that provides quick access to all Spofy commands from any buffer.  The popup header shows the currently playing track.  When @code{spofy-global-mode} is active, this command is bound to @code{spofy-global-key} (default @samp{C-c s}).
+
+The popup is organized into three columns:
+
+@itemize
+@item
+@strong{Playback:} play/pause, next, previous, seek forward, seek backward.
+@item
+@strong{Browse:} search tracks/albums/artists/playlists, library, playlists list, device selection.
+@item
+@strong{Volume, Mode & Other:} volume controls (volume up/down keep the menu open), shuffle/repeat toggles, dashboard, quit.
+@end itemize
+
+A sub-transient for the library (@ref{Library management}) is available from the browse column.
+
+@node Global minor mode
+@section Global minor mode
+
+@findex spofy-global-mode
+
+The command @code{spofy-global-mode} toggles a global minor mode.  When enabled, it:
+
+@itemize
+@item
+Binds @code{spofy-global-key} to @code{spofy-menu}.
+@item
+Starts player state polling.
+@item
+Enables the mode-line display (if @code{spofy-enable-mode-line} is non-nil).
+@end itemize
+
+When disabled, it reverses all of these effects.  The @code{spofy} command enables this mode automatically.
+
+@node Playback control
+@section Playback control
+
+@findex spofy-play-pause
+@findex spofy-next
+@findex spofy-previous
+@findex spofy-seek-forward
+@findex spofy-seek-backward
+@findex spofy-volume-up
+@findex spofy-volume-down
+@findex spofy-volume-set
+@findex spofy-toggle-shuffle
+@findex spofy-toggle-repeat
+@findex spofy-play-track
+@findex spofy-play-context
+
+The command @code{spofy-play-pause} toggles playback between playing and paused.  It checks the current state and sends the appropriate API call.
+
+The commands @code{spofy-next} and @code{spofy-previous} skip to the next or previous track, respectively.
+
+The commands @code{spofy-seek-forward} and @code{spofy-seek-backward} move the playback position by @code{spofy-seek-seconds} seconds (@ref{Playback, , Playback options}).
+
+The commands @code{spofy-volume-up} and @code{spofy-volume-down} adjust the volume by @code{spofy-volume-step} percent.  The command @code{spofy-volume-set} prompts for an exact volume level between 0 and 100.
+
+The command @code{spofy-toggle-shuffle} toggles shuffle mode on or off.  The command @code{spofy-toggle-repeat} cycles through three repeat states: off, context (repeat the current album/playlist), and track (repeat the current track).
+
+The command @code{spofy-play-track} plays a specific track by its Spotify URI@.  If an optional context URI is provided (an album or playlist URI), playback starts within that context at the specified track.  The command @code{spofy-play-context} plays an entire context (album, playlist, or artist) from the beginning.  Both commands are used internally by the browse and search interfaces.
+
+@node Polling
+@section Polling
+
+@findex spofy-player-start-polling
+@findex spofy-player-stop-polling
+
+The command @code{spofy-player-start-polling} starts a timer that polls the Spotify player state at @code{spofy-poll-interval} second intervals.  Polling is necessary because the Spotify Web API does not support push notifications.  When the player state changes, Spofy runs @code{spofy-player-state-changed-hook}.  When the track changes specifically, it also runs @code{spofy-player-track-changed-hook}.  When the API reports no active player session (e.g. playback ended or the device went idle), Spofy clears the player state and runs @code{spofy-player-state-changed-hook} so that the mode line and tab bar reflect that nothing is playing.  Polling errors are caught unconditionally (even when @code{debug-on-error} is non-nil) to prevent them from stalling the repeat timer.
+
+The command @code{spofy-player-stop-polling} cancels the polling timer.  Polling is started automatically by the @code{spofy} command and @code{spofy-global-mode}, and stopped by @code{spofy-stop}.
+
+@node Device management
+@section Device management
+
+@findex spofy-select-device
+
+The Spotify Web API can control playback on any device logged into the user's account: desktop apps, mobile phones, web players, smart speakers, and more.  The command @code{spofy-select-device} fetches the list of available devices, presents them in a @code{completing-read} prompt, and transfers playback to the selected device.
+
+When no active device is found, Spofy's behavior depends on @code{spofy-no-device-action} (@ref{Playback, , Playback options}).
+
+@node Search
+@section Search
+
+@findex spofy-search-tracks
+@findex spofy-search-albums
+@findex spofy-search-artists
+@findex spofy-search-playlists
+
+Spofy provides four search commands, each targeting a specific entity type:
+
+@itemize
+@item
+@code{spofy-search-tracks} searches for matching tracks.
+@item
+@code{spofy-search-albums} searches for matching albums.
+@item
+@code{spofy-search-artists} searches for matching artists.
+@item
+@code{spofy-search-playlists} searches for matching playlists.
+@end itemize
+
+When @code{spofy-consult} is loaded, these commands use incremental search via @code{consult--dynamic-collection}: the minibuffer appears immediately and candidates update live as you type.  Without @code{spofy-consult}, they fall back to prompting for a query string and displaying results in a tabulated list.
+
+Each command creates a @samp{*Spofy Search: TYPE*} buffer using @code{tabulated-list-mode}.  The columns vary by entity type:
+
+@multitable {aaaaaaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+@headitem Type
+@tab Columns
+@item Tracks
+@tab Play indicator, Name, Artist(s), Album, Duration
+@item Albums
+@tab Name, Artist(s), Year, Tracks
+@item Artists
+@tab Name, Genres, Followers
+@item Playlists
+@tab Name, Owner, Tracks, Public
+@end multitable
+
+If the currently playing track appears in the search results, it is highlighted with the @code{spofy-playing} face and prefixed with a ▶ icon.
+
+@menu
+* Navigating search results::
+@end menu
+
+@node Navigating search results
+@subsection Navigating search results
+
+@findex spofy-search-play-item
+@findex spofy-search-view-album
+@findex spofy-search-view-artist
+@findex spofy-search-add-to-playlist
+@findex spofy-search-save
+@findex spofy-search-unsave
+@findex spofy-search-refresh
+@findex spofy-search-load-more
+
+All search result buffers share the @code{spofy-search-mode} keymap:
+
+@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+@headitem Key
+@tab Command
+@tab Action
+@item @samp{RET}
+@tab @code{spofy-search-play-item}
+@tab Play the item at point
+@item @samp{a}
+@tab @code{spofy-search-view-album}
+@tab View album (@ref{Album view})
+@item @samp{A}
+@tab @code{spofy-search-view-artist}
+@tab View artist (@ref{Artist view})
+@item @samp{p}
+@tab @code{spofy-search-add-to-playlist}
+@tab Add track to a playlist
+@item @samp{s}
+@tab @code{spofy-search-save}
+@tab Save item to library
+@item @samp{S}
+@tab @code{spofy-search-unsave}
+@tab Remove item from library
+@item @samp{g}
+@tab @code{spofy-search-refresh}
+@tab Re-run the search
+@item @samp{m}
+@tab @code{spofy-search-load-more}
+@tab Load the next page of results
+@item @samp{q}
+@tab @code{quit-window}
+@tab Close the buffer
+@end multitable
+
+The Spotify API returns results in pages of 20 items.  The command @code{spofy-search-load-more} fetches the next page and appends it to the existing results.
+
+@node Browsing
+@section Browsing
+
+@menu
+* Album view::
+* Artist view::
+* Playlist detail view::
+@end menu
+
+@node Album view
+@subsection Album view
+
+@findex spofy-view-album
+
+The command @code{spofy-view-album} displays the tracks of a Spotify album in a @samp{*Spofy Album: NAME*} buffer.  The buffer has a header showing the album name, artist, year, and total track count.  Tracks are listed with their track number, name, artist(s), and duration.
+
+@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaa}
+@headitem Key
+@tab Command
+@tab Action
+@item @samp{RET}
+@tab @code{spofy-album-play-track}
+@tab Play track in album context
+@item @samp{a}
+@tab @code{spofy-album-play}
+@tab Play the entire album
+@item @samp{A}
+@tab @code{spofy-album-view-artist}
+@tab View the artist
+@item @samp{s}
+@tab @code{spofy-album-save}
+@tab Save album to library
+@item @samp{g}
+@tab @code{spofy-album-refresh}
+@tab Refresh
+@item @samp{m}
+@tab @code{spofy-album-load-more}
+@tab Load more tracks
+@item @samp{q}
+@tab @code{quit-window}
+@tab Close
+@end multitable
+
+@node Artist view
+@subsection Artist view
+
+@findex spofy-view-artist
+@findex spofy-view-artist-top-tracks
+
+The command @code{spofy-view-artist} displays an artist's albums in a @samp{*Spofy Artist: NAME*} buffer.  The header shows the artist name, genres, and follower count.  Albums are listed with their name, year, type (album or single), and track count.
+
+@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+@headitem Key
+@tab Command
+@tab Action
+@item @samp{RET}
+@tab @code{spofy-artist-view-album}
+@tab View album (@ref{Album view})
+@item @samp{t}
+@tab @code{spofy-artist-top-tracks}
+@tab View top tracks
+@item @samp{a}
+@tab @code{spofy-artist-play-album}
+@tab Play the album at point
+@item @samp{g}
+@tab @code{spofy-artist-refresh}
+@tab Refresh
+@item @samp{m}
+@tab @code{spofy-artist-load-more}
+@tab Load more albums
+@item @samp{q}
+@tab @code{quit-window}
+@tab Close
+@end multitable
+
+The function @code{spofy-view-artist-top-tracks} fetches the artist's top tracks (as determined by Spotify's algorithm) and displays them in a @samp{*Spofy Top Tracks: ARTIST*} buffer.  This buffer uses the same track columns as search results (@ref{Search}).
+
+@node Playlist detail view
+@subsection Playlist detail view
+
+@findex spofy-view-playlist
+
+The command @code{spofy-view-playlist} displays the tracks of a playlist in a @samp{*Spofy Playlist: NAME*} buffer.  The header shows the playlist name, owner, description, and total track count.  Columns include the track name, artist(s), album, duration, who added the track, and the date it was added.
+
+@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+@headitem Key
+@tab Command
+@tab Action
+@item @samp{RET}
+@tab @code{spofy-playlist-view-play-track}
+@tab Play track in playlist context
+@item @samp{a}
+@tab @code{spofy-playlist-view-album}
+@tab View album
+@item @samp{A}
+@tab @code{spofy-playlist-view-artist}
+@tab View artist
+@item @samp{d}
+@tab @code{spofy-playlist-view-remove-track}
+@tab Remove track from playlist
+@item @samp{s}
+@tab @code{spofy-playlist-view-save-track}
+@tab Save track to library
+@item @samp{g}
+@tab @code{spofy-playlist-view-refresh}
+@tab Refresh
+@item @samp{m}
+@tab @code{spofy-playlist-view-load-more}
+@tab Load more tracks
+@item @samp{q}
+@tab @code{quit-window}
+@tab Close
+@end multitable
+
+@node Playlist management
+@section Playlist management
+
+@findex spofy-list-playlists
+@findex spofy-create-playlist
+@findex spofy-rename-playlist
+@findex spofy-delete-playlist
+@findex spofy-playlist-add-track
+@findex spofy-playlist-remove-track
+@findex spofy-playlist-reorder
+@findex spofy-playlist-set-public
+@findex spofy-follow-playlist
+@findex spofy-unfollow-playlist
+
+The command @code{spofy-list-playlists} displays all of the user's playlists in a @samp{*Spofy Playlists*} buffer.  Each row shows the playlist name, owner, track count, and public/private status.
+
+@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+@headitem Key
+@tab Command
+@tab Action
+@item @samp{RET}
+@tab @code{spofy-playlists-view}
+@tab View playlist tracks (@ref{Playlist detail view, , detail view})
+@item @samp{p}
+@tab @code{spofy-playlists-play}
+@tab Play the playlist
+@item @samp{c}
+@tab @code{spofy-create-playlist}
+@tab Create a new playlist
+@item @samp{r}
+@tab @code{spofy-rename-playlist}
+@tab Rename the playlist at point
+@item @samp{d}
+@tab @code{spofy-delete-playlist}
+@tab Delete (unfollow) the playlist
+@item @samp{f}
+@tab @code{spofy-follow-playlist}
+@tab Follow a playlist by ID or URI
+@item @samp{v}
+@tab @code{spofy-playlist-set-public}
+@tab Toggle public/private
+@item @samp{g}
+@tab @code{spofy-playlists-refresh}
+@tab Refresh
+@item @samp{m}
+@tab @code{spofy-playlists-load-more}
+@tab Load more playlists
+@item @samp{q}
+@tab @code{quit-window}
+@tab Close
+@end multitable
+
+The command @code{spofy-create-playlist} prompts for a name and description, then creates a new private playlist.  The command @code{spofy-rename-playlist} prompts for a new name with the current name pre-filled.  The command @code{spofy-delete-playlist} asks for confirmation with @code{y-or-n-p} before unfollowing the playlist (Spotify models deletion as unfollowing).
+
+The command @code{spofy-playlist-add-track} adds a track to a playlist.  When called interactively, it attempts to get the track URI from the entity at point, then presents the user's playlists in @code{completing-read} for target selection.  This command is available from search results (@ref{Navigating search results}), library views (@ref{Library management}), and browse views.
+
+The command @code{spofy-playlist-remove-track} removes the track at point from the current playlist.  It only works in playlist detail buffers (@ref{Playlist detail view}).
+
+The command @code{spofy-playlist-reorder} moves the track at point to a new position within the playlist.  It prompts for the target position (1-indexed for the user interface, converted internally to the 0-indexed API format).
+
+The command @code{spofy-playlist-set-public} toggles the public/private visibility of the playlist at point.
+
+The command @code{spofy-follow-playlist} prompts for a playlist ID or URI and follows it.  The command @code{spofy-unfollow-playlist} unfollows the playlist at point (equivalent to @code{spofy-delete-playlist}).
+
+@node Library management
+@section Library management
+
+@findex spofy-library-saved-tracks
+@findex spofy-library-saved-albums
+@findex spofy-library-save
+@findex spofy-library-unsave
+
+The command @code{spofy-library-saved-tracks} displays the user's saved tracks in a @samp{*Spofy Saved Tracks*} buffer.  Columns include a play indicator, track name, artist(s), album, and duration.  The currently playing track is highlighted, just like in search results.
+
+@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaaaa}
+@headitem Key
+@tab Command
+@tab Action
+@item @samp{RET}
+@tab @code{spofy-library-tracks-play}
+@tab Play the track
+@item @samp{a}
+@tab @code{spofy-library-tracks-view-album}
+@tab View album
+@item @samp{A}
+@tab @code{spofy-library-tracks-view-artist}
+@tab View artist
+@item @samp{S}
+@tab @code{spofy-library-tracks-unsave}
+@tab Remove from library
+@item @samp{p}
+@tab @code{spofy-library-tracks-add-to-playlist}
+@tab Add to a playlist
+@item @samp{g}
+@tab @code{spofy-library-tracks-refresh}
+@tab Refresh
+@item @samp{m}
+@tab @code{spofy-library-tracks-load-more}
+@tab Load more tracks
+@item @samp{q}
+@tab @code{quit-window}
+@tab Close
+@end multitable
+
+The command @code{spofy-library-saved-albums} displays saved albums in a @samp{*Spofy Saved Albums*} buffer with columns for name, artist(s), year, and track count.
+
+@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaaaa}
+@headitem Key
+@tab Command
+@tab Action
+@item @samp{RET}
+@tab @code{spofy-library-albums-view}
+@tab View album tracks
+@item @samp{p}
+@tab @code{spofy-library-albums-play}
+@tab Play the album
+@item @samp{A}
+@tab @code{spofy-library-albums-view-artist}
+@tab View artist
+@item @samp{S}
+@tab @code{spofy-library-albums-unsave}
+@tab Remove from library
+@item @samp{g}
+@tab @code{spofy-library-albums-refresh}
+@tab Refresh
+@item @samp{m}
+@tab @code{spofy-library-albums-load-more}
+@tab Load more albums
+@item @samp{q}
+@tab @code{quit-window}
+@tab Close
+@end multitable
+
+The command @code{spofy-library-save} saves a Spotify entity (track or album) to the user's library.  It accepts a Spotify URI and determines the entity type from it.  The command @code{spofy-library-unsave} removes an entity from the library.  Both commands are available through keybindings in search, browse, and library buffers.
+
+@node Cache management
+@section Cache management
+
+@findex spofy-clear-cache
+
+Spofy caches API responses in memory to reduce network requests and improve responsiveness.  Each endpoint type has its own time-to-live: search results are cached for 5 minutes, user playlists for 1 minute, playlist tracks for 2 minutes, and album/artist details for 10 minutes.  The player state endpoint is never cached.
+
+The command @code{spofy-clear-cache} flushes the entire in-memory cache.  Use it when you suspect stale data, for example after making changes to a playlist in the Spotify app.  The cache is also cleared automatically when Emacs restarts.
+
+@node Functions
+@chapter Functions
+
+@menu
+* Player state accessors::
+* Entity access in buffers::
+* API client::
+* Authentication helpers::
+* Formatting utilities::
+@end menu
+
+@node Player state accessors
+@section Player state accessors
+
+@findex spofy-player-current-track
+@findex spofy-player-playing-p
+@findex spofy-player-current-track-id
+
+The function @code{spofy-player-current-track} returns the current track as a cons cell @code{(NAME . ARTIST)}, or @code{nil} if nothing is playing.  This is useful in custom mode-line constructs or hook functions.
+
+The function @code{spofy-player-playing-p} returns non-nil if Spotify is currently playing.
+
+The function @code{spofy-player-current-track-id} returns the Spotify ID of the currently playing track, or @code{nil}.  This is used internally by search and browse buffers to highlight the now-playing row.
+
+@node Entity access in buffers
+@section Entity access in buffers
+
+@findex spofy-browse-entity-at-point
+@findex spofy-library-entity-at-point
+
+The function @code{spofy-browse-entity-at-point} returns the full Spotify API alist for the entity on the current @code{tabulated-list} row in any browse buffer (@ref{Browsing}).  This is useful for writing custom actions or hook functions that need to access entity metadata.
+
+The function @code{spofy-library-entity-at-point} does the same for library buffers (@ref{Library management}).
+
+@node API client
+@section API client
+
+@findex spofy-api-get
+@findex spofy-api-put
+@findex spofy-api-post
+@findex spofy-api-delete
+
+The API client in @samp{spofy-api.el} provides four high-level functions for interacting with the Spotify Web API:
+
+@itemize
+@item
+@code{spofy-api-get} sends a GET request to an endpoint with optional query parameters.
+@item
+@code{spofy-api-put} sends a PUT request with an optional JSON body.
+@item
+@code{spofy-api-post} sends a POST request with an optional JSON body.
+@item
+@code{spofy-api-delete} sends a DELETE request with an optional JSON body.
+@end itemize
+
+All four accept an endpoint path (relative to @samp{https://api.spotify.com/v1/}), optional data, and a callback function that receives the parsed JSON response.  They handle authentication headers, token refresh, rate limiting (429 responses), and transient error retry automatically.
+
+These functions are the building blocks for all of Spofy's features.  Advanced users who want to extend Spofy with custom API calls can use them directly.
+
+@node Authentication helpers
+@section Authentication helpers
+
+@findex spofy-auth-access-token
+@findex spofy-auth-refresh-token
+
+The function @code{spofy-auth-access-token} returns the current OAuth2 access token, or @code{nil} if unavailable or expired.  If the token has expired and a refresh token is available, it automatically attempts a refresh before returning @code{nil}.
+
+The function @code{spofy-auth-refresh-token} explicitly uses the stored refresh token to obtain a new access token from Spotify.  It requires @code{spofy-client-id} and @code{spofy-client-secret} to be set, and signals an error if either is missing.  This is called automatically when needed, but can be invoked manually if you encounter authentication issues.
+
+@node Formatting utilities
+@section Formatting utilities
+
+@findex spofy-ui-format-duration-ms
+@findex spofy-ui-format-artists
+@findex spofy-ui-truncate
+
+The function @code{spofy-ui-format-duration-ms} takes a duration in milliseconds and returns a human-readable @code{"M:SS"} string.
+
+The function @code{spofy-ui-format-artists} takes a list of artist alists (as returned by the Spotify API) and formats them as a comma-separated string of names.
+
+The function @code{spofy-ui-truncate} truncates a string to a given maximum display width, appending ``@dots{}'' if truncation occurs.  It uses @code{truncate-string-to-width} internally, so column alignment is correct even with variable-width characters.  All entry formatting functions in the browse, library, and playlist modules apply @code{spofy-ui-truncate} to long string columns (names, artists, albums, genres, owners) before passing them to @code{propertize}, so that truncation uses ASCII ``@dots{}'' instead of the Unicode ``…'' character that @code{tabulated-list-mode} would otherwise insert.  This prevents the column misalignment that arises because ``…'' has inconsistent display width across fonts.
+
+@node Consult integration
+@chapter Consult integration
+
+@findex consult-spofy-track
+@findex consult-spofy-album
+@findex consult-spofy-artist
+@findex consult-spofy-playlist
+@findex consult-spofy-my-playlist
+@findex consult-spofy-device
+
+The file @samp{spofy-consult.el} provides six @code{consult} completion sources for searching and selecting Spotify entities from the minibuffer.  These require the @samp{consult} package.
+
+All candidates are displayed in aligned tabular columns with faces matching the search result buffers:
+
+The command @code{consult-spofy-track} lets you search for tracks with live narrowing as you type (debounced at 300ms to avoid excessive API calls).  Candidates show Name, Artist(s), Album, and Duration columns.  Selecting a track plays it immediately.
+
+The command @code{consult-spofy-album} provides the same experience for albums, with Name, Artist(s), Year, and track count columns.  Selecting an album opens the album view (@ref{Album view}).
+
+The command @code{consult-spofy-artist} searches artists, with Name, Genres, and Followers columns.  Selecting an artist opens the artist view (@ref{Artist view}).
+
+The command @code{consult-spofy-playlist} searches all Spotify playlists with live narrowing, with Name, Owner, and track count columns.  Selecting a playlist opens the playlist detail view (@ref{Playlist detail view}).
+
+The command @code{consult-spofy-my-playlist} fetches the user's own playlists with incremental narrowing, with Name, Owner, and track count columns.  The full list is fetched once from the API and filtered client-side as you type.  Selecting a playlist opens the playlist detail view.
+
+The command @code{consult-spofy-device} fetches available playback devices with incremental narrowing, with Name and Type columns.  Selecting a device transfers playback to it.
+
+All six commands use @code{consult--dynamic-collection} for incremental search with synchronous API requests (via @code{url-retrieve-synchronously}), as required by consult's dynamic collection contract.  Each candidate stores the full Spotify entity in a text property, making them compatible with the embark integration (@ref{Embark integration}).
+
+@node Embark integration
+@chapter Embark integration
+
+@findex spofy-embark-copy-uri
+
+The file @samp{spofy-embark.el} registers four entity categories with @samp{embark}, each with a keymap of contextual actions.  These actions work on Spotify entities selected through @code{consult} (@ref{Consult integration}) or in @code{tabulated-list} buffers.
+
+The @strong{spofy-track} category provides actions to play the track, add it to a playlist, save it to the library, view its album, view its artist, or copy its Spotify URI@.
+
+The @strong{spofy-album} category provides actions to play the album, save it, view its tracks, view its artist, or copy its URI@.
+
+The @strong{spofy-artist} category provides actions to play the artist's top tracks, view the artist's albums, or copy the URI@.
+
+The @strong{spofy-playlist} category provides actions to play the playlist, view its tracks, follow it, unfollow it, or copy its URI@.
+
+The command @code{spofy-embark-copy-uri} copies the Spotify URI of the target entity to the kill ring.  This is available in all four category keymaps and is useful for sharing links or constructing org-mode links manually.
+
+@node Org-mode integration
+@chapter Org-mode integration
+
+@findex spofy-org-follow
+@findex spofy-org-store
+@findex spofy-org-export
+
+The file @samp{spofy-org.el} registers a @samp{spotify:} link type with Org mode, supporting three operations.
+
+The function @code{spofy-org-follow} handles opening @code{spotify:} links.  It parses the link path to determine the entity type and ID, then dispatches to the appropriate Spofy command: tracks are played, while albums, artists, and playlists open their respective browse views (@ref{Browsing}).  This means you can write @samp{[[spotify:track:4uLU6hMCjMI75M1A2tKUQC][Never Gonna Give You Up]]} in an Org file and open it to play the track.
+
+The function @code{spofy-org-store} enables @samp{org-store-link} in any Spofy buffer.  It extracts the URI and a descriptive label from the entity at point and stores it for later insertion with @samp{org-insert-link}.
+
+The function @code{spofy-org-export} generates appropriate links for export backends.  In HTML, @LaTeX{}, and Markdown, it produces links to @samp{open.spotify.com/TYPE/ID} so readers can open the content in their browser or Spotify app.
+
+@node Faces
+@chapter Faces
+
+@vindex spofy-track-name
+@vindex spofy-artist-name
+@vindex spofy-album-name
+@vindex spofy-playing
+@vindex spofy-playing-icon
+@vindex spofy-header
+@vindex spofy-muted
+
+Spofy defines a set of faces in the @code{spofy-faces} customization group for controlling the appearance of its buffers:
+
+@itemize
+@item
+@code{spofy-track-name} is used for track names in all listings.  It inherits from @code{font-lock-keyword-face}.
+@item
+@code{spofy-artist-name} is used for artist names.  It inherits from @code{font-lock-function-name-face}.
+@item
+@code{spofy-album-name} is used for album names.  It inherits from @code{font-lock-type-face}.
+@item
+@code{spofy-playing} marks the currently playing track in any listing.  It uses bold weight and the Spotify green color (@samp{#1DB954}).
+@item
+@code{spofy-playing-icon} is used for the ▶ icon on the currently playing track.  It inherits from @code{spofy-playing}.
+@item
+@code{spofy-header} is used for the header area in album, artist, and playlist detail views.  It inherits from @code{header-line}.
+@item
+@code{spofy-muted} is used for secondary text like durations and dates.  It inherits from @code{shadow}.
+@end itemize
+
+All faces can be customized with @samp{M-x customize-group RET spofy-faces RET}.
+
+@node Hooks
+@chapter Hooks
+
+@vindex spofy-player-state-changed-hook
+@vindex spofy-player-track-changed-hook
+@vindex spofy-authenticated-hook
+
+The hook @code{spofy-player-state-changed-hook} runs whenever any aspect of the player state changes: track, play/pause state, shuffle, repeat, volume, or device.  The mode-line display and dashboard now-playing section both use this hook to stay up to date.  Add your own functions to this hook if you want to react to any state change.
+
+The hook @code{spofy-player-track-changed-hook} runs only when the current track changes.  This is a subset of state changes and is useful for notifications or logging.  The desktop notification feature (@ref{Playback, , Playback options}) hooks into this.
+
+The hook @code{spofy-authenticated-hook} runs once after a successful OAuth2 authentication.  Use it to perform setup that depends on having a valid token, such as pre-fetching the user's playlists.
+
+@node Mode-line display
+@chapter Mode-line display
+
+@findex spofy-mode-line-mode
+
+The command @code{spofy-mode-line-mode} toggles a global minor mode that adds a Spofy segment to the mode line.  The segment shows the currently playing track formatted according to @code{spofy-mode-line-format} (@ref{Mode-line, , Mode-line options}).
+
+When enabled, the mode hooks into @code{spofy-player-state-changed-hook} to rebuild the mode-line string whenever the player state changes, then calls @code{force-mode-line-update} to refresh all frames.
+
+The mode is enabled automatically when @code{spofy-global-mode} is active and @code{spofy-enable-mode-line} is non-nil (@ref{Global key and mode-line activation, , Global options}).
+
+@node Tab-bar display
+@chapter Tab-bar display
+
+@findex spofy-tab-bar-mode
+
+The command @code{spofy-tab-bar-mode} toggles a global minor mode that adds a Spofy segment to the tab bar.  The segment shows the currently playing track formatted according to @code{spofy-tab-bar-format} (@ref{Tab-bar, , Tab-bar options}).
+
+When enabled, the mode appends a @code{tab-bar-format-spofy} entry to @code{tab-bar-format} and hooks into @code{spofy-player-state-changed-hook} to rebuild the tab-bar string whenever the player state changes.
+
+The mode is enabled automatically when @code{spofy-global-mode} is active and @code{spofy-enable-tab-bar} is non-nil (@ref{Global key and mode-line activation, , Global options}).
+
+@node Indices
+@chapter Indices
+
+@menu
+* Function index::
+* Variable index::
+@end menu
+
+@node Function index
+@section Function index
+
+@printindex fn
+
+@node Variable index
+@section Variable index
+
+@printindex vr
+
+@bye
