@@ -379,9 +379,9 @@ authentication, starts polling, and displays the dashboard buffer."
           (message "Spofy: complete authentication in your browser, then run `spofy' again.")
           (cl-return-from spofy))
       (user-error "Spofy: authentication required")))
-  ;; Start polling if not already running
-  (unless (and (boundp 'spofy-player--timer) spofy-player--timer)
-    (spofy-player-start-polling))
+  ;; Enable global mode (starts polling, mode-line, tab-bar)
+  (unless spofy-global-mode
+    (spofy-global-mode 1))
   ;; Hook up now-playing refresh on state changes
   (add-hook 'spofy-player-state-changed-hook #'spofy--dashboard-refresh-now-playing)
   ;; Start progress interpolation timer

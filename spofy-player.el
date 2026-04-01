@@ -133,6 +133,11 @@ Compare to previous state and run appropriate hooks."
         (setq spofy-player--current-state nil)
         (run-hooks 'spofy-player-state-changed-hook)))))
 
+(defun spofy-player--poll-sync ()
+  "Synchronously fetch and update the player state."
+  (let ((data (spofy-api-get-sync "me/player")))
+    (spofy-player--handle-poll-response data)))
+
 ;;;###autoload
 (defun spofy-player-start-polling ()
   "Start polling the Spotify player state.
@@ -222,6 +227,8 @@ If no device is found, take action based on `spofy-no-device-action':
   "Toggle play/pause."
   (interactive)
   (spofy-player--ensure-device)
+  (unless spofy-player--current-state
+    (spofy-player--poll-sync))
   (if (spofy-player-playing-p)
       (spofy-api-put "me/player/pause" nil
                      (lambda (_)

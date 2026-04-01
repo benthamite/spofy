@@ -271,6 +271,23 @@ CALLBACK is called with the parsed JSON response."
   (spofy-api--request "GET" (spofy-api--build-url endpoint nil)
                       params nil callback))
 
+(defun spofy-api-get-sync (endpoint &optional params)
+  "Synchronously GET ENDPOINT with optional query PARAMS.
+Return the parsed JSON response, or nil on error."
+  (let* ((url (spofy-api--build-url endpoint params))
+         (url-request-method "GET")
+         (url-request-extra-headers
+          `(("Authorization" . ,(format "Bearer %s" (spofy-auth-access-token)))))
+         (url-show-status nil)
+         (buf (url-retrieve-synchronously url t nil 5)))
+    (when buf
+      (unwind-protect
+          (with-current-buffer buf
+            (let ((status (spofy-api--response-status)))
+              (when (and status (>= status 200) (< status 300))
+                (spofy-api--parse-response))))
+        (kill-buffer buf)))))
+
 (defun spofy-api-put (endpoint &optional data callback)
   "Send a PUT request to ENDPOINT with optional JSON body DATA.
 CALLBACK is called with the parsed JSON response."
