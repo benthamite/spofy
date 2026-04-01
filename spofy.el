@@ -280,7 +280,9 @@ Called from `spofy-player-state-changed-hook' and the progress timer."
               ;; Keep section markers in sync after re-render
               (when (markerp spofy--dashboard-recent-marker)
                 (set-marker spofy--dashboard-recent-marker end)))
-            (goto-char (min pos (point-max)))))))))
+            (goto-char (min pos (point-max)))
+            (when-let* ((win (get-buffer-window buf)))
+              (force-window-update win))))))))
 
 (defun spofy--dashboard-start-progress-timer ()
   "Start a 1-second timer to refresh the progress bar."

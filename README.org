@@ -211,7 +211,7 @@ The command ~spofy~ is the main entry point.  It ensures that the user is authen
 2. *Recently played:* the last 10 tracks, each a clickable button that replays the track.
 3. *Your playlists:* the user's first 10 playlists, each a clickable button that opens the playlist detail view.  A "View all playlists..." link at the bottom opens the full playlists list.
 
-The now-playing section refreshes automatically when the player state changes.  The command ~spofy-dashboard-refresh~ forces a full refresh of the entire dashboard.
+The now-playing section refreshes automatically when the player state changes.  A 1-second timer interpolates the progress bar between polls so it animates smoothly.  The command ~spofy-dashboard-refresh~ forces a full refresh of the entire dashboard.
 
 The command ~spofy-stop~ stops player state polling and disables ~spofy-global-mode~.  Use it when you are done with Spofy and want to stop all background activity.
 
