@@ -147,6 +147,7 @@ The user option ~spofy-tab-bar-alignment~ controls whether the Spofy segment app
 #+vindex: spofy-global-key
 #+vindex: spofy-enable-mode-line
 #+vindex: spofy-enable-tab-bar
+#+vindex: spofy-dashboard-sections
 
 The user option ~spofy-global-key~ sets the prefix key that ~spofy-global-mode~ binds to ~spofy-menu~.  It defaults to ~"C-c s"~.  Change this if the default conflicts with other bindings.
 
@@ -155,6 +156,20 @@ The user option ~spofy-enable-mode-line~ controls whether ~spofy-global-mode~ au
 The user option ~spofy-enable-tab-bar~ controls whether ~spofy-global-mode~ automatically enables ~spofy-tab-bar-mode~.  It defaults to ~nil~.  Set it to ~t~ to display the currently playing track in the tab bar ([[#h:tab-bar-display][Tab-bar display]]).
 
 The two display modes are mutually exclusive: when ~spofy-enable-tab-bar~ is non-nil, it takes precedence and the mode-line display is not enabled, regardless of ~spofy-enable-mode-line~.  This avoids duplication because Emacs renders ~global-mode-string~ (where the mode-line segment lives) in the tab bar via ~tab-bar-format-global~, which would otherwise cause the track information to appear twice.
+
+The user option ~spofy-dashboard-sections~ controls which sections appear on the dashboard and in what order.  It defaults to ~(recently-played playlists)~.  Each element is a symbol naming a section.  Available sections:
+
+- ~recently-played~ :: Last 10 tracks played.
+- ~playlists~ :: First 10 user playlists.
+- ~top-tracks-short~ :: Top tracks from the last 4 weeks.
+- ~top-tracks-medium~ :: Top tracks from the last 6 months.
+- ~top-tracks-long~ :: Top tracks from the last year.
+- ~top-artists-short~ :: Top artists from the last 4 weeks.
+- ~top-artists-medium~ :: Top artists from the last 6 months.
+- ~top-artists-long~ :: Top artists from the last year.
+- ~new-releases~ :: New album releases (not personalized).
+
+The now-playing section always appears at the top regardless of this option.  Each section is fetched asynchronously and includes a "View all..." link that opens a full tabulated-list buffer.
 
 ** Column widths
 :PROPERTIES:
@@ -207,11 +222,7 @@ After successful authentication, Spofy runs ~spofy-authenticated-hook~.  You onl
 #+findex: spofy-dashboard-refresh
 #+findex: spofy-stop
 
-The command ~spofy~ is the main entry point.  It ensures that the user is authenticated (prompting if not), starts player state polling, and opens the =*Spofy*= dashboard buffer.  The dashboard displays three sections:
-
-1. *Now playing:* the current track name, artist, album, a Unicode block-character progress bar with sub-character precision, and playback state indicators (play/pause, shuffle, repeat).
-2. *Recently played:* the last 10 tracks, each a clickable button that replays the track.
-3. *Your playlists:* the user's first 10 playlists, each a clickable button that opens the playlist detail view.  A "View all playlists..." link at the bottom opens the full playlists list.
+The command ~spofy~ is the main entry point.  It ensures that the user is authenticated (prompting if not), starts player state polling, and opens the =*Spofy*= dashboard buffer.  The dashboard always shows a *now playing* section at the top (track name and artist distinguished by color, album, progress bar, and playback state indicators).  Below it, a configurable list of sections is displayed according to ~spofy-dashboard-sections~ ([[#h:user-options-global][Global options]]).  By default, the dashboard shows recently played tracks and user playlists.  Each section includes a "View all..." link that opens the full list in a tabulated-list buffer.
 
 The now-playing section refreshes automatically when the player state changes.  A 1-second timer interpolates the progress bar between polls so it animates smoothly.  The command ~spofy-dashboard-refresh~ forces a full refresh of the entire dashboard.
 
@@ -492,6 +503,10 @@ The command ~spofy-follow-playlist~ prompts for a playlist ID or URI and follows
 #+findex: spofy-library-menu
 #+findex: spofy-library-saved-tracks
 #+findex: spofy-library-saved-albums
+#+findex: spofy-list-recently-played
+#+findex: spofy-list-top-tracks
+#+findex: spofy-list-top-artists
+#+findex: spofy-list-new-releases
 #+findex: spofy-library-save
 #+findex: spofy-library-unsave
 
@@ -519,6 +534,43 @@ The command ~spofy-library-saved-albums~ displays saved albums in a =*Spofy Save
 | =g=   | ~spofy-library-albums-refresh~        | Refresh                   |
 | =m=   | ~spofy-library-albums-load-more~      | Load more albums          |
 | =q=   | ~quit-window~                         | Close                     |
+
+The command ~spofy-list-recently-played~ displays the last 50 recently played tracks in a =*Spofy Recently Played*= buffer.  The columns are the same as saved tracks.
+
+| Key   | Command                                | Action                    |
+|-------+----------------------------------------+---------------------------|
+| =RET= | ~spofy-recently-played-play~           | Play the track            |
+| =a=   | ~spofy-recently-played-view-album~     | View album                |
+| =A=   | ~spofy-recently-played-view-artist~    | View artist               |
+| =g=   | ~spofy-recently-played-refresh~        | Refresh                   |
+| =q=   | ~quit-window~                          | Close                     |
+
+The command ~spofy-list-top-tracks~ displays the user's top tracks in a =*Spofy Top Tracks*= buffer.  It accepts an optional TIME-RANGE argument: ~"short_term"~ (4 weeks), ~"medium_term"~ (6 months, the default), or ~"long_term"~ (1 year).  The columns are the same as saved tracks.
+
+| Key   | Command                          | Action                    |
+|-------+----------------------------------+---------------------------|
+| =RET= | ~spofy-top-tracks-play~          | Play the track            |
+| =a=   | ~spofy-top-tracks-view-album~    | View album                |
+| =A=   | ~spofy-top-tracks-view-artist~   | View artist               |
+| =g=   | ~spofy-top-tracks-refresh~       | Refresh                   |
+| =q=   | ~quit-window~                    | Close                     |
+
+The command ~spofy-list-top-artists~ displays the user's top artists in a =*Spofy Top Artists*= buffer with columns for name and genres.  It accepts the same TIME-RANGE argument as ~spofy-list-top-tracks~.
+
+| Key   | Command                           | Action                    |
+|-------+-----------------------------------+---------------------------|
+| =RET= | ~spofy-top-artists-view~          | View artist               |
+| =g=   | ~spofy-top-artists-refresh~       | Refresh                   |
+| =q=   | ~quit-window~                     | Close                     |
+
+The command ~spofy-list-new-releases~ displays new album releases in a =*Spofy New Releases*= buffer with columns for album name, artist(s), year, and track count.  This data is not personalized.
+
+| Key   | Command                            | Action                    |
+|-------+------------------------------------+---------------------------|
+| =RET= | ~spofy-new-releases-view~          | View album                |
+| =A=   | ~spofy-new-releases-view-artist~   | View artist               |
+| =g=   | ~spofy-new-releases-refresh~       | Refresh                   |
+| =q=   | ~quit-window~                      | Close                     |
 
 The command ~spofy-library-save~ saves a Spotify entity (track or album) to the user's library.  It accepts a Spotify URI and determines the entity type from it.  The command ~spofy-library-unsave~ removes an entity from the library.  Both commands are available through keybindings in search, browse, and library buffers.
 

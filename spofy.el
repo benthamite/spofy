@@ -83,6 +83,8 @@
 
 ;; spofy-browse
 (declare-function spofy-view-playlist "spofy-browse" (playlist-id))
+(declare-function spofy-view-album "spofy-browse" (album-id))
+(declare-function spofy-view-artist "spofy-browse" (artist-id))
 
 ;; spofy-playlist
 (declare-function spofy-list-playlists "spofy-playlist" ())
@@ -90,6 +92,10 @@
 ;; spofy-library
 (declare-function spofy-library-saved-tracks "spofy-library" ())
 (declare-function spofy-library-saved-albums "spofy-library" ())
+(declare-function spofy-list-recently-played "spofy-library" ())
+(declare-function spofy-list-top-tracks "spofy-library" (&optional time-range))
+(declare-function spofy-list-top-artists "spofy-library" (&optional time-range))
+(declare-function spofy-list-new-releases "spofy-library" ())
 
 ;; spofy-mode-line
 (declare-function spofy-mode-line-mode "spofy-mode-line" (&optional arg))
@@ -121,6 +127,31 @@ When `spofy-global-mode' is enabled, this key opens `spofy-menu'."
 (defcustom spofy-enable-tab-bar nil
   "Whether to enable `spofy-tab-bar-mode' when `spofy-global-mode' is on."
   :type 'boolean
+  :group 'spofy)
+
+(defcustom spofy-dashboard-sections
+  '(recently-played playlists)
+  "Sections to display on the dashboard, in order.
+Each element is a symbol naming a section.  Available sections:
+
+  `recently-played'    Last 10 tracks played.
+  `playlists'          First 10 user playlists.
+  `top-tracks-short'   Top tracks from the last 4 weeks.
+  `top-tracks-medium'  Top tracks from the last 6 months.
+  `top-tracks-long'    Top tracks from the last year.
+  `top-artists-short'  Top artists from the last 4 weeks.
+  `top-artists-medium' Top artists from the last 6 months.
+  `top-artists-long'   Top artists from the last year.
+  `new-releases'       New album releases."
+  :type '(repeat (choice (const :tag "Recently played" recently-played)
+                         (const :tag "Your playlists" playlists)
+                         (const :tag "Top tracks (4 weeks)" top-tracks-short)
+                         (const :tag "Top tracks (6 months)" top-tracks-medium)
+                         (const :tag "Top tracks (1 year)" top-tracks-long)
+                         (const :tag "Top artists (4 weeks)" top-artists-short)
+                         (const :tag "Top artists (6 months)" top-artists-medium)
+                         (const :tag "Top artists (1 year)" top-artists-long)
+                         (const :tag "New releases" new-releases)))
   :group 'spofy)
 
 ;;;; Dashboard buffer
@@ -159,7 +190,7 @@ When `spofy-global-mode' is enabled, this key opens `spofy-menu'."
         (insert (propertize "  No track playing" 'face 'spofy-muted) "\n")
       (insert "  "
               (propertize track 'face 'spofy-track-name)
-              (propertize " — " 'face 'spofy-muted)
+              " "
               (propertize (or artist "") 'face 'spofy-artist-name)
               "\n")
       (insert "  " (propertize (or album "") 'face 'spofy-album-name) "\n")
@@ -191,14 +222,22 @@ When `spofy-global-mode' is enabled, this key opens `spofy-menu'."
           (insert "  ")
           (insert-text-button
            (concat (propertize name 'face 'spofy-track-name)
-                   (propertize " — " 'face 'spofy-muted)
+                   " "
                    (propertize artist-str 'face 'spofy-artist-name))
            'action (lambda (_btn)
                      (require 'spofy-player)
                      (spofy-play-track uri))
            'spofy-uri uri
            'follow-link t)
-          (insert "\n"))))))
+          (insert "\n")))))
+  (insert "\n  ")
+  (insert-text-button
+   (propertize "View all recently played..." 'face 'spofy-muted)
+   'action (lambda (_btn)
+             (require 'spofy-library)
+             (spofy-list-recently-played))
+   'follow-link t)
+  (insert "\n"))
 
 ;;;;; Dashboard: playlists section
 
@@ -214,22 +253,188 @@ When `spofy-global-mode' is enabled, this key opens `spofy-menu'."
              (playlist-id (alist-get 'id item)))
         (insert "  ")
         (insert-text-button
-         (format "%s (%d tracks)" name total)
+         (concat (propertize name 'face 'spofy-track-name)
+                 " "
+                 (propertize (format "(%d tracks)" total) 'face 'spofy-muted))
          'action (lambda (_btn)
                    (require 'spofy-browse)
                    (spofy-view-playlist playlist-id))
          'spofy-playlist-id playlist-id
          'follow-link t)
         (insert "\n"))))
-  ;; "View all playlists..." link
   (insert "\n  ")
   (insert-text-button
-   "View all playlists..."
+   (propertize "View all playlists..." 'face 'spofy-muted)
    'action (lambda (_btn)
              (require 'spofy-playlist)
              (spofy-list-playlists))
    'follow-link t)
   (insert "\n"))
+
+;;;;; Dashboard: top tracks section
+
+(defun spofy--dashboard-insert-top-tracks (items time-range)
+  "Insert a top-tracks section from ITEMS into the current buffer.
+TIME-RANGE is \"short_term\", \"medium_term\", or \"long_term\"."
+  (let ((label (pcase time-range
+                 ("short_term" "Top tracks (4 weeks)")
+                 ("medium_term" "Top tracks (6 months)")
+                 ("long_term" "Top tracks (1 year)"))))
+    (insert "\n" (propertize label 'face 'spofy-header) "\n\n")
+    (if (or (null items) (= (length items) 0))
+        (insert (propertize "  No tracks" 'face 'spofy-muted) "\n")
+      (seq-doseq (item items)
+        (let* ((name (or (alist-get 'name item) ""))
+               (artists (alist-get 'artists item))
+               (artist-str (if artists (spofy-ui-format-artists artists) ""))
+               (uri (alist-get 'uri item)))
+          (insert "  ")
+          (insert-text-button
+           (concat (propertize name 'face 'spofy-track-name)
+                   " "
+                   (propertize artist-str 'face 'spofy-artist-name))
+           'action (lambda (_btn)
+                     (require 'spofy-player)
+                     (spofy-play-track uri))
+           'spofy-uri uri
+           'follow-link t)
+          (insert "\n"))))
+    (insert "\n  ")
+    (insert-text-button
+     (propertize "View all..." 'face 'spofy-muted)
+     'action (let ((tr time-range))
+               (lambda (_btn)
+                 (require 'spofy-library)
+                 (spofy-list-top-tracks tr)))
+     'follow-link t)
+    (insert "\n")))
+
+;;;;; Dashboard: top artists section
+
+(defun spofy--dashboard-insert-top-artists (items time-range)
+  "Insert a top-artists section from ITEMS into the current buffer.
+TIME-RANGE is \"short_term\", \"medium_term\", or \"long_term\"."
+  (let ((label (pcase time-range
+                 ("short_term" "Top artists (4 weeks)")
+                 ("medium_term" "Top artists (6 months)")
+                 ("long_term" "Top artists (1 year)"))))
+    (insert "\n" (propertize label 'face 'spofy-header) "\n\n")
+    (if (or (null items) (= (length items) 0))
+        (insert (propertize "  No artists" 'face 'spofy-muted) "\n")
+      (seq-doseq (item items)
+        (let* ((name (or (alist-get 'name item) ""))
+               (genres (alist-get 'genres item))
+               (genre-str (if (and genres (> (length genres) 0))
+                              (mapconcat #'identity
+                                         (seq-take (append genres nil) 3)
+                                         ", ")
+                            ""))
+               (id (alist-get 'id item)))
+          (insert "  ")
+          (insert-text-button
+           (concat (propertize name 'face 'spofy-track-name)
+                   (unless (string-empty-p genre-str)
+                     (concat " "
+                             (propertize genre-str 'face 'spofy-muted))))
+           'action (lambda (_btn)
+                     (require 'spofy-browse)
+                     (spofy-view-artist id))
+           'follow-link t)
+          (insert "\n"))))
+    (insert "\n  ")
+    (insert-text-button
+     (propertize "View all..." 'face 'spofy-muted)
+     'action (let ((tr time-range))
+               (lambda (_btn)
+                 (require 'spofy-library)
+                 (spofy-list-top-artists tr)))
+     'follow-link t)
+    (insert "\n")))
+
+;;;;; Dashboard: new releases section
+
+(defun spofy--dashboard-insert-new-releases (items)
+  "Insert the new-releases section from ITEMS into the current buffer."
+  (insert "\n" (propertize "New releases" 'face 'spofy-header) "\n\n")
+  (if (or (null items) (= (length items) 0))
+      (insert (propertize "  No releases" 'face 'spofy-muted) "\n")
+    (seq-doseq (item items)
+      (let* ((name (or (alist-get 'name item) ""))
+             (artists (alist-get 'artists item))
+             (artist-str (if artists (spofy-ui-format-artists artists) ""))
+             (album-id (alist-get 'id item)))
+        (insert "  ")
+        (insert-text-button
+         (concat (propertize name 'face 'spofy-album-name)
+                 " "
+                 (propertize artist-str 'face 'spofy-artist-name))
+         'action (lambda (_btn)
+                   (require 'spofy-browse)
+                   (spofy-view-album album-id))
+         'follow-link t)
+        (insert "\n"))))
+  (insert "\n  ")
+  (insert-text-button
+   (propertize "View all..." 'face 'spofy-muted)
+   'action (lambda (_btn)
+             (require 'spofy-library)
+             (spofy-list-new-releases))
+   'follow-link t)
+  (insert "\n"))
+
+;;;;; Dashboard: section registry
+
+(defun spofy--dashboard-section-spec (section)
+  "Return (ENDPOINT PARAMS INSERTER) for SECTION symbol."
+  (pcase section
+    ('recently-played
+     (list "me/player/recently-played" '(("limit" . "10"))
+           #'spofy--dashboard-insert-recently-played))
+    ('playlists
+     (list "me/playlists" '(("limit" . "10"))
+           #'spofy--dashboard-insert-playlists))
+    ('top-tracks-short
+     (list "me/top/tracks" '(("limit" . "10") ("time_range" . "short_term"))
+           (lambda (items) (spofy--dashboard-insert-top-tracks items "short_term"))))
+    ('top-tracks-medium
+     (list "me/top/tracks" '(("limit" . "10") ("time_range" . "medium_term"))
+           (lambda (items) (spofy--dashboard-insert-top-tracks items "medium_term"))))
+    ('top-tracks-long
+     (list "me/top/tracks" '(("limit" . "10") ("time_range" . "long_term"))
+           (lambda (items) (spofy--dashboard-insert-top-tracks items "long_term"))))
+    ('top-artists-short
+     (list "me/top/artists" '(("limit" . "10") ("time_range" . "short_term"))
+           (lambda (items) (spofy--dashboard-insert-top-artists items "short_term"))))
+    ('top-artists-medium
+     (list "me/top/artists" '(("limit" . "10") ("time_range" . "medium_term"))
+           (lambda (items) (spofy--dashboard-insert-top-artists items "medium_term"))))
+    ('top-artists-long
+     (list "me/top/artists" '(("limit" . "10") ("time_range" . "long_term"))
+           (lambda (items) (spofy--dashboard-insert-top-artists items "long_term"))))
+    ('new-releases
+     (list "browse/new-releases" '(("limit" . "10"))
+           #'spofy--dashboard-insert-new-releases))))
+
+(defun spofy--dashboard-section-extract-items (section response)
+  "Extract the items array from RESPONSE for SECTION."
+  (pcase section
+    ('playlists (alist-get 'items response))
+    ('new-releases (let ((albums (alist-get 'albums response)))
+                     (and albums (alist-get 'items albums))))
+    (_ (alist-get 'items response))))
+
+(defun spofy--dashboard-section-loading-text (section)
+  "Return the loading placeholder text for SECTION."
+  (pcase section
+    ('recently-played "Loading recently played...")
+    ('playlists "Loading playlists...")
+    ('top-tracks-short "Loading top tracks (4 weeks)...")
+    ('top-tracks-medium "Loading top tracks (6 months)...")
+    ('top-tracks-long "Loading top tracks (1 year)...")
+    ('top-artists-short "Loading top artists (4 weeks)...")
+    ('top-artists-medium "Loading top artists (6 months)...")
+    ('top-artists-long "Loading top artists (1 year)...")
+    ('new-releases "Loading new releases...")))
 
 ;;;;; Dashboard: keybinding hints
 
@@ -249,14 +454,9 @@ When `spofy-global-mode' is enabled, this key opens `spofy-menu'."
 (defvar spofy--dashboard-now-playing-end-marker nil
   "Marker for the end of the now-playing section in the dashboard.")
 
-(defvar spofy--dashboard-recent-marker nil
-  "Marker for the start of the recently-played section.")
-
-(defvar spofy--dashboard-playlist-marker nil
-  "Marker for the start of the playlists section.")
-
-(defvar spofy--dashboard-hint-marker nil
-  "Marker for the start of the hints section.")
+(defvar spofy--dashboard-section-markers nil
+  "Alist mapping section index to start marker.
+The last entry is a sentinel marking the start of the hints section.")
 
 (defvar spofy--dashboard-progress-timer nil
   "Timer for updating the progress bar every second.")
@@ -279,9 +479,9 @@ Called from `spofy-player-state-changed-hook' and the progress timer."
             (spofy--dashboard-insert-now-playing)
             (let ((end (point)))
               (set-marker spofy--dashboard-now-playing-end-marker end)
-              ;; Keep section markers in sync after re-render
-              (when (markerp spofy--dashboard-recent-marker)
-                (set-marker spofy--dashboard-recent-marker end)))
+              ;; Keep first section marker in sync after re-render
+              (when-let* ((first (alist-get 0 spofy--dashboard-section-markers)))
+                (set-marker first end)))
             (goto-char (min pos (point-max)))
             (when-let* ((win (get-buffer-window buf)))
               (force-window-update win))))))))
@@ -303,45 +503,57 @@ Called from `spofy-player-state-changed-hook' and the progress timer."
 (defun spofy--dashboard-render ()
   "Render the full dashboard content in the current buffer.
 Assumes the current buffer is in `spofy-dashboard-mode'."
-  (let ((inhibit-read-only t))
+  (let ((inhibit-read-only t)
+        (sections spofy-dashboard-sections))
     (erase-buffer)
     ;; Now playing section (with markers for partial refresh)
     (setq-local spofy--dashboard-now-playing-marker (point-marker))
     (spofy--dashboard-insert-now-playing)
     (setq-local spofy--dashboard-now-playing-end-marker (point-marker))
-    ;; Fetch recently played and playlists asynchronously.
-    (setq-local spofy--dashboard-recent-marker (point-marker))
-    (insert (propertize "\nLoading recently played..." 'face 'spofy-muted) "\n")
-    (setq-local spofy--dashboard-playlist-marker (point-marker))
-    (insert (propertize "\nLoading playlists..." 'face 'spofy-muted) "\n")
-    (setq-local spofy--dashboard-hint-marker (point-marker))
+    ;; Create markers for each async section + a sentinel for hints
+    (setq-local spofy--dashboard-section-markers nil)
+    (let ((idx 0))
+      (dolist (section sections)
+        (let ((marker (point-marker)))
+          (push (cons idx marker) spofy--dashboard-section-markers)
+          (insert (propertize (concat "\n" (spofy--dashboard-section-loading-text section))
+                              'face 'spofy-muted)
+                  "\n")
+          (setq idx (1+ idx))))
+      ;; Sentinel marker for hints
+      (push (cons idx (point-marker)) spofy--dashboard-section-markers))
+    (setq spofy--dashboard-section-markers
+          (nreverse spofy--dashboard-section-markers))
     (spofy--dashboard-insert-hints)
+    ;; Fire async requests for each section
     (let ((buf (current-buffer)))
-      (spofy-api-get
-       "me/player/recently-played"
-       '(("limit" . "10"))
-       (lambda (response)
-         (when (buffer-live-p buf)
-           (with-current-buffer buf
-             (let ((inhibit-read-only t)
-                   (items (alist-get 'items response)))
-               (delete-region spofy--dashboard-recent-marker
-                              spofy--dashboard-playlist-marker)
-               (goto-char spofy--dashboard-recent-marker)
-               (spofy--dashboard-insert-recently-played items)
-               (set-marker spofy--dashboard-playlist-marker (point)))))))
-      (spofy-api-get
-       "me/playlists"
-       '(("limit" . "10"))
-       (lambda (response)
-         (when (buffer-live-p buf)
-           (with-current-buffer buf
-             (let ((inhibit-read-only t)
-                   (items (alist-get 'items response)))
-               (delete-region spofy--dashboard-playlist-marker
-                              spofy--dashboard-hint-marker)
-               (goto-char spofy--dashboard-playlist-marker)
-               (spofy--dashboard-insert-playlists items)))))))))
+      (cl-loop
+       for section in sections
+       for idx from 0
+       for spec = (spofy--dashboard-section-spec section)
+       when spec do
+       (let ((sec section)
+             (i idx)
+             (endpoint (nth 0 spec))
+             (params (nth 1 spec))
+             (inserter (nth 2 spec)))
+         (spofy-api-get
+          endpoint params
+          (lambda (response)
+            (when (buffer-live-p buf)
+              (with-current-buffer buf
+                (let* ((inhibit-read-only t)
+                       (items (spofy--dashboard-section-extract-items sec response))
+                       (start-marker (alist-get i spofy--dashboard-section-markers))
+                       (end-marker (alist-get (1+ i) spofy--dashboard-section-markers)))
+                  (when (and start-marker end-marker
+                             (marker-position start-marker)
+                             (marker-position end-marker))
+                    (delete-region start-marker end-marker)
+                    (goto-char start-marker)
+                    (funcall inserter items)
+                    (set-marker end-marker (point)))))))))))))
+
 
 ;;;;; Dashboard: interactive commands
 
