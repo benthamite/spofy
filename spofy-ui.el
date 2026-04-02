@@ -260,6 +260,13 @@ The time display (e.g. \"1:23 / 3:45\") is appended after the bar."
 (defvar-local spofy-ui--entity-type nil
   "The type of Spotify entity displayed in this buffer (track, album, etc.).")
 
+(defvar-local spofy-ui--load-more-handler nil
+  "Function to handle loading the next page of results.
+When non-nil, called with the API response for the next page.
+Must return a cons cell (NEW-ENTRIES . NEXT-URL) where NEW-ENTRIES
+is a list of `tabulated-list-entries' items and NEXT-URL is the URL
+for the following page, or nil.")
+
 (defvar-local spofy-ui--buffer-context nil
   "Alist of context data for the current Spofy buffer.")
 
@@ -272,6 +279,35 @@ LINES is a list of strings, each displayed on its own line with the
     (dolist (line lines)
       (insert (propertize line 'face 'spofy-header) "\n"))
     (insert "\n")))
+
+(declare-function spofy-api--request "spofy-api"
+                  (method url &optional params data callback))
+
+(defun spofy-ui-load-more ()
+  "Load the next page of results and append to the current buffer.
+Requires `spofy-ui--load-more-handler' to be set in the buffer."
+  (interactive)
+  (cond
+   ((null spofy-ui--load-more-handler)
+    (user-error "Spofy: this buffer does not support pagination"))
+   ((null spofy-ui--next-page-url)
+    (message "Spofy: no more results to load."))
+   (t
+    (require 'spofy-api)
+    (let ((buf (current-buffer))
+          (handler spofy-ui--load-more-handler))
+      (spofy-api--request
+       "GET" spofy-ui--next-page-url nil nil
+       (lambda (response)
+         (when (buffer-live-p buf)
+           (with-current-buffer buf
+             (pcase-let ((`(,new-entries . ,next-url)
+                          (funcall handler response)))
+               (setq spofy-ui--next-page-url next-url)
+               (setq tabulated-list-entries
+                     (append tabulated-list-entries new-entries))
+               (tabulated-list-print t)
+               (message "Spofy: loaded %d more." (length new-entries)))))))))))
 
 (defun spofy-ui-insert-pagination-footer ()
   "Insert a pagination hint at the end of the current buffer.

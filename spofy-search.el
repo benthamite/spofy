@@ -67,7 +67,7 @@
     (define-key map (kbd "s")   #'spofy-search-save)
     (define-key map (kbd "S")   #'spofy-search-unsave)
     (define-key map (kbd "g")   #'spofy-search-refresh)
-    (define-key map (kbd "m")   #'spofy-search-load-more)
+    (define-key map (kbd "m")   #'spofy-ui-load-more)
     (define-key map (kbd "q")   #'quit-window)
     map)
   "Keymap for `spofy-search-mode'.")
@@ -232,6 +232,20 @@ NEXT-URL is the URL for the next page of results, or nil."
       (setq spofy-search--type type)
       (setq spofy-ui--next-page-url next-url)
       (setq spofy-ui--entity-type type)
+      (let ((search-type type))
+        (setq-local spofy-ui--load-more-handler
+                    (lambda (response)
+                      (let* ((section-key (intern (spofy-search--type-plural search-type)))
+                             (section (alist-get section-key response))
+                             (items (alist-get 'items section))
+                             (next-url (alist-get 'next section)))
+                        (when items
+                          (spofy-search--store-entities
+                           spofy-search--entities items search-type))
+                        (cons (mapcar (lambda (item)
+                                        (spofy-search--format-entry search-type item))
+                                      (append items nil))
+                              next-url)))))
       (setq tabulated-list-format columns)
       (let ((entries (mapcar (lambda (item)
                                (spofy-search--format-entry type item))
@@ -391,31 +405,6 @@ play the context (all tracks from the beginning)."
   (interactive)
   (when (and spofy-search--type spofy-search--query)
     (spofy-search--perform spofy-search--type spofy-search--query)))
-
-(defun spofy-search-load-more ()
-  "Load the next page of search results and append to the current buffer."
-  (interactive)
-  (if (not spofy-ui--next-page-url)
-      (message "Spofy: no more results to load.")
-    (let ((type spofy-search--type)
-          (buf (current-buffer)))
-      (spofy-api--request
-       "GET" spofy-ui--next-page-url nil nil
-       (lambda (response)
-         (let* ((section-key (intern (spofy-search--type-plural type)))
-                (section (alist-get section-key response))
-                (items (alist-get 'items section))
-                (next-url (alist-get 'next section)))
-           (when (and items (buffer-live-p buf))
-             (with-current-buffer buf
-               (spofy-search--store-entities spofy-search--entities items type)
-               (let ((new-entries (mapcar (lambda (item)
-                                            (spofy-search--format-entry type item))
-                                          (append items nil))))
-                 (setq tabulated-list-entries
-                       (append tabulated-list-entries new-entries)))
-               (setq spofy-ui--next-page-url next-url)
-               (tabulated-list-print t)))))))))
 
 (provide 'spofy-search)
 ;;; spofy-search.el ends here

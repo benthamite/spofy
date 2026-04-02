@@ -101,7 +101,7 @@ Shows a play icon if TRACK-URI matches the currently playing track."
     (define-key map (kbd "A")   #'spofy-album-view-artist)
     (define-key map (kbd "g")   #'spofy-album-refresh)
     (define-key map (kbd "q")   #'quit-window)
-    (define-key map (kbd "m")   #'spofy-album-load-more)
+    (define-key map (kbd "m")   #'spofy-ui-load-more)
     map)
   "Keymap for `spofy-album-mode'.")
 
@@ -164,6 +164,14 @@ ALBUM-URI is the album context URI for playback."
                     (album . ,album)))
       (setq-local spofy-ui--next-page-url next-url)
       (setq-local spofy-ui--entity-type 'track)
+      (setq-local spofy-ui--load-more-handler
+                  (let ((album-uri uri))
+                    (lambda (response)
+                      (let ((tracks (alist-get 'items response))
+                            (next-url (alist-get 'next response)))
+                        (cons (cl-loop for track across tracks
+                                       collect (spofy-album--format-track track album-uri))
+                              next-url)))))
       (spofy-ui-insert-header
        (list (format "Album: %s" name)
              (format "Artist(s): %s" artist-str)
@@ -221,29 +229,6 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
   (when-let* ((album-id (alist-get 'album-id spofy-ui--buffer-context)))
     (spofy-view-album album-id)))
 
-(defun spofy-album-load-more ()
-  "Load the next page of tracks for this album."
-  (interactive)
-  (if (null spofy-ui--next-page-url)
-      (message "Spofy: no more tracks to load.")
-    (let ((album-uri (alist-get 'album-uri spofy-ui--buffer-context))
-          (buf (current-buffer)))
-      (spofy-api--request
-       "GET" spofy-ui--next-page-url nil nil
-       (lambda (response)
-         (when (buffer-live-p buf)
-           (with-current-buffer buf
-             (let* ((tracks (alist-get 'items response))
-                    (next-url (alist-get 'next response))
-                    (new-entries
-                     (cl-loop for track across tracks
-                              collect (spofy-album--format-track track album-uri))))
-               (setq-local spofy-ui--next-page-url next-url)
-               (setq tabulated-list-entries
-                     (append tabulated-list-entries new-entries))
-               (tabulated-list-print t)
-               (message "Spofy: loaded %d more tracks." (length tracks))))))))))
-
 ;;; ========================================================================
 ;;;; Artist view
 ;;; ========================================================================
@@ -255,7 +240,7 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
     (define-key map (kbd "a")   #'spofy-artist-play-album)
     (define-key map (kbd "g")   #'spofy-artist-refresh)
     (define-key map (kbd "q")   #'quit-window)
-    (define-key map (kbd "m")   #'spofy-artist-load-more)
+    (define-key map (kbd "m")   #'spofy-ui-load-more)
     map)
   "Keymap for `spofy-artist-mode'.")
 
@@ -310,6 +295,13 @@ ARTIST-ID is the Spotify artist ID."
                     (artist . ,artist)))
       (setq-local spofy-ui--next-page-url next-url)
       (setq-local spofy-ui--entity-type 'album)
+      (setq-local spofy-ui--load-more-handler
+                  (lambda (response)
+                    (let ((albums (alist-get 'items response))
+                          (next-url (alist-get 'next response)))
+                      (cons (cl-loop for album across albums
+                                     collect (spofy-artist--format-album album))
+                            next-url))))
       (spofy-ui-insert-header
        (list (format "Artist: %s" name)
              (format "Genres: %s" genres-str)
@@ -370,29 +362,6 @@ Fetches artist info and albums, then displays in a tabulated-list buffer."
   (interactive)
   (when-let* ((artist-id (alist-get 'artist-id spofy-ui--buffer-context)))
     (spofy-view-artist artist-id)))
-
-(defun spofy-artist-load-more ()
-  "Load the next page of albums for this artist."
-  (interactive)
-  (if (null spofy-ui--next-page-url)
-      (message "Spofy: no more albums to load.")
-    (let ((buf (current-buffer)))
-      (spofy-api--request
-       "GET" spofy-ui--next-page-url nil nil
-       (lambda (response)
-         (when (buffer-live-p buf)
-           (with-current-buffer buf
-             (let* ((albums (alist-get 'items response))
-                    (next-url (alist-get 'next response))
-                    (new-entries
-                     (cl-loop for album across albums
-                              collect (spofy-artist--format-album album))))
-               (setq-local spofy-ui--next-page-url next-url)
-               (setq tabulated-list-entries
-                     (append tabulated-list-entries new-entries))
-               (tabulated-list-print t)
-               (message "Spofy: loaded %d more albums."
-                        (length albums))))))))))
 
 ;;; ========================================================================
 ;;;; Artist top tracks
@@ -506,7 +475,7 @@ ARTIST-ID is kept for refresh."
     (define-key map (kbd "s")   #'spofy-playlist-view-save-track)
     (define-key map (kbd "g")   #'spofy-playlist-view-refresh)
     (define-key map (kbd "q")   #'quit-window)
-    (define-key map (kbd "m")   #'spofy-playlist-view-load-more)
+    (define-key map (kbd "m")   #'spofy-ui-load-more)
     map)
   "Keymap for `spofy-playlist-view-mode'.")
 
@@ -594,6 +563,16 @@ PLAYLIST-URI is the playlist context URI for playback."
                     (playlist . ,playlist)))
       (setq-local spofy-ui--next-page-url next-url)
       (setq-local spofy-ui--entity-type 'track)
+      (setq-local spofy-ui--load-more-handler
+                  (let ((playlist-uri uri))
+                    (lambda (response)
+                      (let ((items (alist-get 'items response))
+                            (next-url (alist-get 'next response)))
+                        (cons (cl-loop for item across items
+                                       for entry = (spofy-playlist--format-track-item
+                                                    item playlist-uri)
+                                       when entry collect entry)
+                              next-url)))))
       (spofy-ui-insert-header
        (list (format "Playlist: %s" name)
              (format "Owner: %s" owner)
@@ -660,32 +639,6 @@ Fetches playlist data from the API and displays it in a tabulated-list buffer."
   (interactive)
   (when-let* ((playlist-id (alist-get 'playlist-id spofy-ui--buffer-context)))
     (spofy-view-playlist playlist-id)))
-
-(defun spofy-playlist-view-load-more ()
-  "Load the next page of tracks for this playlist."
-  (interactive)
-  (if (null spofy-ui--next-page-url)
-      (message "Spofy: no more tracks to load.")
-    (let ((playlist-uri (alist-get 'playlist-uri spofy-ui--buffer-context))
-          (buf (current-buffer)))
-      (spofy-api--request
-       "GET" spofy-ui--next-page-url nil nil
-       (lambda (response)
-         (when (buffer-live-p buf)
-           (with-current-buffer buf
-             (let* ((items (alist-get 'items response))
-                    (next-url (alist-get 'next response))
-                    (new-entries
-                     (cl-loop for item across items
-                              for entry = (spofy-playlist--format-track-item
-                                           item playlist-uri)
-                              when entry collect entry)))
-               (setq-local spofy-ui--next-page-url next-url)
-               (setq tabulated-list-entries
-                     (append tabulated-list-entries new-entries))
-               (tabulated-list-print t)
-               (message "Spofy: loaded %d more tracks."
-                        (length new-entries))))))))))
 
 (provide 'spofy-browse)
 ;;; spofy-browse.el ends here

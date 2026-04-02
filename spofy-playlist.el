@@ -96,7 +96,7 @@ Buffer-local in `spofy-playlists-mode' buffers.")
     (define-key map (kbd "f")   #'spofy-follow-playlist)
     (define-key map (kbd "v")   #'spofy-playlist-set-public)
     (define-key map (kbd "g")   #'spofy-playlists-refresh)
-    (define-key map (kbd "m")   #'spofy-playlists-load-more)
+    (define-key map (kbd "m")   #'spofy-ui-load-more)
     (define-key map (kbd "q")   #'quit-window)
     map)
   "Keymap for `spofy-playlists-mode'.")
@@ -146,6 +146,13 @@ NEXT-URL is the URL for the next page of results, or nil."
       (spofy-playlists-mode)
       (setq spofy-ui--next-page-url next-url)
       (setq spofy-ui--entity-type "playlist")
+      (setq-local spofy-ui--load-more-handler
+                  (lambda (response)
+                    (let ((items (alist-get 'items response))
+                          (next-url (alist-get 'next response)))
+                      (cons (cl-loop for item across items
+                                     collect (spofy-playlist--format-entry item))
+                            next-url))))
       (setq tabulated-list-entries
             (cl-loop for item across items
                      collect (spofy-playlist--format-entry item)))
@@ -181,29 +188,6 @@ NEXT-URL is the URL for the next page of results, or nil."
   "Refresh the playlists buffer."
   (interactive)
   (spofy-list-playlists))
-
-(defun spofy-playlists-load-more ()
-  "Load the next page of playlists and append to the buffer."
-  (interactive)
-  (if (null spofy-ui--next-page-url)
-      (message "Spofy: no more playlists to load.")
-    (let ((buf (current-buffer)))
-      (spofy-api--request
-       "GET" spofy-ui--next-page-url nil nil
-       (lambda (response)
-         (when (buffer-live-p buf)
-           (with-current-buffer buf
-             (let* ((items (alist-get 'items response))
-                    (next-url (alist-get 'next response))
-                    (new-entries
-                     (cl-loop for item across items
-                              collect (spofy-playlist--format-entry item))))
-               (setq spofy-ui--next-page-url next-url)
-               (setq tabulated-list-entries
-                     (append tabulated-list-entries new-entries))
-               (tabulated-list-print t)
-               (message "Spofy: loaded %d more playlists."
-                        (length new-entries))))))))))
 
 ;;;; Create playlist
 
