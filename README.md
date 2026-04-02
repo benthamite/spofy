@@ -50,8 +50,8 @@ Optional integrations extend `spofy` into the broader Emacs ecosystem:
 2. Configure your credentials:
 
    ```emacs-lisp
-   (setq spofy-client-id "your-client-id")
-   (setq spofy-client-secret "your-client-secret")
+   (setopt spofy-client-id "your-client-id")
+   (setopt spofy-client-secret "your-client-secret")
    ```
 
 3. Run `M-x spofy-authenticate` to authorize via OAuth2 (opens your browser).
