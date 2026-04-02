@@ -282,6 +282,14 @@ HEADERS is an alist of extra headers to include."
     (let ((result (spofy-api--extract-paged-results response)))
       (should-not (alist-get 'next result)))))
 
+(ert-deftest spofy-api-test-pagination-json-null-next ()
+  "When JSON null is returned for next, it is normalized to nil."
+  (let ((response `((items . [((name . "Track 1"))])
+                    (next . :null)
+                    (total . 1))))
+    (let ((result (spofy-api--extract-paged-results response)))
+      (should-not (alist-get 'next result)))))
+
 ;;;; Cache TTL lookup
 
 (ert-deftest spofy-api-test-cache-ttl-lookup ()

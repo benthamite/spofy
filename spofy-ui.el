@@ -295,7 +295,8 @@ Requires `spofy-ui--load-more-handler' to be set in the buffer."
            (with-current-buffer buf
              (pcase-let ((`(,new-entries . ,next-url)
                           (funcall handler response)))
-               (setq spofy-ui--next-page-url next-url)
+               (setq spofy-ui--next-page-url
+                     (unless (eq next-url :null) next-url))
                (setq tabulated-list-entries
                      (append tabulated-list-entries new-entries))
                (tabulated-list-print t)

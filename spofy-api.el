@@ -332,7 +332,7 @@ Return an alist with `items' (vector) and `next' (URL string or nil)."
   (let ((items (alist-get 'items response))
         (next (alist-get 'next response)))
     `((items . ,items)
-      (next . ,next))))
+      (next . ,(unless (eq next :null) next)))))
 
 (provide 'spofy-api)
 ;;; spofy-api.el ends here
