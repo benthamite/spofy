@@ -38,8 +38,8 @@
 (declare-function spofy-view-album "spofy-browse" (album-id))
 (declare-function spofy-view-artist "spofy-browse" (artist-id))
 (declare-function spofy-playlist-add-track "spofy-playlist" (track-uri))
-(declare-function spofy-library-save "spofy-library" (uri))
-(declare-function spofy-library-unsave "spofy-library" (uri))
+(declare-function spofy-library-save "spofy-library" (uri-or-type &optional id))
+(declare-function spofy-library-unsave "spofy-library" (uri-or-type &optional id))
 (declare-function consult-spofy-track "spofy-consult" ())
 (declare-function consult-spofy-album "spofy-consult" ())
 (declare-function consult-spofy-artist "spofy-consult" ())
@@ -257,6 +257,24 @@ NEXT-URL is the URL for the next page of results, or nil."
            (spofy-search--display-results type query items next-url)
          (message "Spofy: no results for \"%s\"." query))))))
 
+(defun spofy-search--consult-available-p ()
+  "Return non-nil when the Consult integration is available."
+  (and (require 'spofy-consult nil t)
+       (featurep 'consult)
+       (fboundp 'consult--read)
+       (fboundp 'consult--dynamic-collection)
+       (fboundp 'consult--lookup-member)))
+
+(defun spofy-search--dispatch (type query consult-command)
+  "Dispatch a TYPE search using QUERY or CONSULT-COMMAND."
+  (cond
+   (query
+    (spofy-search--perform type query))
+   ((spofy-search--consult-available-p)
+    (funcall consult-command))
+   (t
+    (user-error "Spofy: Consult is unavailable; provide a search query"))))
+
 ;;;; Interactive commands
 
 ;;;###autoload
@@ -264,44 +282,36 @@ NEXT-URL is the URL for the next page of results, or nil."
   "Search Spotify for tracks matching QUERY.
 When `spofy-consult' is loaded, use incremental search instead."
   (interactive
-   (list (unless (require 'spofy-consult nil t)
+   (list (unless (spofy-search--consult-available-p)
            (read-string "Search tracks: "))))
-  (if query
-      (spofy-search--perform "track" query)
-    (consult-spofy-track)))
+  (spofy-search--dispatch "track" query #'consult-spofy-track))
 
 ;;;###autoload
 (defun spofy-search-albums (query)
   "Search Spotify for albums matching QUERY.
 When `spofy-consult' is loaded, use incremental search instead."
   (interactive
-   (list (unless (require 'spofy-consult nil t)
+   (list (unless (spofy-search--consult-available-p)
            (read-string "Search albums: "))))
-  (if query
-      (spofy-search--perform "album" query)
-    (consult-spofy-album)))
+  (spofy-search--dispatch "album" query #'consult-spofy-album))
 
 ;;;###autoload
 (defun spofy-search-artists (query)
   "Search Spotify for artists matching QUERY.
 When `spofy-consult' is loaded, use incremental search instead."
   (interactive
-   (list (unless (require 'spofy-consult nil t)
+   (list (unless (spofy-search--consult-available-p)
            (read-string "Search artists: "))))
-  (if query
-      (spofy-search--perform "artist" query)
-    (consult-spofy-artist)))
+  (spofy-search--dispatch "artist" query #'consult-spofy-artist))
 
 ;;;###autoload
 (defun spofy-search-playlists (query)
   "Search Spotify for playlists matching QUERY.
 When `spofy-consult' is loaded, use incremental search instead."
   (interactive
-   (list (unless (require 'spofy-consult nil t)
+   (list (unless (spofy-search--consult-available-p)
            (read-string "Search playlists: "))))
-  (if query
-      (spofy-search--perform "playlist" query)
-    (consult-spofy-playlist)))
+  (spofy-search--dispatch "playlist" query #'consult-spofy-playlist))
 
 ;;;; Actions
 

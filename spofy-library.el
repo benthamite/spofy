@@ -58,6 +58,20 @@ For example, \"spotify:track:1234\" returns \"track\"."
       (match-string 1 uri)
     nil))
 
+(defun spofy-library--normalize-type (type)
+  "Normalize TYPE to a singular Spotify library entity type."
+  (pcase (if (symbolp type) (symbol-name type) type)
+    ((or "track" "tracks") "track")
+    ((or "album" "albums") "album")
+    (_ nil)))
+
+(defun spofy-library--resolve-entity (uri-or-type &optional id)
+  "Resolve URI-OR-TYPE and optional ID to a normalized (TYPE . ID) pair."
+  (if id
+      (cons (spofy-library--normalize-type uri-or-type) id)
+    (cons (spofy-library--normalize-type (spofy-library--extract-type uri-or-type))
+          (spofy-library--extract-id uri-or-type))))
+
 ;;;; Entity storage
 
 (defvar-local spofy-library--entities nil
@@ -381,42 +395,42 @@ in a tabulated-list buffer."
 ;;; ========================================================================
 
 ;;;###autoload
-(defun spofy-library-save (uri)
-  "Save the Spotify entity identified by URI to the user's library.
-URI should be a Spotify URI like \"spotify:track:ID\" or
-\"spotify:album:ID\".  The entity type is determined from the URI."
+(defun spofy-library-save (uri-or-type &optional id)
+  "Save a Spotify entity to the user's library.
+URI-OR-TYPE may be a Spotify URI like \"spotify:track:ID\", or a
+type string/symbol plus ID supplied separately."
   (interactive
    (list (or (tabulated-list-get-id)
              (read-string "Spotify URI: "))))
-  (let* ((type (spofy-library--extract-type uri))
-         (id (spofy-library--extract-id uri))
+  (pcase-let* ((`(,type . ,entity-id)
+                 (spofy-library--resolve-entity uri-or-type id))
          (endpoint (pcase type
                      ("track" "me/tracks")
                      ("album" "me/albums")
                      (_ nil))))
     (if (not endpoint)
         (message "Spofy: cannot save entity of type \"%s\"." (or type "unknown"))
-      (spofy-api-put endpoint `((ids . [,id]))
+      (spofy-api-put endpoint `((ids . [,entity-id]))
                      (lambda (_response)
                        (message "Spofy: saved %s to library." type))))))
 
 ;;;###autoload
-(defun spofy-library-unsave (uri)
-  "Remove the Spotify entity identified by URI from the user's library.
-URI should be a Spotify URI like \"spotify:track:ID\" or
-\"spotify:album:ID\".  The entity type is determined from the URI."
+(defun spofy-library-unsave (uri-or-type &optional id)
+  "Remove a Spotify entity from the user's library.
+URI-OR-TYPE may be a Spotify URI like \"spotify:track:ID\", or a
+type string/symbol plus ID supplied separately."
   (interactive
    (list (or (tabulated-list-get-id)
              (read-string "Spotify URI: "))))
-  (let* ((type (spofy-library--extract-type uri))
-         (id (spofy-library--extract-id uri))
+  (pcase-let* ((`(,type . ,entity-id)
+                 (spofy-library--resolve-entity uri-or-type id))
          (endpoint (pcase type
                      ("track" "me/tracks")
                      ("album" "me/albums")
                      (_ nil))))
     (if (not endpoint)
         (message "Spofy: cannot unsave entity of type \"%s\"." (or type "unknown"))
-      (spofy-api-delete endpoint `((ids . [,id]))
+      (spofy-api-delete endpoint `((ids . [,entity-id]))
                         (lambda (_response)
                           (message "Spofy: removed %s from library." type))))))
 

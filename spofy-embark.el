@@ -37,7 +37,7 @@
 (declare-function spofy-play-track "spofy-player" (uri &optional context-uri))
 (declare-function spofy-play-context "spofy-player" (context-uri))
 (declare-function spofy-playlist-add-track "spofy-playlist" (track-uri))
-(declare-function spofy-library-save "spofy-library" (uri))
+(declare-function spofy-library-save "spofy-library" (uri-or-type &optional id))
 (declare-function spofy-view-album "spofy-browse" (album-id))
 (declare-function spofy-view-artist "spofy-browse" (artist-id))
 (declare-function spofy-view-playlist "spofy-browse" (playlist-id))

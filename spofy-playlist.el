@@ -338,13 +338,15 @@ get the track URI from the entity at point."
 
 ;;;; Remove track from playlist
 
-(defun spofy-playlist-remove-track ()
-  "Remove the track at point from the current playlist.
-Only works in playlist detail buffers.  Gets the playlist ID from
-`spofy-ui--buffer-context'."
+(defun spofy-playlist-remove-track (&optional playlist-id track-uri)
+  "Remove TRACK-URI from PLAYLIST-ID.
+When called interactively, operate on the playlist track at point
+using `spofy-ui--buffer-context'."
   (interactive)
-  (let ((playlist-id (alist-get 'playlist-id spofy-ui--buffer-context))
-        (track-uri (tabulated-list-get-id)))
+  (let ((playlist-id (or playlist-id
+                         (alist-get 'playlist-id spofy-ui--buffer-context)))
+        (track-uri (or track-uri
+                       (tabulated-list-get-id))))
     (unless playlist-id
       (user-error "Not in a playlist detail buffer"))
     (unless track-uri

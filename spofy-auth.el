@@ -25,11 +25,12 @@
 ;; OAuth2 authentication for the Spofy Spotify client.  Handles the
 ;; authorization code flow: starts a local HTTP server, opens the
 ;; browser for authorization, exchanges the code for tokens, and
-;; persists them via auth-source.
+;; persists them in `spofy-token-file'.
 
 ;;; Code:
 
 (require 'spofy-ui)
+(require 'epa-file)
 (require 'url)
 (require 'url-http)
 (require 'cl-lib)
@@ -156,7 +157,7 @@ type, and a random state parameter."
 (defun spofy-auth--store-tokens (access-token refresh-token expires-in)
   "Store ACCESS-TOKEN, REFRESH-TOKEN and compute expiry from EXPIRES-IN.
 EXPIRES-IN is the number of seconds until the access token expires.
-Tokens are stored both in memory and in auth-source."
+Tokens are stored both in memory and in `spofy-token-file'."
   (setq spofy-auth--access-token access-token
         spofy-auth--refresh-token refresh-token
         spofy-auth--token-expiry (+ (float-time) expires-in))

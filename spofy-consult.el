@@ -33,9 +33,9 @@
 (require 'seq)
 (require 'spofy-api)
 
-(declare-function consult--read "consult")
-(declare-function consult--dynamic-collection "consult")
-(declare-function consult--lookup-member "consult")
+(declare-function consult--read "ext:consult")
+(declare-function consult--dynamic-collection "ext:consult")
+(declare-function consult--lookup-member "ext:consult")
 
 (declare-function spofy-play-track "spofy-player" (uri &optional context-uri))
 (declare-function spofy-play-context "spofy-player" (context-uri))
@@ -73,25 +73,38 @@ appended as-is."
   "Return the Nth column width for TYPE from `spofy-consult-columns'."
   (nth n (alist-get type spofy-consult-columns)))
 
+(defun spofy-consult--available-p ()
+  "Return non-nil when the Consult internals used by Spofy are loaded."
+  (and (featurep 'consult)
+       (fboundp 'consult--read)
+       (fboundp 'consult--dynamic-collection)
+       (fboundp 'consult--lookup-member)))
+
+(defun spofy-consult--ensure-available ()
+  "Signal a user-facing error when Consult is unavailable."
+  (unless (spofy-consult--available-p)
+    (user-error "Spofy: Consult is not installed")))
+
 ;;;; Synchronous API helper
 
 (defun spofy-consult--api-get-sync (endpoint params)
   "Synchronous GET from the Spotify API.
 ENDPOINT is a relative path.  PARAMS is an alist of query parameters.
 Return the parsed JSON response, or nil on error."
-  (let* ((url (spofy-api--build-url endpoint params))
-         (url-request-method "GET")
-         (url-request-extra-headers
-          `(("Authorization" . ,(format "Bearer %s" (spofy-auth-access-token)))))
-         (url-show-status nil)
-         (buf (url-retrieve-synchronously url t nil 10)))
-    (when buf
-      (unwind-protect
-          (with-current-buffer buf
-            (let ((status (spofy-api--response-status)))
-              (when (and status (>= status 200) (< status 300))
-                (spofy-api--parse-response))))
-        (kill-buffer buf)))))
+  (when-let* ((token (spofy-auth-access-token)))
+    (let* ((url (spofy-api--build-url endpoint params))
+           (url-request-method "GET")
+           (url-request-extra-headers
+            `(("Authorization" . ,(format "Bearer %s" token))))
+           (url-show-status nil)
+           (buf (url-retrieve-synchronously url t nil 10)))
+      (when buf
+        (unwind-protect
+            (with-current-buffer buf
+              (let ((status (spofy-api--response-status)))
+                (when (and status (>= status 200) (< status 300))
+                  (spofy-api--parse-response))))
+          (kill-buffer buf))))))
 
 ;;;; Helpers
 
@@ -233,6 +246,7 @@ FORMAT-FN is called on each result item to produce a candidate string."
 (defun consult-spofy-track ()
   "Search Spotify tracks and play the selected one."
   (interactive)
+  (spofy-consult--ensure-available)
   (let* ((selected
           (consult--read
            (consult--dynamic-collection
@@ -255,6 +269,7 @@ FORMAT-FN is called on each result item to produce a candidate string."
 (defun consult-spofy-album ()
   "Search Spotify albums and open the selected one."
   (interactive)
+  (spofy-consult--ensure-available)
   (let* ((selected
           (consult--read
            (consult--dynamic-collection
@@ -277,6 +292,7 @@ FORMAT-FN is called on each result item to produce a candidate string."
 (defun consult-spofy-artist ()
   "Search Spotify artists and open the selected one."
   (interactive)
+  (spofy-consult--ensure-available)
   (let* ((selected
           (consult--read
            (consult--dynamic-collection
@@ -299,6 +315,7 @@ FORMAT-FN is called on each result item to produce a candidate string."
 (defun consult-spofy-playlist ()
   "Search Spotify playlists and open the selected one."
   (interactive)
+  (spofy-consult--ensure-available)
   (let* ((selected
           (consult--read
            (consult--dynamic-collection
@@ -334,6 +351,7 @@ Results are fetched once and cached for subsequent calls."
 (defun consult-spofy-my-playlist ()
   "Pick from the user's Spotify playlists and open the selected one."
   (interactive)
+  (spofy-consult--ensure-available)
   (let* ((selected
           (consult--read
            (consult--dynamic-collection
@@ -368,6 +386,7 @@ Results are fetched once and cached for subsequent calls."
 (defun consult-spofy-device ()
   "Pick a Spotify playback device and transfer playback to it."
   (interactive)
+  (spofy-consult--ensure-available)
   (let* ((selected
           (consult--read
            (consult--dynamic-collection

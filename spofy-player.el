@@ -192,6 +192,10 @@ If no device is found, take action based on `spofy-no-device-action':
 `prompt' signals a `user-error'; `launch' starts Spotify and signals
 a `user-error' so the caller can retry once the app is ready."
   (unless (alist-get 'device spofy-player--current-state)
+    ;; Cold sessions can have no cached state even when Spotify already has
+    ;; an active device, so refresh once before failing.
+    (spofy-player--poll-sync))
+  (unless (alist-get 'device spofy-player--current-state)
     (pcase spofy-no-device-action
       ('prompt
        (user-error "Spofy: no active device found; please open Spotify on a device"))

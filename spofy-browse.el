@@ -37,9 +37,9 @@
 (declare-function spofy-player-current-track-id "spofy-player" ())
 (declare-function spofy-play-track "spofy-player" (track-uri &optional context-uri))
 (declare-function spofy-play-context "spofy-player" (context-uri))
-(declare-function spofy-playlist-remove-track "spofy-playlist" (playlist-id track-uri))
-(declare-function spofy-library-save "spofy-library" (type id))
-(declare-function spofy-library-unsave "spofy-library" (type id))
+(declare-function spofy-playlist-remove-track "spofy-playlist" (&optional playlist-id track-uri))
+(declare-function spofy-library-save "spofy-library" (uri-or-type &optional id))
+(declare-function spofy-library-unsave "spofy-library" (uri-or-type &optional id))
 
 ;;;; Entity storage
 
@@ -201,8 +201,10 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
 (defun spofy-album-save ()
   "Save the album to the user's library."
   (interactive)
-  (when-let* ((album-id (alist-get 'album-id spofy-ui--buffer-context)))
-    (spofy-library-save "albums" album-id)))
+  (when-let* ((album-uri (or (alist-get 'album-uri spofy-ui--buffer-context)
+                             (when-let* ((album-id (alist-get 'album-id spofy-ui--buffer-context)))
+                               (format "spotify:album:%s" album-id)))))
+    (spofy-library-save album-uri)))
 
 (defun spofy-album-view-artist ()
   "View the artist of the track at point."
@@ -481,9 +483,8 @@ ARTIST-ID is kept for refresh."
 (defun spofy-top-tracks-save ()
   "Save the track at point to the user's library."
   (interactive)
-  (when-let* ((uri (tabulated-list-get-id))
-              (track-id (spofy-browse--extract-id-from-uri uri)))
-    (spofy-library-save "tracks" track-id)))
+  (when-let* ((uri (tabulated-list-get-id)))
+    (spofy-library-save uri)))
 
 (defun spofy-top-tracks-refresh ()
   "Refresh the top tracks view."
@@ -651,9 +652,8 @@ Fetches playlist data from the API and displays it in a tabulated-list buffer."
 (defun spofy-playlist-view-save-track ()
   "Save the track at point to the user's library."
   (interactive)
-  (when-let* ((uri (tabulated-list-get-id))
-              (track-id (spofy-browse--extract-id-from-uri uri)))
-    (spofy-library-save "tracks" track-id)))
+  (when-let* ((uri (tabulated-list-get-id)))
+    (spofy-library-save uri)))
 
 (defun spofy-playlist-view-refresh ()
   "Refresh the playlist view."
