@@ -233,7 +233,7 @@ The dashboard keymap provides these bindings:
 
 #+findex: spofy-menu
 
-The command ~spofy-menu~ opens a transient popup that provides quick access to all Spofy commands from any buffer.  The popup header shows the currently playing track.  When ~spofy-global-mode~ is active, this command is bound to ~spofy-global-key~ (default =C-c s=).
+The command ~spofy-menu~ opens a transient popup that provides quick access to all Spofy commands from any buffer.  Before showing the popup, it ensures that ~spofy-global-mode~ is active ([[#h:global-minor-mode][Global minor mode]]), so invoking ~spofy-menu~ for the first time in a session automatically starts polling, the mode-line display, and the tab-bar display as configured.  The popup header shows the currently playing track.  When ~spofy-global-mode~ is active, this command is bound to ~spofy-global-key~ (default =C-c s=).
 
 The popup is organized into columns:
 
@@ -256,8 +256,11 @@ The command ~spofy-global-mode~ toggles a global minor mode.  When enabled, it:
 - Binds ~spofy-global-key~ to ~spofy-menu~.
 - Starts player state polling.
 - Enables the mode-line display (if ~spofy-enable-mode-line~ is non-nil).
+- Enables the tab-bar display (if ~spofy-enable-tab-bar~ is non-nil).
 
-When disabled, it reverses all of these effects.  The ~spofy~ command enables this mode automatically.
+When disabled, it reverses all of these effects.  Both ~spofy~ and ~spofy-menu~ enable this mode automatically when they are invoked.
+
+In addition, Spofy auto-enables the mode at package load time when display features (~spofy-enable-mode-line~ or ~spofy-enable-tab-bar~) are configured and valid authentication tokens are available on disk.  This means that loading the package eagerly (e.g. with =:demand t= in a ~use-package~ form) is sufficient for the tab-bar or mode-line display to appear at Emacs startup without requiring the user to invoke any command.
 
 ** Playback control
 :PROPERTIES:

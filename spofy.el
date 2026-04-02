@@ -349,13 +349,9 @@ Assumes the current buffer is in `spofy-dashboard-mode'."
 The main entry point for the Spofy Spotify client.  Ensures
 authentication, starts polling, and displays the dashboard buffer."
   (interactive)
-  ;; Lazy-load modules
+  ;; Ensure authenticated (with interactive prompt on first use)
   (require 'spofy-auth)
-  (require 'spofy-api)
-  (require 'spofy-player)
-  ;; Try to load persisted tokens
   (spofy-auth--load-tokens)
-  ;; Ensure we are authenticated
   (unless (spofy-auth-access-token)
     (if (y-or-n-p "Spofy: not authenticated.  Authenticate now? ")
         (progn
@@ -364,8 +360,7 @@ authentication, starts polling, and displays the dashboard buffer."
           (cl-return-from spofy))
       (user-error "Spofy: authentication required")))
   ;; Enable global mode (starts polling, mode-line, tab-bar)
-  (unless spofy-global-mode
-    (spofy-global-mode 1))
+  (spofy--ensure-global-mode)
   ;; Hook up now-playing refresh on state changes
   (add-hook 'spofy-player-state-changed-hook #'spofy--dashboard-refresh-now-playing)
   ;; Start progress interpolation timer
@@ -385,6 +380,21 @@ authentication, starts polling, and displays the dashboard buffer."
   (when (string= (buffer-name) "*Spofy*")
     (spofy--dashboard-render)))
 
+;;;; Initialization helper
+
+(defun spofy--ensure-global-mode ()
+  "Ensure `spofy-global-mode' is active.
+Loads required modules, checks authentication, and enables the mode.
+Signals `user-error' if authentication tokens are not available."
+  (require 'spofy-auth)
+  (require 'spofy-api)
+  (require 'spofy-player)
+  (spofy-auth--load-tokens)
+  (unless (spofy-auth-access-token)
+    (user-error "Spofy: not authenticated; run `spofy' to authenticate"))
+  (unless spofy-global-mode
+    (spofy-global-mode 1)))
+
 ;;;; Transient popup
 
 (defun spofy--transient-description ()
@@ -396,9 +406,8 @@ authentication, starts polling, and displays the dashboard buffer."
           (format "Spofy: %s %s — %s" icon (car track-info) (cdr track-info)))
       "Spofy: no track playing")))
 
-;;;###autoload (autoload 'spofy-menu "spofy" nil t)
-(transient-define-prefix spofy-menu ()
-  "Spofy command popup."
+(transient-define-prefix spofy--menu ()
+  "Spofy command popup (internal transient)."
   [:description spofy--transient-description]
   [["Playback"
     ("SPC" "Play/Pause"  spofy-play-pause)
@@ -438,6 +447,15 @@ authentication, starts polling, and displays the dashboard buffer."
     "Other"
     ("D" "Dashboard" spofy)
     ("q" "Quit"      transient-quit-one)]])
+
+;;;###autoload (autoload 'spofy-menu "spofy" nil t)
+(defun spofy-menu ()
+  "Open the Spofy command popup.
+Ensures Spofy is initialized (polling, tab-bar, etc.) before
+showing the transient menu."
+  (interactive)
+  (spofy--ensure-global-mode)
+  (call-interactively #'spofy--menu))
 
 ;;;###autoload (autoload 'spofy-library-menu "spofy" nil t)
 (transient-define-prefix spofy-library-menu ()
@@ -503,6 +521,19 @@ polling, and optionally enables the mode-line display."
     (when (and spofy-enable-tab-bar
                (fboundp 'spofy-tab-bar-mode))
       (spofy-tab-bar-mode -1))))
+
+;;;; Auto-start
+
+;; When display features (mode-line or tab-bar) are configured and auth
+;; tokens are available, enable `spofy-global-mode' automatically on load.
+;; This ensures that loading spofy (e.g. via :demand t in use-package) is
+;; sufficient for the tab-bar/mode-line display to appear.
+(when (and (or spofy-enable-mode-line spofy-enable-tab-bar)
+           (not spofy-global-mode))
+  (require 'spofy-auth)
+  (spofy-auth--load-tokens)
+  (when (spofy-auth-access-token)
+    (spofy-global-mode 1)))
 
 (provide 'spofy)
 ;;; spofy.el ends here
