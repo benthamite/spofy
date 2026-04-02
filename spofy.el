@@ -125,9 +125,9 @@ When `spofy-global-mode' is enabled, this key opens `spofy-menu'."
 
 (defvar spofy-dashboard-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "p")   #'spofy-play-pause)
+    (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "n")   #'spofy-next)
-    (define-key map (kbd "b")   #'spofy-previous)
+    (define-key map (kbd "p")   #'spofy-previous)
     (define-key map (kbd "/")   #'spofy-menu)
     (define-key map (kbd "g")   #'spofy-dashboard-refresh)
     (define-key map (kbd "q")   #'quit-window)
@@ -235,7 +235,7 @@ When `spofy-global-mode' is enabled, this key opens `spofy-menu'."
   "Insert keybinding hints at the bottom of the dashboard."
   (insert "\n"
           (propertize
-           "p Play/Pause  n Next  b Previous  / Search  q Quit"
+           "SPC Play/Pause  n Next  p Previous  / Search  q Quit"
            'face 'spofy-muted)
           "\n"))
 
@@ -401,9 +401,9 @@ authentication, starts polling, and displays the dashboard buffer."
   "Spofy command popup."
   [:description spofy--transient-description]
   [["Playback"
-    ("p" "Play/Pause"    spofy-play-pause)
+    ("SPC" "Play/Pause"  spofy-play-pause)
     ("n" "Next"          spofy-next)
-    ("b" "Previous"      spofy-previous)
+    ("p" "Previous"      spofy-previous)
     ("f" "Seek forward"  spofy-seek-forward :transient t)
     ("r" "Seek backward" spofy-seek-backward :transient t)]
    ["Search"

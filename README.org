@@ -219,9 +219,9 @@ The dashboard keymap provides these bindings:
 
 | Key | Command                     |
 |-----+-----------------------------|
-| =p= | ~spofy-play-pause~          |
-| =n= | ~spofy-next~                |
-| =b= | ~spofy-previous~            |
+| =SPC= | ~spofy-play-pause~        |
+| =n=   | ~spofy-next~              |
+| =p=   | ~spofy-previous~          |
 =/=  | ~spofy-menu~           |
 | =g= | ~spofy-dashboard-refresh~   |
 | =q= | ~quit-window~               |
