@@ -95,7 +95,7 @@ The user option ~spofy-seek-seconds~ controls how many seconds ~spofy-seek-forwa
 
 The user option ~spofy-volume-step~ sets the percentage increment for ~spofy-volume-up~ and ~spofy-volume-down~.  It defaults to ~5~.  Valid volume values range from 0 to 100.
 
-The user option ~spofy-no-device-action~ determines what happens when Spofy tries to control playback but no active Spotify device is found.  It defaults to the symbol ~prompt~, which displays a message asking the user to open Spotify on any device.  Setting it to ~launch~ makes Spofy attempt to start the local Spotify desktop application automatically (using =open -a Spotify= on macOS or =spotify= on Linux).
+The user option ~spofy-no-device-action~ determines what happens when Spofy tries to control playback but no active Spotify device is found.  It defaults to the symbol ~prompt~, which aborts the command and displays a message asking the user to open Spotify on any device.  Setting it to ~launch~ makes Spofy start the local Spotify desktop application automatically (using =open -a Spotify= on macOS or =spotify= on Linux) and then abort the command so the user can retry once the application is ready.  In both cases the playback command is aborted early, so no API request is sent to Spotify.
 
 ** Mode-line
 :PROPERTIES:

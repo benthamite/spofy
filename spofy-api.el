@@ -262,6 +262,14 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
                                   #'spofy-api--request-with-retries
                                   method url params data callback
                                   (1+ retry-count) refreshed-p)))
+                  ;; No active device (404 on player endpoints)
+                  ((and (eql status-code 404)
+                        (string-match-p "me/player" full-url))
+                   (kill-buffer buf)
+                   (let ((last (gethash full-url spofy-api--last-error-times 0)))
+                     (when (> (- (float-time) last) spofy-api--error-cooldown)
+                       (puthash full-url (float-time) spofy-api--last-error-times)
+                       (message "Spofy: no active device found; please open Spotify on a device"))))
                   ;; All retries exhausted or unrecoverable error
                   (t
                    (kill-buffer buf)

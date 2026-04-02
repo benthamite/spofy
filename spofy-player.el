@@ -189,16 +189,17 @@ Adds elapsed wall-clock time since the last poll if the track is playing."
 (defun spofy-player--ensure-device ()
   "Ensure an active playback device is available.
 If no device is found, take action based on `spofy-no-device-action':
-`prompt' displays a message; `launch' attempts to start Spotify."
+`prompt' signals a `user-error'; `launch' starts Spotify and signals
+a `user-error' so the caller can retry once the app is ready."
   (unless (alist-get 'device spofy-player--current-state)
     (pcase spofy-no-device-action
       ('prompt
-       (message "Spofy: no active device found; please open Spotify on a device"))
+       (user-error "Spofy: no active device found; please open Spotify on a device"))
       ('launch
-       (message "Spofy: no active device found; launching Spotify...")
        (pcase system-type
          ('darwin (start-process "spotify" nil "open" "-a" "Spotify"))
-         (_ (start-process "spotify" nil "spotify")))))))
+         (_ (start-process "spotify" nil "spotify")))
+       (user-error "Spofy: no active device found; launching Spotify — please retry in a moment")))))
 
 ;;;###autoload
 (defun spofy-select-device ()
