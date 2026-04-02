@@ -505,23 +505,23 @@ polling, and optionally enables the mode-line display."
         (require 'spofy-player)
         (unless (and (boundp 'spofy-player--timer) spofy-player--timer)
           (spofy-player-start-polling))
-        ;; Enable mode-line if configured
-        (when spofy-enable-mode-line
-          (require 'spofy-mode-line)
-          (spofy-mode-line-mode 1))
-        ;; Enable tab-bar if configured
-        (when spofy-enable-tab-bar
+        ;; Enable display: tab-bar takes precedence over mode-line to
+        ;; avoid duplication (mode-line strings appear in the tab bar
+        ;; via `tab-bar-format-global').
+        (cond
+         (spofy-enable-tab-bar
           (require 'spofy-tab-bar)
-          (spofy-tab-bar-mode 1)))
+          (spofy-tab-bar-mode 1))
+         (spofy-enable-mode-line
+          (require 'spofy-mode-line)
+          (spofy-mode-line-mode 1))))
     ;; Disable
     (define-key spofy-global-mode-map (kbd spofy-global-key) nil)
     (require 'spofy-player)
     (spofy-player-stop-polling)
-    (when (and spofy-enable-mode-line
-               (fboundp 'spofy-mode-line-mode))
+    (when (fboundp 'spofy-mode-line-mode)
       (spofy-mode-line-mode -1))
-    (when (and spofy-enable-tab-bar
-               (fboundp 'spofy-tab-bar-mode))
+    (when (fboundp 'spofy-tab-bar-mode)
       (spofy-tab-bar-mode -1))))
 
 ;;;; Auto-start

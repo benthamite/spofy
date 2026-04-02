@@ -154,6 +154,8 @@ The user option ~spofy-enable-mode-line~ controls whether ~spofy-global-mode~ au
 
 The user option ~spofy-enable-tab-bar~ controls whether ~spofy-global-mode~ automatically enables ~spofy-tab-bar-mode~.  It defaults to ~nil~.  Set it to ~t~ to display the currently playing track in the tab bar ([[#h:tab-bar-display][Tab-bar display]]).
 
+The two display modes are mutually exclusive: when ~spofy-enable-tab-bar~ is non-nil, it takes precedence and the mode-line display is not enabled, regardless of ~spofy-enable-mode-line~.  This avoids duplication because Emacs renders ~global-mode-string~ (where the mode-line segment lives) in the tab bar via ~tab-bar-format-global~, which would otherwise cause the track information to appear twice.
+
 ** Column widths
 :PROPERTIES:
 :CUSTOM_ID: h:user-options-columns
@@ -255,12 +257,11 @@ The command ~spofy-global-mode~ toggles a global minor mode.  When enabled, it:
 
 - Binds ~spofy-global-key~ to ~spofy-menu~.
 - Starts player state polling.
-- Enables the mode-line display (if ~spofy-enable-mode-line~ is non-nil).
-- Enables the tab-bar display (if ~spofy-enable-tab-bar~ is non-nil).
+- Enables the tab-bar display (if ~spofy-enable-tab-bar~ is non-nil), or the mode-line display (if ~spofy-enable-mode-line~ is non-nil).  Tab-bar takes precedence; the two are mutually exclusive ([[#h:user-options-global][Global options]]).
 
 When disabled, it reverses all of these effects.  Both ~spofy~ and ~spofy-menu~ enable this mode automatically when they are invoked.
 
-In addition, Spofy auto-enables the mode at package load time when display features (~spofy-enable-mode-line~ or ~spofy-enable-tab-bar~) are configured and a non-expired access token is found on disk.  This check is entirely passive: it reads the token file but never makes network requests (no token refresh, no API calls).  If the stored access token has expired, auto-start is silently skipped and the user must invoke ~spofy-menu~ or ~spofy~ to start the mode.  Loading the package eagerly (e.g. with =:demand t= in a ~use-package~ form) is sufficient for the tab-bar or mode-line display to appear at Emacs startup, provided the token has not yet expired.
+In addition, Spofy auto-enables the mode at package load time when a display feature (~spofy-enable-mode-line~ or ~spofy-enable-tab-bar~) is configured and a non-expired access token is found on disk.  This check is entirely passive: it reads the token file but never makes network requests (no token refresh, no API calls).  If the stored access token has expired, auto-start is silently skipped and the user must invoke ~spofy-menu~ or ~spofy~ to start the mode.  Loading the package eagerly (e.g. with =:demand t= in a ~use-package~ form) is sufficient for the tab-bar or mode-line display to appear at Emacs startup, provided the token has not yet expired.
 
 ** Playback control
 :PROPERTIES:
@@ -744,7 +745,7 @@ The command ~spofy-mode-line-mode~ toggles a global minor mode that adds a Spofy
 
 When enabled, the mode hooks into ~spofy-player-state-changed-hook~ to rebuild the mode-line string whenever the player state changes, then calls ~force-mode-line-update~ to refresh all frames.
 
-The mode is enabled automatically when ~spofy-global-mode~ is active and ~spofy-enable-mode-line~ is non-nil ([[#h:user-options-global][Global options]]).
+The mode is enabled automatically when ~spofy-global-mode~ is active and ~spofy-enable-mode-line~ is non-nil, provided ~spofy-enable-tab-bar~ is ~nil~ ([[#h:user-options-global][Global options]]).  When both options are non-nil, tab-bar display takes precedence and mode-line display is not enabled.
 
 * Tab-bar display
 :PROPERTIES:
@@ -757,7 +758,7 @@ The command ~spofy-tab-bar-mode~ toggles a global minor mode that adds a Spofy s
 
 When enabled, the mode inserts a ~tab-bar-format-spofy~ entry into ~tab-bar-format~ at a position determined by ~spofy-tab-bar-alignment~ ([[#h:user-options-tab-bar][Tab-bar options]]) and hooks into ~spofy-player-state-changed-hook~ to rebuild the tab-bar string whenever the player state changes.  When the format string contains =%g=, a 1-second timer is also started to update the progress bar smoothly between poll cycles.  When disabled, it removes the entry, stops the progress timer, and cleans up any ~tab-bar-format-align-right~ entry that was added automatically.
 
-The mode is enabled automatically when ~spofy-global-mode~ is active and ~spofy-enable-tab-bar~ is non-nil ([[#h:user-options-global][Global options]]).
+The mode is enabled automatically when ~spofy-global-mode~ is active and ~spofy-enable-tab-bar~ is non-nil ([[#h:user-options-global][Global options]]).  When enabled, it takes precedence over the mode-line display to avoid showing track information twice.
 
 * Indices
 :PROPERTIES:
