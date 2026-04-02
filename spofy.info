@@ -245,14 +245,14 @@ Specifier   Meaning
 ‘%a’        Artist name
 ‘%b’        Album name
 ‘%p’        Play/pause icon (▶ or ⏸)
-‘%s’        Shuffle indicator (🔀 when on, empty when off)
-‘%r’        Repeat indicator (🔁 for context, 🔂 for track,
+‘%s’        Shuffle indicator (⇌ when on, empty when off)
+‘%r’        Repeat indicator (↻ for context, ↻₁ for track,
             empty)
 
    The user option ‘spofy-mode-line-max-length’ sets the maximum
 character length of the mode-line string.  It defaults to ‘40’.  Longer
-strings are truncated with an ellipsis.  Increase this if you have a
-wide frame and want to see more of the track and artist names.
+strings are silently truncated.  Increase this if you have a wide frame
+and want to see more of the track and artist names.
 
    The user option ‘spofy-mode-line-separator’ is the string inserted
 before the Spofy segment in the mode line.  It defaults to a single
@@ -271,8 +271,7 @@ Mode-line::).
 
    The user option ‘spofy-tab-bar-max-length’ sets the maximum character
 length of the tab-bar string.  It defaults to ‘50’.  Longer strings are
-truncated with an ellipsis.  Set it to ‘nil’ to disable truncation
-entirely.
+silently truncated.  Set it to ‘nil’ to disable truncation entirely.
 
 
 File: spofy.info,  Node: Global key and mode-line activation,  Prev: Tab-bar,  Up: User options
@@ -839,15 +838,25 @@ milliseconds and returns a human-readable ‘"M:SS"’ string.
 string of names.
 
    The function ‘spofy-ui-truncate’ truncates a string to a given
-maximum display width, appending "..." if truncation occurs.  It uses
-‘truncate-string-to-width’ internally, so column alignment is correct
-even with variable-width characters.  All entry formatting functions in
-the browse, library, and playlist modules apply ‘spofy-ui-truncate’ to
-long string columns (names, artists, albums, genres, owners) before
-passing them to ‘propertize’, so that truncation uses ASCII "..."
-instead of the Unicode "…" character that ‘tabulated-list-mode’ would
-otherwise insert.  This prevents the column misalignment that arises
-because "…" has inconsistent display width across fonts.
+maximum display width.  It accepts an optional FACE argument; when
+provided, the face is applied to the result and, if truncation occurred,
+the last three characters are marked with the ‘spofy-fade’ text property
+(levels 1, 2, 3).  After ‘tabulated-list-print’, the advice function
+‘spofy-ui--after-tabulated-list-print’ calls
+‘spofy-ui--apply-buffer-fades’, which creates overlays on the marked
+characters with foreground colors blended toward the default background
+at 25%, 50%, and 75% respectively.  This produces a smooth fade-out
+effect instead of a hard cut or an explicit ellipsis character.  Because
+the color blending happens at display time via overlays rather than
+being baked into text properties, the fade automatically adapts when the
+user switches themes: ‘spofy-ui--refresh-fades’ is registered on
+‘enable-theme-functions’ and recomputes all fade overlays in Spofy
+buffers.  It uses ‘truncate-string-to-width’ internally, so column
+alignment is correct even with variable-width characters.  All entry
+formatting functions in the browse, library, search, consult, and
+playlist modules pass the appropriate face to ‘spofy-ui-truncate’, which
+handles both truncation and propertizing in one call.  The mode-line and
+tab-bar modules call it without a face, so truncation there is silent.
 
 
 File: spofy.info,  Node: Consult integration,  Next: Embark integration,  Prev: Functions,  Up: Top
@@ -1202,41 +1211,41 @@ Node: User options4841
 Node: Authentication (1)5084
 Node: Playback6281
 Node: Mode-line7541
-Node: Tab-bar8652
-Node: Global key and mode-line activation9274
-Node: Commands10230
-Node: Authentication10590
-Node: Dashboard and global control11366
-Node: Transient popup12865
-Node: Global minor mode13779
-Node: Playback control14312
-Node: Polling15724
-Node: Device management16824
-Node: Search17421
-Node: Navigating search results18768
-Node: Browsing19935
-Node: Album view20123
-Node: Artist view21045
-Node: Playlist detail view22193
-Node: Playlist management23326
-Node: Library management26037
-Node: Cache management28255
-Node: Functions28952
-Node: Player state accessors29203
-Node: Entity access in buffers29876
-Node: API client30449
-Node: Authentication helpers31499
-Node: Formatting utilities32280
-Node: Consult integration33427
-Node: Embark integration35538
-Node: Org-mode integration36739
-Node: Faces37899
-Node: Hooks39090
-Node: Mode-line display39990
-Node: Tab-bar display40766
-Node: Indices41534
-Node: Function index41675
-Node: Variable index48728
+Node: Tab-bar8644
+Node: Global key and mode-line activation9258
+Node: Commands10214
+Node: Authentication10574
+Node: Dashboard and global control11350
+Node: Transient popup12849
+Node: Global minor mode13763
+Node: Playback control14296
+Node: Polling15708
+Node: Device management16808
+Node: Search17405
+Node: Navigating search results18752
+Node: Browsing19919
+Node: Album view20107
+Node: Artist view21029
+Node: Playlist detail view22177
+Node: Playlist management23310
+Node: Library management26021
+Node: Cache management28239
+Node: Functions28936
+Node: Player state accessors29187
+Node: Entity access in buffers29860
+Node: API client30433
+Node: Authentication helpers31483
+Node: Formatting utilities32264
+Node: Consult integration34111
+Node: Embark integration36222
+Node: Org-mode integration37423
+Node: Faces38583
+Node: Hooks39774
+Node: Mode-line display40674
+Node: Tab-bar display41450
+Node: Indices42218
+Node: Function index42359
+Node: Variable index49412
 
 End Tag Table
 
