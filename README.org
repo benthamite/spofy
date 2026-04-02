@@ -260,7 +260,7 @@ The command ~spofy-global-mode~ toggles a global minor mode.  When enabled, it:
 
 When disabled, it reverses all of these effects.  Both ~spofy~ and ~spofy-menu~ enable this mode automatically when they are invoked.
 
-In addition, Spofy auto-enables the mode at package load time when display features (~spofy-enable-mode-line~ or ~spofy-enable-tab-bar~) are configured and valid authentication tokens are available on disk.  This means that loading the package eagerly (e.g. with =:demand t= in a ~use-package~ form) is sufficient for the tab-bar or mode-line display to appear at Emacs startup without requiring the user to invoke any command.
+In addition, Spofy auto-enables the mode at package load time when display features (~spofy-enable-mode-line~ or ~spofy-enable-tab-bar~) are configured and a non-expired access token is found on disk.  This check is entirely passive: it reads the token file but never makes network requests (no token refresh, no API calls).  If the stored access token has expired, auto-start is silently skipped and the user must invoke ~spofy-menu~ or ~spofy~ to start the mode.  Loading the package eagerly (e.g. with =:demand t= in a ~use-package~ form) is sufficient for the tab-bar or mode-line display to appear at Emacs startup, provided the token has not yet expired.
 
 ** Playback control
 :PROPERTIES:

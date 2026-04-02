@@ -49,6 +49,7 @@
 ;; spofy-auth
 (declare-function spofy-auth-access-token "spofy-auth" ())
 (declare-function spofy-auth--load-tokens "spofy-auth" ())
+(declare-function spofy-auth--token-expired-p "spofy-auth" ())
 (declare-function spofy-authenticate "spofy-auth" ())
 
 ;; spofy-api
@@ -98,6 +99,7 @@
 
 ;;;; Variables from other modules (for byte-compiler)
 
+(defvar spofy-auth--access-token)
 (defvar spofy-player--current-state)
 (defvar spofy-player-state-changed-hook)
 (defvar spofy-player--timer)
@@ -524,15 +526,18 @@ polling, and optionally enables the mode-line display."
 
 ;;;; Auto-start
 
-;; When display features (mode-line or tab-bar) are configured and auth
-;; tokens are available, enable `spofy-global-mode' automatically on load.
-;; This ensures that loading spofy (e.g. via :demand t in use-package) is
-;; sufficient for the tab-bar/mode-line display to appear.
+;; When display features (mode-line or tab-bar) are configured and a
+;; non-expired access token is already on disk, enable `spofy-global-mode'
+;; automatically on load.  This is deliberately passive: it loads tokens
+;; from disk but never makes network requests (no token refresh, no API
+;; calls).  If the token has expired, auto-start is silently skipped and
+;; the user can start Spofy manually via `spofy-menu' or `spofy'.
 (when (and (or spofy-enable-mode-line spofy-enable-tab-bar)
            (not spofy-global-mode))
   (require 'spofy-auth)
   (spofy-auth--load-tokens)
-  (when (spofy-auth-access-token)
+  (when (and spofy-auth--access-token
+             (not (spofy-auth--token-expired-p)))
     (spofy-global-mode 1)))
 
 (provide 'spofy)
