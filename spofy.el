@@ -221,8 +221,7 @@ Each element is a symbol naming a section.  Available sections:
         (when name
           (insert "  ")
           (insert-text-button
-           (concat (propertize name 'face 'spofy-track-name)
-                   " "
+           (concat (propertize (concat name " ") 'face 'spofy-track-name)
                    (propertize artist-str 'face 'spofy-artist-name))
            'action (lambda (_btn)
                      (require 'spofy-player)
@@ -253,8 +252,7 @@ Each element is a symbol naming a section.  Available sections:
              (playlist-id (alist-get 'id item)))
         (insert "  ")
         (insert-text-button
-         (concat (propertize name 'face 'spofy-track-name)
-                 " "
+         (concat (propertize (concat name " ") 'face 'spofy-track-name)
                  (propertize (format "(%d tracks)" total) 'face 'spofy-muted))
          'action (lambda (_btn)
                    (require 'spofy-browse)
@@ -290,8 +288,7 @@ TIME-RANGE is \"short_term\", \"medium_term\", or \"long_term\"."
                (uri (alist-get 'uri item)))
           (insert "  ")
           (insert-text-button
-           (concat (propertize name 'face 'spofy-track-name)
-                   " "
+           (concat (propertize (concat name " ") 'face 'spofy-track-name)
                    (propertize artist-str 'face 'spofy-artist-name))
            'action (lambda (_btn)
                      (require 'spofy-player)
@@ -334,8 +331,7 @@ TIME-RANGE is \"short_term\", \"medium_term\", or \"long_term\"."
           (insert-text-button
            (concat (propertize name 'face 'spofy-track-name)
                    (unless (string-empty-p genre-str)
-                     (concat " "
-                             (propertize genre-str 'face 'spofy-muted))))
+                     (propertize (concat " " genre-str) 'face 'spofy-muted)))
            'action (lambda (_btn)
                      (require 'spofy-browse)
                      (spofy-view-artist id))
@@ -365,8 +361,7 @@ TIME-RANGE is \"short_term\", \"medium_term\", or \"long_term\"."
              (album-id (alist-get 'id item)))
         (insert "  ")
         (insert-text-button
-         (concat (propertize name 'face 'spofy-album-name)
-                 " "
+         (concat (propertize (concat name " ") 'face 'spofy-album-name)
                  (propertize artist-str 'face 'spofy-artist-name))
          'action (lambda (_btn)
                    (require 'spofy-browse)
@@ -525,6 +520,7 @@ Assumes the current buffer is in `spofy-dashboard-mode'."
     (setq spofy--dashboard-section-markers
           (nreverse spofy--dashboard-section-markers))
     (spofy--dashboard-insert-hints)
+    (goto-char (point-min))
     ;; Fire async requests for each section
     (let ((buf (current-buffer)))
       (cl-loop
@@ -543,6 +539,7 @@ Assumes the current buffer is in `spofy-dashboard-mode'."
             (when (buffer-live-p buf)
               (with-current-buffer buf
                 (let* ((inhibit-read-only t)
+                       (pos (point))
                        (items (spofy--dashboard-section-extract-items sec response))
                        (start-marker (alist-get i spofy--dashboard-section-markers))
                        (end-marker (alist-get (1+ i) spofy--dashboard-section-markers)))
@@ -552,7 +549,8 @@ Assumes the current buffer is in `spofy-dashboard-mode'."
                     (delete-region start-marker end-marker)
                     (goto-char start-marker)
                     (funcall inserter items)
-                    (set-marker end-marker (point)))))))))))))
+                    (set-marker end-marker (point)))
+                  (goto-char (min pos (point-max)))))))))))))
 
 
 ;;;;; Dashboard: interactive commands
