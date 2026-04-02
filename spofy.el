@@ -404,8 +404,8 @@ authentication, starts polling, and displays the dashboard buffer."
     ("p" "Play/Pause"    spofy-play-pause)
     ("n" "Next"          spofy-next)
     ("b" "Previous"      spofy-previous)
-    ("f" "Seek forward"  spofy-seek-forward)
-    ("r" "Seek backward" spofy-seek-backward)]
+    ("f" "Seek forward"  spofy-seek-forward :transient t)
+    ("r" "Seek backward" spofy-seek-backward :transient t)]
    ["Search"
     ("s t" "Tracks"    spofy-search-tracks)
     ("s l" "Albums"    spofy-search-albums)

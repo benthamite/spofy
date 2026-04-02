@@ -240,7 +240,7 @@ The popup is organized into columns:
 - *Playback:* play/pause, next, previous, seek forward, seek backward.
 - *Search* (=s= prefix): search tracks (=s t=), albums (=s l=), artists (=s a=), playlists (=s p=).
 - *Browse:* library, playlists list, device selection.
-- *Volume, Mode & Other:* volume controls (volume up/down keep the menu open), shuffle/repeat toggles, dashboard, quit.
+- *Volume, Mode & Other:* volume controls, shuffle/repeat toggles, dashboard, quit.  Volume up/down, seek forward/backward, shuffle, and repeat all keep the menu open so they can be used repeatedly.
 
 The command ~spofy-library-menu~ (bound to =l= in the browse group) opens a sub-transient for the library ([[#h:library-management][Library management]]).
 
