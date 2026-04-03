@@ -276,41 +276,51 @@ Call CALLBACK with the parsed JSON response."
      (list callback)
      t nil)))
 
+(defun spofy-wikipedia--first-artist (artist)
+  "Return the first name from a comma-separated ARTIST string.
+Spotify often lists multiple artists (e.g., composer and performer).
+Wikipedia searches work best with a single name."
+  (if (string-match "\\`\\([^,]+\\)" artist)
+      (string-trim (match-string 1 artist))
+    artist))
+
 (defun spofy-wikipedia--search-album (album artist callback)
   "Search Wikipedia for ALBUM by ARTIST.
 Call CALLBACK with (WIKI-TITLE . WIKI-URL) or nil if not found."
-  (spofy-wikipedia--api-get
-   `(("action" . "query")
-     ("list" . "search")
-     ("srsearch" . ,(format "%s %s album" album artist))
-     ("srlimit" . "1")
-     ("format" . "json"))
-   (lambda (data)
-     (let* ((search (alist-get 'search (alist-get 'query data)))
-            (title (and (> (length search) 0)
-                        (alist-get 'title (aref search 0)))))
-       (if title
-           (spofy-wikipedia--validate-infobox
-            title "Template:Infobox album" callback)
-         (funcall callback nil))))))
+  (let ((first-artist (spofy-wikipedia--first-artist artist)))
+    (spofy-wikipedia--api-get
+     `(("action" . "query")
+       ("list" . "search")
+       ("srsearch" . ,(format "%s %s album" album first-artist))
+       ("srlimit" . "1")
+       ("format" . "json"))
+     (lambda (data)
+       (let* ((search (alist-get 'search (alist-get 'query data)))
+              (title (and (> (length search) 0)
+                          (alist-get 'title (aref search 0)))))
+         (if title
+             (spofy-wikipedia--validate-infobox
+              title "Template:Infobox album" callback)
+           (funcall callback nil)))))))
 
 (defun spofy-wikipedia--search-artist (artist callback)
   "Search Wikipedia for ARTIST.
 Call CALLBACK with (WIKI-TITLE . WIKI-URL) or nil if not found."
-  (spofy-wikipedia--api-get
-   `(("action" . "query")
-     ("list" . "search")
-     ("srsearch" . ,(format "%s musician" artist))
-     ("srlimit" . "1")
-     ("format" . "json"))
-   (lambda (data)
-     (let* ((search (alist-get 'search (alist-get 'query data)))
-            (title (and (> (length search) 0)
-                        (alist-get 'title (aref search 0)))))
-       (if title
-           (spofy-wikipedia--validate-infobox
-            title "Template:Infobox musical artist" callback)
-         (funcall callback nil))))))
+  (let ((first-artist (spofy-wikipedia--first-artist artist)))
+    (spofy-wikipedia--api-get
+     `(("action" . "query")
+       ("list" . "search")
+       ("srsearch" . ,(format "%s musician" first-artist))
+       ("srlimit" . "1")
+       ("format" . "json"))
+     (lambda (data)
+       (let* ((search (alist-get 'search (alist-get 'query data)))
+              (title (and (> (length search) 0)
+                          (alist-get 'title (aref search 0)))))
+         (if title
+             (spofy-wikipedia--validate-infobox
+              title "Template:Infobox musical artist" callback)
+           (funcall callback nil)))))))
 
 (defun spofy-wikipedia--validate-infobox (title template callback)
   "Check if Wikipedia article TITLE uses TEMPLATE.

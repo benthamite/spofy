@@ -767,7 +767,7 @@ The function ~spofy-org-export~ generates appropriate links for export backends.
 
 The file =spofy-wikipedia.el= provides a command to open the Wikipedia article for the album or musical work that is currently playing.  It handles non-classical and classical music differently, using two distinct lookup strategies.
 
-For non-classical music, Spofy searches the Wikipedia API directly using the album name and artist, then validates that the top result is a genuine album article by checking for the presence of =Template:Infobox album=.  No LLM is involved in this path, so it is fast and deterministic.
+For non-classical music, Spofy searches the Wikipedia API directly using the album name and artist, then validates that the top result is a genuine album article by checking for the presence of =Template:Infobox album=.  No LLM is involved in this path, so it is fast and deterministic.  When Spotify lists multiple artists (e.g., composer and performer), only the first name is used in Wikipedia searches to avoid failed lookups on combined strings.
 
 For classical music, a different approach is necessary because the Spotify album name (e.g., "Beethoven: Symphonies Nos. 5 & 7") does not correspond to a single Wikipedia article.  Instead, Spofy uses an LLM (via =gptel=) to extract the underlying musical work from the track and album metadata and return its Wikipedia article title.  For example, a track named "Symphony No. 5 in C minor, Op. 67: I. Allegro con brio" resolves to the Wikipedia article "Symphony No. 5 (Beethoven)".
 
