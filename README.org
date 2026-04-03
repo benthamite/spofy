@@ -256,7 +256,7 @@ The popup is organized into columns:
 - *Playback:* play/pause, next, previous, seek forward, seek backward.
 - *Search* (=s= prefix): search tracks (=s t=), albums (=s l=), artists (=s a=), playlists (=s p=).
 - *Browse:* library, playlists list, device selection.
-- *Volume, Mode & Other:* volume controls, shuffle/repeat toggles, Wikipedia lookup (=W=), dashboard, quit.  Volume up/down, seek forward/backward, shuffle, and repeat all keep the menu open so they can be used repeatedly.
+- *Volume, Mode & Other:* volume controls, shuffle/repeat toggles, Wikipedia lookup (=w=), dashboard, quit.  Volume up/down, seek forward/backward, shuffle, and repeat all keep the menu open so they can be used repeatedly.
 
 The command ~spofy-library-menu~ (bound to =l= in the browse group) opens a sub-transient for the library ([[#h:library-management][Library management]]).
 
@@ -713,11 +713,11 @@ All six commands use ~consult--dynamic-collection~ for incremental search with s
 
 The file =spofy-embark.el= registers four entity categories with =embark=, each with a keymap of contextual actions.  Like =spofy-consult.el=, the =embark= dependency is soft-loaded for byte-compilation compatibility.  These actions work on Spotify entities selected through ~consult~ ([[#h:consult-integration][Consult integration]]) or in ~tabulated-list~ buffers.
 
-The *spofy-track* category provides actions to play the track, add it to a playlist, save it to the library, view its album, view its artist, open its Wikipedia article (=W=), or copy its Spotify URI.
+The *spofy-track* category provides actions to play the track, add it to a playlist, save it to the library, view its album, view its artist, open its Wikipedia article (=w=), or copy its Spotify URI.
 
-The *spofy-album* category provides actions to play the album, save it, view its tracks, view its artist, open its Wikipedia article (=W=), or copy its URI.
+The *spofy-album* category provides actions to play the album, save it, view its tracks, view its artist, open its Wikipedia article (=w=), or copy its URI.
 
-The *spofy-artist* category provides actions to play the artist's top tracks, view the artist's albums, open the artist's Wikipedia article (=W=), or copy the URI.
+The *spofy-artist* category provides actions to play the artist's top tracks, view the artist's albums, open the artist's Wikipedia article (=w=), or copy the URI.
 
 The *spofy-playlist* category provides actions to play the playlist, view its tracks, follow it, unfollow it, or copy its URI.
 
@@ -764,9 +764,9 @@ Classification of tracks as classical or non-classical relies primarily on the S
 
 All lookup results are cached persistently in a SQLite database (Emacs 29+ built-in support required) so that repeated plays of the same album or track never trigger redundant API or LLM calls.  Artist classifications are also cached.
 
-The command ~spofy-wikipedia~ is the main entry point.  It reads the currently playing track from the player state ([[#h:playback-control][Playback control]]), classifies the artist, and dispatches to the appropriate lookup path.  When a Wikipedia article is found, it is opened via ~browse-url~.  The command is also available in the transient popup ([[#h:transient-popup][Transient popup]]) under =W=.
+The command ~spofy-wikipedia~ is the main entry point.  It reads the currently playing track from the player state ([[#h:playback-control][Playback control]]), classifies the artist, and dispatches to the appropriate lookup path.  When a Wikipedia article is found, it is opened via ~browse-url~.  The command is also available in the transient popup ([[#h:transient-popup][Transient popup]]) under =w=.
 
-Wikipedia lookup actions are available through Embark ([[#h:embark-integration][Embark integration]]) on tracks, albums, and artists (bound to =W= in each keymap).  For tracks, the command classifies the artist and uses either the album or work lookup.  For albums, the Wikipedia search path is used directly.  For artists, the command searches for the artist's Wikipedia page and validates it against =Template:Infobox musical artist=.
+Wikipedia lookup actions are available through Embark ([[#h:embark-integration][Embark integration]]) on tracks, albums, and artists (bound to =w= in each keymap).  For tracks, the command classifies the artist and uses either the album or work lookup.  For albums, the Wikipedia search path is used directly.  For artists, the command searches for the artist's Wikipedia page and validates it against =Template:Infobox musical artist=.
 
 ** Wikipedia user options
 :PROPERTIES:

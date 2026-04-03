@@ -200,8 +200,8 @@ treating TARGET as a URI directly."
   "s"   #'spofy-embark-save-track
   "a"   #'spofy-embark-track-view-album
   "A"   #'spofy-embark-track-view-artist
-  "W"   #'spofy-embark-track-wikipedia
-  "w"   #'spofy-embark-copy-uri)
+  "w"   #'spofy-embark-track-wikipedia
+  "W"   #'spofy-embark-copy-uri)
 
 (defun spofy-embark-album-wikipedia (target)
   "Open the Wikipedia article for TARGET album."
@@ -215,8 +215,8 @@ treating TARGET as a URI directly."
   "s"   #'spofy-embark-save-album
   "v"   #'spofy-embark-album-view-tracks
   "A"   #'spofy-embark-album-view-artist
-  "W"   #'spofy-embark-album-wikipedia
-  "w"   #'spofy-embark-copy-uri)
+  "w"   #'spofy-embark-album-wikipedia
+  "W"   #'spofy-embark-copy-uri)
 
 (defun spofy-embark-artist-wikipedia (target)
   "Open the Wikipedia article for TARGET artist."
@@ -228,8 +228,8 @@ treating TARGET as a URI directly."
   :parent embark-general-map
   "RET" #'spofy-embark-artist-play-top-tracks
   "v"   #'spofy-embark-artist-view-albums
-  "W"   #'spofy-embark-artist-wikipedia
-  "w"   #'spofy-embark-copy-uri)
+  "w"   #'spofy-embark-artist-wikipedia
+  "W"   #'spofy-embark-copy-uri)
 
 (defvar-keymap spofy-embark-playlist-map
   :doc "Embark keymap for Spofy playlists."

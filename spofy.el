@@ -660,7 +660,7 @@ Signals `user-error' if authentication tokens are not available."
      :transient t)
     ""
     "Other"
-    ("W" "Wikipedia" spofy-wikipedia)
+    ("w" "Wikipedia" spofy-wikipedia)
     ("D" "Dashboard" spofy)
     ("q" "Quit"      transient-quit-one)]])
 
