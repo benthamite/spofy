@@ -242,6 +242,65 @@ artist has no genres, falls back to heuristic matching on TRACK-NAME."
            (spofy-wikipedia--cache-classification artist-id classical)
            (funcall callback classical)))))))
 
+;;;; Wikidata SPARQL
+
+(defun spofy-wikipedia--wikidata-query (sparql callback)
+  "Run a SPARQL query against Wikidata and call CALLBACK with the result.
+CALLBACK receives a list of result bindings, or nil on failure."
+  (let* ((url (format "https://query.wikidata.org/sparql?query=%s&format=json"
+                      (url-hexify-string sparql)))
+         (url-request-method "GET")
+         (url-request-extra-headers
+          '(("Accept" . "application/sparql-results+json")
+            ("User-Agent" . "Spofy/0.1 (Emacs; spofy-wikipedia.el)")))
+         (url-show-status nil))
+    (url-retrieve
+     url
+     (lambda (_status cb)
+       (let ((data nil))
+         (save-excursion
+           (goto-char (point-min))
+           (when (re-search-forward "\r?\n\r?\n" nil t)
+             (condition-case nil
+                 (setq data (json-parse-string
+                             (buffer-substring-no-properties (point) (point-max))
+                             :object-type 'alist :array-type 'array))
+               (json-parse-error nil))))
+         (kill-buffer (current-buffer))
+         (let* ((results (alist-get 'results data))
+                (bindings (alist-get 'bindings results)))
+           (funcall cb (and (> (length bindings) 0) bindings)))))
+     (list callback)
+     t nil)))
+
+(defun spofy-wikipedia--wikidata-lookup (property spotify-id callback)
+  "Look up a Wikipedia article via Wikidata PROPERTY and SPOTIFY-ID.
+PROPERTY is the Wikidata property (e.g., \"P1902\" for artist ID).
+Call CALLBACK with (TITLE . URL) or nil if not found."
+  (let ((sparql (format
+                 "SELECT ?article WHERE {
+  ?item wdt:%s \"%s\" .
+  ?article schema:about ?item ;
+           schema:isPartOf <https://%s.wikipedia.org/> .
+} LIMIT 1"
+                 property spotify-id spofy-wikipedia-language)))
+    (spofy-wikipedia--wikidata-query
+     sparql
+     (lambda (bindings)
+       (if bindings
+           (let* ((binding (aref bindings 0))
+                  (article-url (alist-get 'value (alist-get 'article binding)))
+                  (title (and article-url
+                              (url-unhex-string
+                               (replace-regexp-in-string
+                                "_" " "
+                                (replace-regexp-in-string
+                                 "\\`.*/wiki/" "" article-url))))))
+             (if title
+                 (funcall callback (cons title article-url))
+               (funcall callback nil)))
+         (funcall callback nil))))))
+
 ;;;; Wikipedia API
 
 (defun spofy-wikipedia--api-url (params)
@@ -413,37 +472,51 @@ Call CALLBACK with the Wikipedia article title string, or nil on failure."
 
 ;;;; Main lookup logic
 
-(defun spofy-wikipedia--fallback-or-error (artist message callback)
+(defun spofy-wikipedia--fallback-or-error (artist artist-id message callback)
   "If `spofy-wikipedia-fallback-to-artist' is non-nil, look up ARTIST.
-Otherwise signal a `user-error' with MESSAGE.  CALLBACK is called with
-the artist result on success."
+Otherwise signal a `user-error' with MESSAGE.  ARTIST-ID is the Spotify
+artist ID used for Wikidata lookup.  CALLBACK is called with the artist
+result on success."
   (if spofy-wikipedia-fallback-to-artist
-      (spofy-wikipedia--lookup-artist artist callback)
+      (spofy-wikipedia--lookup-artist artist artist-id callback)
     (user-error "%s" message)))
 
-(defun spofy-wikipedia--lookup-album (album artist callback)
+(defun spofy-wikipedia--lookup-album (album artist album-id artist-id callback)
   "Look up the Wikipedia article for non-classical ALBUM by ARTIST.
-Call CALLBACK with (WIKI-TITLE . WIKI-URL) or signal an error."
+ALBUM-ID is the Spotify album ID for Wikidata lookup.  ARTIST-ID is
+passed through for the artist fallback.  Call CALLBACK with
+\(WIKI-TITLE . WIKI-URL) or signal an error."
   (let ((cached (spofy-wikipedia--cache-lookup "" album artist "album")))
     (if cached
         (funcall callback (cons (alist-get 'wiki-title cached)
                                 (alist-get 'wiki-url cached)))
-      (spofy-wikipedia--search-album
-       album artist
+      ;; Try Wikidata first, fall back to Wikipedia search
+      (spofy-wikipedia--wikidata-lookup
+       "P2205" album-id
        (lambda (result)
          (if result
              (progn
                (spofy-wikipedia--cache-store
                 "" album artist "album" "" (car result) (cdr result))
                (funcall callback result))
-           (spofy-wikipedia--fallback-or-error
-            artist
-            (format "Spofy: no Wikipedia article found for album \"%s\"" album)
-            callback)))))))
+           ;; Wikidata miss — fall back to Wikipedia search
+           (spofy-wikipedia--search-album
+            album artist
+            (lambda (result)
+              (if result
+                  (progn
+                    (spofy-wikipedia--cache-store
+                     "" album artist "album" "" (car result) (cdr result))
+                    (funcall callback result))
+                (spofy-wikipedia--fallback-or-error
+                 artist artist-id
+                 (format "Spofy: no Wikipedia article found for album \"%s\"" album)
+                 callback))))))))))
 
-(defun spofy-wikipedia--lookup-work (track album artist callback)
+(defun spofy-wikipedia--lookup-work (track album artist artist-id callback)
   "Look up the Wikipedia article for classical TRACK on ALBUM by ARTIST.
-Call CALLBACK with (WIKI-TITLE . WIKI-URL) or signal an error."
+ARTIST-ID is passed through for the artist fallback.  Call CALLBACK
+with (WIKI-TITLE . WIKI-URL) or signal an error."
   (let ((cached (spofy-wikipedia--cache-lookup track album artist "work")))
     (if cached
         (funcall callback (cons (alist-get 'wiki-title cached)
@@ -453,7 +526,8 @@ Call CALLBACK with (WIKI-TITLE . WIKI-URL) or signal an error."
        (lambda (llm-title)
          (if (not llm-title)
              (spofy-wikipedia--fallback-or-error
-              artist "Spofy: LLM failed to identify the musical work" callback)
+              artist artist-id
+              "Spofy: LLM failed to identify the musical work" callback)
            (spofy-wikipedia--validate-title
             llm-title
             (lambda (result)
@@ -464,27 +538,38 @@ Call CALLBACK with (WIKI-TITLE . WIKI-URL) or signal an error."
                      llm-title (car result) (cdr result))
                     (funcall callback result))
                 (spofy-wikipedia--fallback-or-error
-                 artist
+                 artist artist-id
                  (format "Spofy: Wikipedia article \"%s\" not found" llm-title)
                  callback))))))))))
 
-(defun spofy-wikipedia--lookup-artist (artist callback)
+(defun spofy-wikipedia--lookup-artist (artist artist-id callback)
   "Look up the Wikipedia article for ARTIST.
-Call CALLBACK with (WIKI-TITLE . WIKI-URL) or signal an error."
+ARTIST-ID is the Spotify artist ID for Wikidata lookup.  Call CALLBACK
+with (WIKI-TITLE . WIKI-URL) or signal an error."
   (let ((cached (spofy-wikipedia--cache-lookup "" "" artist "artist")))
     (if cached
         (funcall callback (cons (alist-get 'wiki-title cached)
                                 (alist-get 'wiki-url cached)))
-      (spofy-wikipedia--search-artist
-       artist
+      ;; Try Wikidata first, fall back to Wikipedia search
+      (spofy-wikipedia--wikidata-lookup
+       "P1902" artist-id
        (lambda (result)
          (if result
              (progn
                (spofy-wikipedia--cache-store
                 "" "" artist "artist" "" (car result) (cdr result))
                (funcall callback result))
-           (user-error "Spofy: no Wikipedia article found for artist \"%s\""
-                       artist)))))))
+           ;; Wikidata miss — fall back to Wikipedia search
+           (spofy-wikipedia--search-artist
+            artist
+            (lambda (result)
+              (if result
+                  (progn
+                    (spofy-wikipedia--cache-store
+                     "" "" artist "artist" "" (car result) (cdr result))
+                    (funcall callback result))
+                (user-error "Spofy: no Wikipedia article found for artist \"%s\""
+                            artist))))))))))
 
 ;;;; Interactive command
 
@@ -498,6 +583,7 @@ Call CALLBACK with (WIKI-TITLE . WIKI-URL) or signal an error."
   (let* ((state spofy-player--current-state)
          (track (alist-get 'track state))
          (album (alist-get 'album state))
+         (album-id (alist-get 'album-id state))
          (artist (alist-get 'artist state))
          (artist-id (alist-get 'artist-id state)))
     (unless track
@@ -509,10 +595,10 @@ Call CALLBACK with (WIKI-TITLE . WIKI-URL) or signal an error."
      (lambda (classical)
        (if classical
            (spofy-wikipedia--lookup-work
-            track album artist
+            track album artist artist-id
             (lambda (result) (browse-url (cdr result))))
          (spofy-wikipedia--lookup-album
-          album artist
+          album artist album-id artist-id
           (lambda (result) (browse-url (cdr result)))))))))
 
 ;;;; Embark action helpers
@@ -527,16 +613,17 @@ Call CALLBACK with (WIKI-TITLE . WIKI-URL) or signal an error."
               (artist-name (alist-get 'name artist))
               (track-name (alist-get 'name entity))
               (album (alist-get 'album entity))
-              (album-name (alist-get 'name album)))
+              (album-name (alist-get 'name album))
+              (album-id (alist-get 'id album)))
     (spofy-wikipedia--classify-artist
      artist-id track-name
      (lambda (classical)
        (if classical
            (spofy-wikipedia--lookup-work
-            track-name album-name artist-name
+            track-name album-name artist-name artist-id
             (lambda (result) (browse-url (cdr result))))
          (spofy-wikipedia--lookup-album
-          album-name artist-name
+          album-name artist-name album-id artist-id
           (lambda (result) (browse-url (cdr result)))))))))
 
 ;;;###autoload
@@ -544,20 +631,23 @@ Call CALLBACK with (WIKI-TITLE . WIKI-URL) or signal an error."
   "Open the Wikipedia article for TARGET album."
   (when-let* ((entity (get-text-property 0 'spofy-entity target))
               (album-name (alist-get 'name entity))
+              (album-id (alist-get 'id entity))
               (artists (alist-get 'artists entity))
               (artist (aref artists 0))
+              (artist-id (alist-get 'id artist))
               (artist-name (alist-get 'name artist)))
     (spofy-wikipedia--lookup-album
-     album-name artist-name
+     album-name artist-name album-id artist-id
      (lambda (result) (browse-url (cdr result))))))
 
 ;;;###autoload
 (defun spofy-wikipedia-artist (target)
   "Open the Wikipedia article for TARGET artist."
   (when-let* ((entity (get-text-property 0 'spofy-entity target))
-              (artist-name (alist-get 'name entity)))
+              (artist-name (alist-get 'name entity))
+              (artist-id (alist-get 'id entity)))
     (spofy-wikipedia--lookup-artist
-     artist-name
+     artist-name artist-id
      (lambda (result) (browse-url (cdr result))))))
 
 (provide 'spofy-wikipedia)

@@ -76,6 +76,9 @@ device, volume, track-id.")
 (defvar spofy-player--timer nil
   "Timer object for player state polling.")
 
+(defvar spofy-player--volume-set-time nil
+  "Timestamp of the last optimistic volume update, or nil.")
+
 ;;;; State extraction
 
 (defun spofy-player--extract-state (data)
@@ -89,6 +92,7 @@ device, volume, track-id.")
         (artist    . ,(when artists (spofy-ui-format-artists artists)))
         (artist-id . ,(when artists (alist-get 'id (aref artists 0))))
         (album     . ,(alist-get 'name album))
+        (album-id  . ,(alist-get 'id album))
         (progress  . ,(alist-get 'progress_ms data))
         (duration  . ,(alist-get 'duration_ms item))
         (is-playing . ,(eq (alist-get 'is_playing data) t))
@@ -122,6 +126,14 @@ Compare to previous state and run appropriate hooks."
         (progn
           ;; Record the wall-clock time of this poll for progress interpolation
           (setf (alist-get 'poll-time new-state) (float-time))
+          ;; Preserve optimistic volume during the grace period after a
+          ;; user-initiated volume change, so the poll doesn't overwrite it
+          ;; with a stale value from Spotify.
+          (when (and spofy-player--volume-set-time
+                     (< (- (float-time) spofy-player--volume-set-time)
+                        spofy-poll-interval))
+            (setf (alist-get 'volume new-state)
+                  (alist-get 'volume spofy-player--current-state)))
           (let ((old-state spofy-player--current-state))
             (setq spofy-player--current-state new-state)
             (unless (equal old-state new-state)
@@ -287,6 +299,7 @@ a `user-error' so the caller can retry once the app is ready."
   (let* ((current (or (alist-get 'volume spofy-player--current-state) 50))
          (new-vol (min 100 (+ current spofy-volume-step))))
     (spofy-player--update-state 'volume new-vol)
+    (setq spofy-player--volume-set-time (float-time))
     (spofy-api-put (format "me/player/volume?volume_percent=%d" new-vol) nil
                    (lambda (_) (message "Spofy: volume %d%%" new-vol)))))
 
@@ -298,6 +311,7 @@ a `user-error' so the caller can retry once the app is ready."
   (let* ((current (or (alist-get 'volume spofy-player--current-state) 50))
          (new-vol (max 0 (- current spofy-volume-step))))
     (spofy-player--update-state 'volume new-vol)
+    (setq spofy-player--volume-set-time (float-time))
     (spofy-api-put (format "me/player/volume?volume_percent=%d" new-vol) nil
                    (lambda (_) (message "Spofy: volume %d%%" new-vol)))))
 
@@ -308,6 +322,7 @@ a `user-error' so the caller can retry once the app is ready."
   (spofy-player--ensure-device)
   (let ((vol (max 0 (min 100 volume))))
     (spofy-player--update-state 'volume vol)
+    (setq spofy-player--volume-set-time (float-time))
     (spofy-api-put (format "me/player/volume?volume_percent=%d" vol) nil
                    (lambda (_) (message "Spofy: volume set to %d%%" vol)))))
 

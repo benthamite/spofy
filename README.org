@@ -299,7 +299,7 @@ The commands ~spofy-next~ and ~spofy-previous~ skip to the next or previous trac
 
 The commands ~spofy-seek-forward~ and ~spofy-seek-backward~ move the playback position by ~spofy-seek-seconds~ seconds ([[#h:user-options-playback][Playback options]]).
 
-The commands ~spofy-volume-up~ and ~spofy-volume-down~ adjust the volume by ~spofy-volume-step~ percent.  The command ~spofy-volume-set~ prompts for an exact volume level between 0 and 100.  All three commands update the local player state optimistically so that repeated keypresses accumulate without waiting for the API response.
+The commands ~spofy-volume-up~ and ~spofy-volume-down~ adjust the volume by ~spofy-volume-step~ percent.  The command ~spofy-volume-set~ prompts for an exact volume level between 0 and 100.  All three commands update the local player state optimistically so that repeated keypresses accumulate without waiting for the API response.  The optimistic value is protected from being overwritten by the next poll cycle, so there is no regression even if Spotify has not yet processed the change.
 
 The command ~spofy-toggle-shuffle~ toggles shuffle mode on or off.  The command ~spofy-toggle-repeat~ cycles through three repeat states: off, context (repeat the current album/playlist), and track (repeat the current track).  Both commands update the local player state immediately on success, so the mode line, tab bar, and transient menu reflect the new state without waiting for the next poll.  In the transient popup ([[#h:transient-popup][Transient popup]]), the current state is shown with the ~transient-value~ face, and both suffixes remain transient so that the user can toggle repeatedly without reopening the menu.
 
@@ -767,7 +767,9 @@ The function ~spofy-org-export~ generates appropriate links for export backends.
 
 The file =spofy-wikipedia.el= provides a command to open the Wikipedia article for the album or musical work that is currently playing.  It handles non-classical and classical music differently, using two distinct lookup strategies.
 
-For non-classical music, Spofy searches the Wikipedia API directly using the album name and artist, then validates that the top result is a genuine album article by checking for the presence of =Template:Infobox album=.  No LLM is involved in this path, so it is fast and deterministic.  When Spotify lists multiple artists (e.g., composer and performer), only the first name is used in Wikipedia searches to avoid failed lookups on combined strings.
+For non-classical music, Spofy first attempts a precise lookup via Wikidata's SPARQL endpoint, using the Spotify album ID (Wikidata property P2205) to find the corresponding Wikipedia article directly.  This is the most reliable path when the album is registered in Wikidata (~40k albums).  If the Wikidata lookup finds no match, Spofy falls back to searching the Wikipedia API using the album name and artist, then validates that the top result is a genuine album article by checking for the presence of =Template:Infobox album=.  No LLM is involved in this path, so it is fast and deterministic.  When Spotify lists multiple artists (e.g., composer and performer), only the first name is used in Wikipedia searches to avoid failed lookups on combined strings.
+
+Artist lookups similarly try Wikidata first (property P1902, ~65k artists) before falling back to Wikipedia search.
 
 For classical music, a different approach is necessary because the Spotify album name (e.g., "Beethoven: Symphonies Nos. 5 & 7") does not correspond to a single Wikipedia article.  Instead, Spofy uses an LLM (via =gptel=) to extract the underlying musical work from the track and album metadata and return its Wikipedia article title.  For example, a track named "Symphony No. 5 in C minor, Op. 67: I. Allegro con brio" resolves to the Wikipedia article "Symphony No. 5 (Beethoven)".
 
