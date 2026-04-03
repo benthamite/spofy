@@ -103,6 +103,9 @@
 ;; spofy-tab-bar
 (declare-function spofy-tab-bar-mode "spofy-tab-bar" (&optional arg))
 
+;; spofy-wikipedia
+(declare-function spofy-wikipedia "spofy-wikipedia" ())
+
 ;;;; Variables from other modules (for byte-compiler)
 
 (defvar spofy-auth--access-token)
@@ -657,6 +660,7 @@ Signals `user-error' if authentication tokens are not available."
      :transient t)
     ""
     "Other"
+    ("W" "Wikipedia" spofy-wikipedia)
     ("D" "Dashboard" spofy)
     ("q" "Quit"      transient-quit-one)]])
 

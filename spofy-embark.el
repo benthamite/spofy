@@ -44,6 +44,9 @@
 (declare-function spofy-view-artist-top-tracks "spofy-browse" (artist-id artist-name))
 (declare-function spofy-follow-playlist "spofy-playlist" (playlist-id-or-uri))
 (declare-function spofy-unfollow-playlist "spofy-playlist" ())
+(declare-function spofy-wikipedia-track "spofy-wikipedia" (target))
+(declare-function spofy-wikipedia-album "spofy-wikipedia" (target))
+(declare-function spofy-wikipedia-artist "spofy-wikipedia" (target))
 
 ;;;; Entity extraction
 
@@ -184,6 +187,11 @@ treating TARGET as a URI directly."
 
 ;;;; Keymaps
 
+(defun spofy-embark-track-wikipedia (target)
+  "Open the Wikipedia article for the album/work of TARGET track."
+  (require 'spofy-wikipedia)
+  (spofy-wikipedia-track target))
+
 (defvar-keymap spofy-embark-track-map
   :doc "Embark keymap for Spofy tracks."
   :parent embark-general-map
@@ -192,7 +200,13 @@ treating TARGET as a URI directly."
   "s"   #'spofy-embark-save-track
   "a"   #'spofy-embark-track-view-album
   "A"   #'spofy-embark-track-view-artist
+  "W"   #'spofy-embark-track-wikipedia
   "w"   #'spofy-embark-copy-uri)
+
+(defun spofy-embark-album-wikipedia (target)
+  "Open the Wikipedia article for TARGET album."
+  (require 'spofy-wikipedia)
+  (spofy-wikipedia-album target))
 
 (defvar-keymap spofy-embark-album-map
   :doc "Embark keymap for Spofy albums."
@@ -201,13 +215,20 @@ treating TARGET as a URI directly."
   "s"   #'spofy-embark-save-album
   "v"   #'spofy-embark-album-view-tracks
   "A"   #'spofy-embark-album-view-artist
+  "W"   #'spofy-embark-album-wikipedia
   "w"   #'spofy-embark-copy-uri)
+
+(defun spofy-embark-artist-wikipedia (target)
+  "Open the Wikipedia article for TARGET artist."
+  (require 'spofy-wikipedia)
+  (spofy-wikipedia-artist target))
 
 (defvar-keymap spofy-embark-artist-map
   :doc "Embark keymap for Spofy artists."
   :parent embark-general-map
   "RET" #'spofy-embark-artist-play-top-tracks
   "v"   #'spofy-embark-artist-view-albums
+  "W"   #'spofy-embark-artist-wikipedia
   "w"   #'spofy-embark-copy-uri)
 
 (defvar-keymap spofy-embark-playlist-map

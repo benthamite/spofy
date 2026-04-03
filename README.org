@@ -19,7 +19,7 @@ This manual describes the features and customization options of =spofy=, a Spoti
 
 Spofy is a full-featured Spotify client that runs entirely inside Emacs.  It communicates with the [[https://developer.spotify.com/documentation/web-api][Spotify Web API]] to provide playback control, search, browsing, playlist management, and library management without leaving the editor.
 
-The package targets Emacs 30 or later and depends on the =transient= library (available on GNU ELPA) for its command popup.  Optional integrations are provided for =consult= (minibuffer completion), =embark= (contextual actions), and =org-mode= (link storage and export).
+The package targets Emacs 30 or later and depends on the =transient= library (available on GNU ELPA) for its command popup.  Optional integrations are provided for =consult= (minibuffer completion), =embark= (contextual actions), =org-mode= (link storage and export), and Wikipedia (album and musical work lookup).
 
 Spofy is organized as a multi-file package.  The main entry point is the =spofy= command, which opens a dashboard buffer showing the current track, recently played tracks, and the user's playlists.  From there, the user can search for content, browse albums and artists, manage playlists, and control playback.  A transient popup ([[#h:transient-popup][Transient popup]]) provides quick access to all commands from any buffer.
 
@@ -33,6 +33,7 @@ The core capabilities are:
 - *Library management:* View and manage saved tracks and albums ([[#h:library-management][Library management]]).
 - *Mode-line display:* A configurable mode-line segment showing the currently playing track ([[#h:mode-line-display][Mode-line display]]).
 - *Tab-bar display:* A configurable tab-bar segment showing the currently playing track ([[#h:tab-bar-display][Tab-bar display]]).
+- *Wikipedia lookup:* Opens the Wikipedia article for the currently playing album or, for classical music, the underlying musical work.  Classical detection uses Spotify's genre metadata; work identification uses an LLM via =gptel= ([[#h:wikipedia-integration][Wikipedia integration]]).
 
 ** Getting started
 :PROPERTIES:
@@ -253,7 +254,7 @@ The popup is organized into columns:
 - *Playback:* play/pause, next, previous, seek forward, seek backward.
 - *Search* (=s= prefix): search tracks (=s t=), albums (=s l=), artists (=s a=), playlists (=s p=).
 - *Browse:* library, playlists list, device selection.
-- *Volume, Mode & Other:* volume controls, shuffle/repeat toggles, dashboard, quit.  Volume up/down, seek forward/backward, shuffle, and repeat all keep the menu open so they can be used repeatedly.
+- *Volume, Mode & Other:* volume controls, shuffle/repeat toggles, Wikipedia lookup (=W=), dashboard, quit.  Volume up/down, seek forward/backward, shuffle, and repeat all keep the menu open so they can be used repeatedly.
 
 The command ~spofy-library-menu~ (bound to =l= in the browse group) opens a sub-transient for the library ([[#h:library-management][Library management]]).
 
@@ -725,11 +726,11 @@ All six commands use ~consult--dynamic-collection~ for incremental search with s
 
 The file =spofy-embark.el= registers four entity categories with =embark=, each with a keymap of contextual actions.  Like =spofy-consult.el=, the =embark= dependency is soft-loaded for byte-compilation compatibility.  These actions work on Spotify entities selected through ~consult~ ([[#h:consult-integration][Consult integration]]) or in ~tabulated-list~ buffers.
 
-The *spofy-track* category provides actions to play the track, add it to a playlist, save it to the library, view its album, view its artist, or copy its Spotify URI.
+The *spofy-track* category provides actions to play the track, add it to a playlist, save it to the library, view its album, view its artist, open its Wikipedia article (=W=), or copy its Spotify URI.
 
-The *spofy-album* category provides actions to play the album, save it, view its tracks, view its artist, or copy its URI.
+The *spofy-album* category provides actions to play the album, save it, view its tracks, view its artist, open its Wikipedia article (=W=), or copy its URI.
 
-The *spofy-artist* category provides actions to play the artist's top tracks, view the artist's albums, or copy the URI.
+The *spofy-artist* category provides actions to play the artist's top tracks, view the artist's albums, open the artist's Wikipedia article (=W=), or copy the URI.
 
 The *spofy-playlist* category provides actions to play the playlist, view its tracks, follow it, unfollow it, or copy its URI.
 
@@ -751,6 +752,44 @@ The function ~spofy-org-follow~ handles opening ~spotify:~ links.  It parses the
 The function ~spofy-org-store~ enables =org-store-link= in any Spofy buffer.  It extracts the URI and a descriptive label from the entity at point and stores it for later insertion with =org-insert-link=.
 
 The function ~spofy-org-export~ generates appropriate links for export backends.  In HTML, LaTeX, and Markdown, it produces links to =open.spotify.com/TYPE/ID= so readers can open the content in their browser or Spotify app.
+
+* Wikipedia integration
+:PROPERTIES:
+:CUSTOM_ID: h:wikipedia-integration
+:END:
+
+#+findex: spofy-wikipedia
+#+vindex: spofy-wikipedia-language
+#+vindex: spofy-wikipedia-db-file
+#+vindex: spofy-wikipedia-backend
+#+vindex: spofy-wikipedia-model
+
+The file =spofy-wikipedia.el= provides a command to open the Wikipedia article for the album or musical work that is currently playing.  It handles non-classical and classical music differently, using two distinct lookup strategies.
+
+For non-classical music, Spofy searches the Wikipedia API directly using the album name and artist, then validates that the top result is a genuine album article by checking for the presence of =Template:Infobox album=.  No LLM is involved in this path, so it is fast and deterministic.
+
+For classical music, a different approach is necessary because the Spotify album name (e.g., "Beethoven: Symphonies Nos. 5 & 7") does not correspond to a single Wikipedia article.  Instead, Spofy uses an LLM (via =gptel=) to extract the underlying musical work from the track and album metadata and return its Wikipedia article title.  For example, a track named "Symphony No. 5 in C minor, Op. 67: I. Allegro con brio" resolves to the Wikipedia article "Symphony No. 5 (Beethoven)".
+
+Classification of tracks as classical or non-classical relies on the Spotify API's genre tags for the artist.  If any of the artist's genres match a set of classical patterns (such as "classical", "orchestral", "opera", or "baroque"), the track is treated as classical.
+
+All lookup results are cached persistently in a SQLite database (Emacs 29+ built-in support required) so that repeated plays of the same album or track never trigger redundant API or LLM calls.  Artist classifications are also cached.
+
+The command ~spofy-wikipedia~ is the main entry point.  It reads the currently playing track from the player state ([[#h:playback-control][Playback control]]), classifies the artist, and dispatches to the appropriate lookup path.  When a Wikipedia article is found, it is opened via ~browse-url~.  The command is also available in the transient popup ([[#h:transient-popup][Transient popup]]) under =W=.
+
+Wikipedia lookup actions are available through Embark ([[#h:embark-integration][Embark integration]]) on tracks, albums, and artists (bound to =W= in each keymap).  For tracks, the command classifies the artist and uses either the album or work lookup.  For albums, the Wikipedia search path is used directly.  For artists, the command searches for the artist's Wikipedia page and validates it against =Template:Infobox musical artist=.
+
+** Wikipedia user options
+:PROPERTIES:
+:CUSTOM_ID: h:wikipedia-user-options
+:END:
+
+The user option ~spofy-wikipedia-language~ controls which language edition of Wikipedia to use.  The default value is ="en"= for the English Wikipedia.  Set it to another language code (e.g., ="de"=, ="fr"=, ="es"=) to look up articles in that language instead.
+
+The user option ~spofy-wikipedia-db-file~ specifies the path to the SQLite database file for caching lookup results.  The default is =spofy-wikipedia.sqlite= in the user Emacs directory.
+
+The user option ~spofy-wikipedia-backend~ specifies the =gptel= backend name to use for classical music lookups (e.g., ="Gemini"= or ="Claude"=).  When ~nil~ (the default), the backend is inferred from ~spofy-wikipedia-model~ or falls back to the global ~gptel-backend~.
+
+The user option ~spofy-wikipedia-model~ specifies the =gptel= model for classical music lookups.  When ~nil~ (the default), it uses the global ~gptel-model~.  These two options follow the same resolution pattern as =elfeed-ai.el=: setting the model alone is sufficient if it uniquely identifies a backend.
 
 * Faces
 :PROPERTIES:
