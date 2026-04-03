@@ -162,32 +162,36 @@ Return a list of (ID [COLUMNS...])."
 ;;;; Column definitions
 
 (defun spofy-search--track-columns ()
-  "Return column format for track search results."
-  (vector '(" " 2 nil)
-          `("Name"      ,(spofy-ui-col 'search-track 0) nil)
-          `("Artist(s)" ,(spofy-ui-col 'search-track 1) nil)
-          `("Album"     ,(spofy-ui-col 'search-track 2) nil)
-          '("Duration"  6 nil)))
+  "Return the view and column recipe for track search results."
+  (list 'search-track
+        '((" "         2 nil)
+          ("Name"      :flex nil)
+          ("Artist(s)" :flex nil)
+          ("Album"     :flex nil)
+          ("Duration"  6 nil))))
 
 (defun spofy-search--album-columns ()
-  "Return column format for album search results."
-  (vector `("Name"      ,(spofy-ui-col 'search-album 0) nil)
-          `("Artist(s)" ,(spofy-ui-col 'search-album 1) nil)
-          '("Year"      6 nil)
-          '("Tracks"    6 nil)))
+  "Return the view and column recipe for album search results."
+  (list 'search-album
+        '(("Name"      :flex nil)
+          ("Artist(s)" :flex nil)
+          ("Year"      6 nil)
+          ("Tracks"    6 nil))))
 
 (defun spofy-search--artist-columns ()
-  "Return column format for artist search results."
-  (vector `("Name"      ,(spofy-ui-col 'search-artist 0) nil)
-          `("Genres"    ,(spofy-ui-col 'search-artist 1) nil)
-          '("Followers" 12 nil)))
+  "Return the view and column recipe for artist search results."
+  (list 'search-artist
+        '(("Name"      :flex nil)
+          ("Genres"    :flex nil)
+          ("Followers" 12 nil))))
 
 (defun spofy-search--playlist-columns ()
-  "Return column format for playlist search results."
-  (vector `("Name"   ,(spofy-ui-col 'search-playlist 0) nil)
-          `("Owner"  ,(spofy-ui-col 'search-playlist 1) nil)
-          '("Tracks" 8 nil)
-          '("Public" 7 nil)))
+  "Return the view and column recipe for playlist search results."
+  (list 'search-playlist
+        '(("Name"   :flex nil)
+          ("Owner"  :flex nil)
+          ("Tracks" 8 nil)
+          ("Public" 7 nil))))
 
 ;;;; Search internals
 
@@ -196,7 +200,7 @@ Return a list of (ID [COLUMNS...])."
   (concat type "s"))
 
 (defun spofy-search--columns-for-type (type)
-  "Return the column format vector for search TYPE."
+  "Return (VIEW COLUMNS) for search TYPE."
   (pcase type
     ("track" (spofy-search--track-columns))
     ("album" (spofy-search--album-columns))
@@ -224,8 +228,7 @@ TYPE is the search type (unused but reserved for future use)."
 (defun spofy-search--display-results (type query items next-url)
   "Display search ITEMS of TYPE for QUERY in a tabulated-list buffer.
 NEXT-URL is the URL for the next page of results, or nil."
-  (let ((buf-name (format "*Spofy Search: %s*" (spofy-search--type-plural type)))
-        (columns (spofy-search--columns-for-type type)))
+  (let ((buf-name (format "*Spofy Search: %s*" (spofy-search--type-plural type))))
     (with-current-buffer (get-buffer-create buf-name)
       (spofy-search-mode)
       (setq spofy-search--query query)
@@ -246,7 +249,8 @@ NEXT-URL is the URL for the next page of results, or nil."
                                         (spofy-search--format-entry search-type item))
                                       (append items nil))
                               next-url)))))
-      (setq tabulated-list-format columns)
+      (pcase-let ((`(,view ,columns) (spofy-search--columns-for-type type)))
+        (spofy-ui-set-format view columns))
       (let ((entries (mapcar (lambda (item)
                                (spofy-search--format-entry type item))
                              (append items nil))))

@@ -101,10 +101,13 @@
     (artist-top-track . (35 25))
     (playlist-track   . (30 20 20))
     (playlist-list    . (35 20)))
-  "Column widths for tabulated-list buffers.
-Each entry is (VIEW . (COL1 COL2 ...)).  Only variable-width columns
-are listed; fixed-width columns (indicators, duration, year, counts)
-are not configurable.  The columns per view are:
+  "Proportional column weights for tabulated-list buffers.
+Each entry is (VIEW . (W1 W2 ...)).  The values are proportional
+weights for variable-width columns; they are scaled so that all
+columns together fill the window width.  Fixed-width columns
+\(indicators, duration, year, counts) are not listed here.
+
+The variable-width columns per view are:
 
   library-track:    Name, Artist(s), Album
   library-album:    Name, Artist(s)
@@ -115,15 +118,89 @@ are not configurable.  The columns per view are:
   album-track:      Name, Artist(s)
   artist-album:     Name
   artist-top-track: Name, Album
-  playlist-track:   Name, Artist(s), Album, Added By
+  playlist-track:   Name, Artist(s), Album
   playlist-list:    Name, Owner"
   :type '(alist :key-type symbol
                 :value-type (repeat integer))
   :group 'spofy)
 
+(defvar-local spofy-ui--format-view nil
+  "View symbol used to compute the current buffer's column format.")
+
+(defvar-local spofy-ui--format-columns nil
+  "Column recipe used to compute the current buffer's column format.
+A list of specs (NAME WIDTH-OR-FLEX SORT . PROPS).  When WIDTH-OR-FLEX
+is the keyword `:flex', the column width is computed proportionally.")
+
+(defvar-local spofy-ui--computed-widths nil
+  "Computed flex column widths for the current buffer.
+An alist (VIEW . (W0 W1 ...)) set by `spofy-ui-compute-format'.")
+
 (defun spofy-ui-col (view n)
-  "Return the Nth column width for VIEW from `spofy-columns'."
-  (nth n (alist-get view spofy-columns)))
+  "Return the Nth flex column width for VIEW.
+Uses the dynamically computed width when available, falling back
+to the raw weight from `spofy-columns'."
+  (or (nth n (alist-get view spofy-ui--computed-widths))
+      (nth n (alist-get view spofy-columns))))
+
+(defun spofy-ui-compute-format (view columns)
+  "Compute a `tabulated-list-format' vector for VIEW with COLUMNS.
+COLUMNS is a list of column specs, each (NAME WIDTH SORT . PROPS).
+When WIDTH is `:flex', the column width is computed proportionally
+from the VIEW entry in `spofy-columns' so that all columns together
+fill the window.  Flex columns consume weights in order of appearance."
+  (let ((fixed-total 0)
+        (flex-count 0)
+        (num-cols (length columns))
+        (padding (or tabulated-list-padding 0)))
+    (dolist (col columns)
+      (if (eq (cadr col) :flex)
+          (cl-incf flex-count)
+        (cl-incf fixed-total (cadr col))))
+    (let* ((weights (seq-take (alist-get view spofy-columns) flex-count))
+           (total-weight (max 1 (apply #'+ weights)))
+           (available (max 20 (- (window-body-width) padding fixed-total num-cols)))
+           (computed nil)
+           (flex-idx 0))
+      (prog1
+          (apply #'vector
+                 (mapcar (lambda (col)
+                           (if (eq (cadr col) :flex)
+                               (let ((w (max 8 (floor (* available
+                                                         (/ (float (nth flex-idx weights))
+                                                            total-weight))))))
+                                 (push w computed)
+                                 (cl-incf flex-idx)
+                                 `(,(car col) ,w ,@(cddr col)))
+                             col))
+                         columns))
+        (setq spofy-ui--computed-widths
+              (list (cons view (nreverse computed))))))))
+
+(defun spofy-ui-set-format (view columns)
+  "Set `tabulated-list-format' for VIEW with dynamic COLUMNS.
+Stores the recipe for resize recomputation and sets the format."
+  (setq-local spofy-ui--format-view view)
+  (setq-local spofy-ui--format-columns columns)
+  (setq tabulated-list-format (spofy-ui-compute-format view columns)))
+
+(defun spofy-ui--recompute-columns ()
+  "Recompute column widths for the current Spofy buffer after resize."
+  (when (and spofy-ui--format-view spofy-ui--format-columns)
+    (let ((new-format (spofy-ui-compute-format
+                       spofy-ui--format-view spofy-ui--format-columns)))
+      (unless (equal new-format tabulated-list-format)
+        (setq tabulated-list-format new-format)
+        (tabulated-list-init-header)
+        (tabulated-list-print t)))))
+
+(defun spofy-ui--handle-window-resize (frame)
+  "Recompute column widths in Spofy buffers displayed in FRAME."
+  (dolist (window (window-list frame 'no-minibuf))
+    (with-current-buffer (window-buffer window)
+      (spofy-ui--recompute-columns))))
+
+(add-hook 'window-size-change-functions #'spofy-ui--handle-window-resize)
 
 ;;;; Utilities
 

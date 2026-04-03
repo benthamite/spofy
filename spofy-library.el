@@ -131,13 +131,14 @@ Shows a play icon if TRACK-URI matches the currently playing track."
   "Spofy Library Tracks"
   "Major mode for viewing saved tracks in the user's Spotify library."
   :group 'spofy
-  (setq tabulated-list-format
-        (vector '(" "         2 nil)
-                `("Name"      ,(spofy-ui-col 'library-track 0) t)
-                `("Artist(s)" ,(spofy-ui-col 'library-track 1) t)
-                `("Album"     ,(spofy-ui-col 'library-track 2) t)
-                '("Duration"  6 nil :right-align t))
-        tabulated-list-padding 2)
+  (setq tabulated-list-padding 2)
+  (spofy-ui-set-format
+   'library-track
+   '((" "         2 nil)
+     ("Name"      :flex t)
+     ("Artist(s)" :flex t)
+     ("Album"     :flex t)
+     ("Duration"  6 nil :right-align t)))
   (setq-local spofy-library--entities (make-hash-table :test #'equal))
   (setq-local spofy-ui--entity-type 'track)
   (tabulated-list-init-header))
@@ -260,12 +261,13 @@ in a tabulated-list buffer."
   "Spofy Library Albums"
   "Major mode for viewing saved albums in the user's Spotify library."
   :group 'spofy
-  (setq tabulated-list-format
-        (vector `("Name"      ,(spofy-ui-col 'library-album 0) t)
-                `("Artist(s)" ,(spofy-ui-col 'library-album 1) t)
-                '("Year"      6 t)
-                '("Tracks"    6 nil :right-align t))
-        tabulated-list-padding 2)
+  (setq tabulated-list-padding 2)
+  (spofy-ui-set-format
+   'library-album
+   '(("Name"      :flex t)
+     ("Artist(s)" :flex t)
+     ("Year"      6 t)
+     ("Tracks"    6 nil :right-align t)))
   (setq-local spofy-library--entities (make-hash-table :test #'equal))
   (setq-local spofy-ui--entity-type 'album)
   (tabulated-list-init-header))
@@ -377,13 +379,14 @@ in a tabulated-list buffer."
   "Spofy Recently Played"
   "Major mode for viewing recently played tracks."
   :group 'spofy
-  (setq tabulated-list-format
-        (vector '(" "         2 nil)
-                `("Name"      ,(spofy-ui-col 'library-track 0) t)
-                `("Artist(s)" ,(spofy-ui-col 'library-track 1) t)
-                `("Album"     ,(spofy-ui-col 'library-track 2) t)
-                '("Duration"  6 nil :right-align t))
-        tabulated-list-padding 2)
+  (setq tabulated-list-padding 2)
+  (spofy-ui-set-format
+   'library-track
+   '((" "         2 nil)
+     ("Name"      :flex t)
+     ("Artist(s)" :flex t)
+     ("Album"     :flex t)
+     ("Duration"  6 nil :right-align t)))
   (setq-local spofy-library--entities (make-hash-table :test #'equal))
   (setq-local spofy-ui--entity-type 'track)
   (tabulated-list-init-header))
@@ -510,13 +513,14 @@ type string/symbol plus ID supplied separately."
   "Spofy Top Tracks"
   "Major mode for viewing top tracks."
   :group 'spofy
-  (setq tabulated-list-format
-        (vector '(" "         2 nil)
-                `("Name"      ,(spofy-ui-col 'library-track 0) t)
-                `("Artist(s)" ,(spofy-ui-col 'library-track 1) t)
-                `("Album"     ,(spofy-ui-col 'library-track 2) t)
-                '("Duration"  6 nil :right-align t))
-        tabulated-list-padding 2)
+  (setq tabulated-list-padding 2)
+  (spofy-ui-set-format
+   'library-track
+   '((" "         2 nil)
+     ("Name"      :flex t)
+     ("Artist(s)" :flex t)
+     ("Album"     :flex t)
+     ("Duration"  6 nil :right-align t)))
   (setq-local spofy-library--entities (make-hash-table :test #'equal))
   (setq-local spofy-ui--entity-type 'track)
   (tabulated-list-init-header))
@@ -633,10 +637,11 @@ Defaults to \"medium_term\"."
   "Spofy Top Artists"
   "Major mode for viewing top artists."
   :group 'spofy
-  (setq tabulated-list-format
-        (vector `("Name"   ,(spofy-ui-col 'search-artist 0) t)
-                `("Genres" ,(spofy-ui-col 'search-artist 1) t))
-        tabulated-list-padding 2)
+  (setq tabulated-list-padding 2)
+  (spofy-ui-set-format
+   'search-artist
+   '(("Name"   :flex t)
+     ("Genres" :flex t)))
   (setq-local spofy-library--entities (make-hash-table :test #'equal))
   (setq-local spofy-ui--entity-type 'artist)
   (tabulated-list-init-header))
@@ -732,12 +737,13 @@ Defaults to \"medium_term\"."
   "Spofy New Releases"
   "Major mode for viewing new album releases."
   :group 'spofy
-  (setq tabulated-list-format
-        (vector `("Album"     ,(spofy-ui-col 'library-album 0) t)
-                `("Artist(s)" ,(spofy-ui-col 'library-album 1) t)
-                '("Year"      6 t)
-                '("Tracks"    6 nil :right-align t))
-        tabulated-list-padding 2)
+  (setq tabulated-list-padding 2)
+  (spofy-ui-set-format
+   'library-album
+   '(("Album"     :flex t)
+     ("Artist(s)" :flex t)
+     ("Year"      6 t)
+     ("Tracks"    6 nil :right-align t)))
   (setq-local spofy-library--entities (make-hash-table :test #'equal))
   (setq-local spofy-ui--entity-type 'album)
   (tabulated-list-init-header))

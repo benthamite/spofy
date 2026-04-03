@@ -179,11 +179,13 @@ The now-playing section always appears at the top regardless of this option.  Ea
 
 #+vindex: spofy-columns
 #+findex: spofy-ui-col
+#+findex: spofy-ui-set-format
+#+findex: spofy-ui-compute-format
 
-The user option ~spofy-columns~ controls the width of variable-width columns in all tabulated-list buffers (library, search, browse, and playlist views).  Each entry maps a view symbol to a list of column widths.  These widths govern both the column headers and the text truncation in each cell.  Fixed-width columns such as indicators, duration, year, and track counts are not configurable.  The default value is:
+Variable-width columns are sized dynamically so that all columns together fill the window.  The user option ~spofy-columns~ controls the proportional weights of these columns.  Each entry maps a view symbol to a list of weights; columns are allocated window space in proportion to their weight.  Fixed-width columns such as indicators, duration, year, and track counts are not affected.  Column widths are recomputed automatically when the window is resized.  The default weights are:
 
-| View              | Columns                          |
-|-------------------+----------------------------------|
+| View              | Columns (weights)                    |
+|-------------------+--------------------------------------|
 | =library-track=   | Name (35), Artist(s) (25), Album (25)        |
 | =library-album=   | Name (35), Artist(s) (25)                    |
 | =search-track=    | Name (35), Artist(s) (25), Album (25)        |
@@ -193,10 +195,10 @@ The user option ~spofy-columns~ controls the width of variable-width columns in 
 | =album-track=     | Name (40), Artist(s) (25)                    |
 | =artist-album=    | Name (40)                                    |
 | =artist-top-track= | Name (35), Album (25)                       |
-| =playlist-track=  | Name (30), Artist(s) (20), Album (20)                |
+| =playlist-track=  | Name (30), Artist(s) (20), Album (20)        |
 | =playlist-list=   | Name (35), Owner (20)                        |
 
-The function ~spofy-ui-col~ looks up a column width from ~spofy-columns~.  It takes a view symbol and a zero-based column index.
+The function ~spofy-ui-compute-format~ takes a view symbol and a list of column specs, where each spec is =(NAME WIDTH SORT . PROPS)=.  When WIDTH is the keyword =:flex=, the column width is computed proportionally from ~spofy-columns~.  The convenience function ~spofy-ui-set-format~ calls ~spofy-ui-compute-format~ and stores the recipe so that column widths are recomputed on window resize.  The function ~spofy-ui-col~ returns the computed width for a given view and flex column index.
 
 * Commands
 :PROPERTIES:

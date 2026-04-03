@@ -108,12 +108,13 @@ Shows a play icon if TRACK-URI matches the currently playing track."
 (define-derived-mode spofy-album-mode tabulated-list-mode "Spofy Album"
   "Major mode for viewing a Spotify album's tracks."
   :group 'spofy
-  (setq tabulated-list-format
-        (vector '("#"        4 nil :right-align t)
-                `("Name"     ,(spofy-ui-col 'album-track 0) t)
-                `("Artist(s)" ,(spofy-ui-col 'album-track 1) t)
-                '("Duration"  6 nil :right-align t))
-        tabulated-list-padding 2)
+  (setq tabulated-list-padding 2)
+  (spofy-ui-set-format
+   'album-track
+   '(("#"        4 nil :right-align t)
+     ("Name"     :flex t)
+     ("Artist(s)" :flex t)
+     ("Duration"  6 nil :right-align t)))
   (tabulated-list-init-header))
 
 (defun spofy-album--format-track (track album-uri)
@@ -247,12 +248,13 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
 (define-derived-mode spofy-artist-mode tabulated-list-mode "Spofy Artist"
   "Major mode for viewing a Spotify artist's albums."
   :group 'spofy
-  (setq tabulated-list-format
-        (vector `("Name"   ,(spofy-ui-col 'artist-album 0) t)
-                '("Year"    6 t)
-                '("Type"    8 t)
-                '("Tracks"  6 nil :right-align t))
-        tabulated-list-padding 2)
+  (setq tabulated-list-padding 2)
+  (spofy-ui-set-format
+   'artist-album
+   '(("Name"    :flex t)
+     ("Year"     6 t)
+     ("Type"     8 t)
+     ("Tracks"   6 nil :right-align t)))
   (tabulated-list-init-header))
 
 (defun spofy-artist--format-album (album)
@@ -381,12 +383,13 @@ Fetches artist info and albums, then displays in a tabulated-list buffer."
   "Spofy Top Tracks"
   "Major mode for viewing an artist's top tracks."
   :group 'spofy
-  (setq tabulated-list-format
-        (vector '(" "        2 nil)
-                `("Name"     ,(spofy-ui-col 'artist-top-track 0) t)
-                `("Album"    ,(spofy-ui-col 'artist-top-track 1) t)
-                '("Duration"  6 nil :right-align t))
-        tabulated-list-padding 2)
+  (setq tabulated-list-padding 2)
+  (spofy-ui-set-format
+   'artist-top-track
+   '((" "        2 nil)
+     ("Name"     :flex t)
+     ("Album"    :flex t)
+     ("Duration"  6 nil :right-align t)))
   (tabulated-list-init-header))
 
 (defun spofy-top-tracks--format-track (track)
@@ -483,13 +486,14 @@ ARTIST-ID is kept for refresh."
   "Spofy Playlist"
   "Major mode for viewing a Spotify playlist's tracks."
   :group 'spofy
-  (setq tabulated-list-format
-        (vector '(" "          2 nil)
-                `("Name"       ,(spofy-ui-col 'playlist-track 0) t)
-                `("Artist(s)"  ,(spofy-ui-col 'playlist-track 1) t)
-                `("Album"      ,(spofy-ui-col 'playlist-track 2) t)
-                '("Duration"    6 nil :right-align t))
-        tabulated-list-padding 2)
+  (setq tabulated-list-padding 2)
+  (spofy-ui-set-format
+   'playlist-track
+   '((" "          2 nil)
+     ("Name"       :flex t)
+     ("Artist(s)"  :flex t)
+     ("Album"      :flex t)
+     ("Duration"    6 nil :right-align t)))
   (tabulated-list-init-header))
 
 (defun spofy-playlist--format-track-item (item playlist-uri)

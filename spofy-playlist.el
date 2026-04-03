@@ -105,12 +105,13 @@ Buffer-local in `spofy-playlists-mode' buffers.")
   "Major mode for listing the user's Spotify playlists.
 Derived from `tabulated-list-mode'."
   :group 'spofy
-  (setq tabulated-list-format
-        (vector `("Name"   ,(spofy-ui-col 'playlist-list 0) t)
-                `("Owner"  ,(spofy-ui-col 'playlist-list 1) t)
-                '("Tracks"  8 nil :right-align t)
-                '("Public"  7 t))
-        tabulated-list-padding 2)
+  (setq tabulated-list-padding 2)
+  (spofy-ui-set-format
+   'playlist-list
+   '(("Name"    :flex t)
+     ("Owner"   :flex t)
+     ("Tracks"   8 nil :right-align t)
+     ("Public"   7 t)))
   (setq-local spofy-playlist--entities (make-hash-table :test #'equal))
   (tabulated-list-init-header))
 
