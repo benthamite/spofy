@@ -389,7 +389,7 @@ Requires `spofy-ui--load-more-handler' to be set in the buffer."
   "Auto-load the next page when WINDOW scrolls near the end of the buffer."
   (with-current-buffer (window-buffer window)
     (when (and spofy-ui--load-more-handler
-               spofy-ui--next-page-url
+               (stringp spofy-ui--next-page-url)
                (not spofy-ui--loading-more)
                ;; Trigger when window end is within 3 lines of point-max.
                (<= (- (point-max) (window-end window t)) 3))
