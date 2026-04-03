@@ -193,7 +193,7 @@ The user option ~spofy-columns~ controls the width of variable-width columns in 
 | =album-track=     | Name (40), Artist(s) (25)                    |
 | =artist-album=    | Name (40)                                    |
 | =artist-top-track= | Name (35), Album (25)                       |
-| =playlist-track=  | Name (30), Artist(s) (20), Album (20), Added By (15) |
+| =playlist-track=  | Name (30), Artist(s) (20), Album (20)                |
 | =playlist-list=   | Name (35), Owner (20)                        |
 
 The function ~spofy-ui-col~ looks up a column width from ~spofy-columns~.  It takes a view symbol and a zero-based column index.

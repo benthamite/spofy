@@ -488,27 +488,14 @@ ARTIST-ID is kept for refresh."
                 `("Name"       ,(spofy-ui-col 'playlist-track 0) t)
                 `("Artist(s)"  ,(spofy-ui-col 'playlist-track 1) t)
                 `("Album"      ,(spofy-ui-col 'playlist-track 2) t)
-                '("Duration"    6 nil :right-align t)
-                `("Added By"   ,(spofy-ui-col 'playlist-track 3) t)
-                '("Date Added" 12 t))
+                '("Duration"    6 nil :right-align t))
         tabulated-list-padding 2)
   (tabulated-list-init-header))
-
-(defun spofy-playlist--format-added-at (added-at)
-  "Format ADDED-AT timestamp as YYYY-MM-DD."
-  (if (and added-at (stringp added-at) (>= (length added-at) 10))
-      (substring added-at 0 10)
-    ""))
 
 (defun spofy-playlist--format-track-item (item playlist-uri)
   "Format a playlist track ITEM (wrapper with `track' and `added_by').
 PLAYLIST-URI is the playlist context URI for playback."
   (let* ((track (alist-get 'track item))
-         (added-by-obj (alist-get 'added_by item))
-         (added-by (if added-by-obj
-                       (or (alist-get 'id added-by-obj) "")
-                     ""))
-         (added-at (or (alist-get 'added_at item) ""))
          (uri (if track (alist-get 'uri track) nil)))
     ;; Protect against nil tracks (local files, etc.)
     (when (and track uri)
@@ -519,8 +506,7 @@ PLAYLIST-URI is the playlist context URI for playback."
              (duration (alist-get 'duration_ms track))
              (playing (spofy-browse--playing-indicator uri))
              (artists-str (if artists (spofy-ui-format-artists artists) ""))
-             (dur-str (if duration (spofy-ui-format-duration-ms duration) ""))
-             (date-str (spofy-playlist--format-added-at added-at)))
+             (dur-str (if duration (spofy-ui-format-duration-ms duration) "")))
         ;; Store the full wrapper so we have added_by and track data.
         (spofy-browse--store-entity uri item)
         ;; Store playlist-uri for playback context.
@@ -533,9 +519,7 @@ PLAYLIST-URI is the playlist context URI for playback."
                                          (if (string-empty-p playing) 'spofy-artist-name 'spofy-playing))
                       (spofy-ui-truncate album-name (spofy-ui-col 'playlist-track 2)
                                          (if (string-empty-p playing) 'spofy-album-name 'spofy-playing))
-                      (propertize dur-str 'face 'spofy-muted)
-                      (spofy-ui-truncate added-by (spofy-ui-col 'playlist-track 3))
-                      (propertize date-str 'face 'spofy-muted)))))))
+                      (propertize dur-str 'face 'spofy-muted)))))))
 
 (defun spofy-playlist--render (playlist)
   "Render PLAYLIST data into a buffer."

@@ -99,7 +99,7 @@
     (album-track      . (40 25))
     (artist-album     . (40))
     (artist-top-track . (35 25))
-    (playlist-track   . (30 20 20 15))
+    (playlist-track   . (30 20 20))
     (playlist-list    . (35 20)))
   "Column widths for tabulated-list buffers.
 Each entry is (VIEW . (COL1 COL2 ...)).  Only variable-width columns
