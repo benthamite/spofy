@@ -179,6 +179,30 @@ Return an alist with keys `wiki-title', `wiki-url', `work', or nil."
       VALUES (?, ?, ?)"
      (list artist-id (if is-classical 1 0) (round (float-time))))))
 
+(defconst spofy-wikipedia--classical-track-patterns
+  (concat
+   "\\(?:"
+   "Op\\. *[0-9]"                     ; opus numbers
+   "\\|BWV *[0-9]"                    ; Bach catalog
+   "\\|K\\. *[0-9]"                   ; Mozart catalog
+   "\\|KV *[0-9]"                     ; Mozart catalog (alt)
+   "\\|Hob\\."                        ; Haydn catalog
+   "\\|D\\. *[0-9]"                   ; Schubert catalog
+   "\\|RV *[0-9]"                     ; Vivaldi catalog
+   "\\|S\\. *[0-9]"                   ; Liszt catalog
+   "\\|HWV *[0-9]"                    ; Handel catalog
+   "\\|WWV *[0-9]"                    ; Wagner catalog
+   "\\|No\\. *[0-9]"                  ; numbered works
+   "\\|in [A-G][#b]? [Mm]\\(ajor\\|inor\\)" ; key signatures
+   "\\|: I\\. "                       ; movement numbers
+   "\\|: II\\. "
+   "\\|: III\\. "
+   "\\|: IV\\. "
+   "\\|Allegro\\|Adagio\\|Andante\\|Presto\\|Largo\\|Moderato"
+   "\\|Scherzo\\|Menuett?o\\|Rondo"
+   "\\)")
+  "Regexp matching common classical music markers in track names.")
+
 (defun spofy-wikipedia--classical-genre-p (genres)
   "Return non-nil if GENRES (a vector of strings) contains a classical genre."
   (cl-some (lambda (genre)
@@ -188,9 +212,15 @@ Return an alist with keys `wiki-title', `wiki-url', `work', or nil."
                         spofy-wikipedia--classical-genres)))
            genres))
 
-(defun spofy-wikipedia--classify-artist (artist-id callback)
+(defun spofy-wikipedia--classical-track-p (track-name)
+  "Return non-nil if TRACK-NAME contains classical music markers."
+  (and track-name
+       (string-match-p spofy-wikipedia--classical-track-patterns track-name)))
+
+(defun spofy-wikipedia--classify-artist (artist-id track-name callback)
   "Determine if ARTIST-ID is classical and call CALLBACK with the boolean.
-Uses the cache first, then falls back to the Spotify API."
+Uses the cache first, then falls back to the Spotify API.  When the
+artist has no genres, falls back to heuristic matching on TRACK-NAME."
   (let ((cached (spofy-wikipedia--classification-cached-p artist-id)))
     (if (not (eq cached 'unknown))
         (funcall callback cached)
@@ -199,7 +229,9 @@ Uses the cache first, then falls back to the Spotify API."
        (format "artists/%s" artist-id) nil
        (lambda (data)
          (let* ((genres (or (alist-get 'genres data) []))
-                (classical (spofy-wikipedia--classical-genre-p genres)))
+                (classical (if (= 0 (length genres))
+                               (spofy-wikipedia--classical-track-p track-name)
+                             (spofy-wikipedia--classical-genre-p genres))))
            (spofy-wikipedia--cache-classification artist-id classical)
            (funcall callback classical)))))))
 
@@ -443,7 +475,7 @@ Call CALLBACK with (WIKI-TITLE . WIKI-URL) or signal an error."
     (unless artist-id
       (user-error "Spofy: no artist information available"))
     (spofy-wikipedia--classify-artist
-     artist-id
+     artist-id track
      (lambda (classical)
        (if classical
            (spofy-wikipedia--lookup-work
@@ -467,7 +499,7 @@ Call CALLBACK with (WIKI-TITLE . WIKI-URL) or signal an error."
               (album (alist-get 'album entity))
               (album-name (alist-get 'name album)))
     (spofy-wikipedia--classify-artist
-     artist-id
+     artist-id track-name
      (lambda (classical)
        (if classical
            (spofy-wikipedia--lookup-work

@@ -770,7 +770,7 @@ For non-classical music, Spofy searches the Wikipedia API directly using the alb
 
 For classical music, a different approach is necessary because the Spotify album name (e.g., "Beethoven: Symphonies Nos. 5 & 7") does not correspond to a single Wikipedia article.  Instead, Spofy uses an LLM (via =gptel=) to extract the underlying musical work from the track and album metadata and return its Wikipedia article title.  For example, a track named "Symphony No. 5 in C minor, Op. 67: I. Allegro con brio" resolves to the Wikipedia article "Symphony No. 5 (Beethoven)".
 
-Classification of tracks as classical or non-classical relies on the Spotify API's genre tags for the artist.  If any of the artist's genres match a set of classical patterns (such as "classical", "orchestral", "opera", or "baroque"), the track is treated as classical.
+Classification of tracks as classical or non-classical relies primarily on the Spotify API's genre tags for the artist.  If any of the artist's genres match a set of classical patterns (such as "classical", "orchestral", "opera", or "baroque"), the track is treated as classical.  When an artist has no genre tags at all — which is common for lesser-known classical performers — Spofy falls back to heuristic matching on the track name, looking for patterns such as opus numbers (=Op.=), catalog numbers (=BWV=, =K.=, =RV=, etc.), key signatures (=in C minor=), movement indicators (=I.=, =II.=), and tempo markings (=Allegro=, =Adagio=, etc.).
 
 All lookup results are cached persistently in a SQLite database (Emacs 29+ built-in support required) so that repeated plays of the same album or track never trigger redundant API or LLM calls.  Artist classifications are also cached.
 
