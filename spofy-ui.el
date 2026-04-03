@@ -179,9 +179,12 @@ fill the window.  Flex columns consume weights in order of appearance."
 
 (defun spofy-ui-set-format (view columns)
   "Set `tabulated-list-format' for VIEW with dynamic COLUMNS.
-Stores the recipe for resize recomputation and sets the format."
+Stores the recipe for resize recomputation, sets the format,
+and suppresses `tabulated-list-mode'\\='s built-in ellipsis so that
+only the fade effect from `spofy-ui-truncate' indicates truncation."
   (setq-local spofy-ui--format-view view)
   (setq-local spofy-ui--format-columns columns)
+  (setq-local truncate-string-ellipsis "")
   (setq tabulated-list-format (spofy-ui-compute-format view columns)))
 
 (defun spofy-ui--recompute-columns ()
