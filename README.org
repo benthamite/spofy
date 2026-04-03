@@ -383,10 +383,9 @@ All search result buffers share the ~spofy-search-mode~ keymap:
 | =s=   | ~spofy-search-save~           | Save item to library                |
 | =S=   | ~spofy-search-unsave~         | Remove item from library            |
 | =g=   | ~spofy-search-refresh~        | Re-run the search                   |
-| =m=   | ~spofy-ui-load-more~          | Load the next page of results       |
 | =q=   | ~quit-window~                 | Close the buffer                    |
 
-The Spotify API returns results in pages of 20 items.  The command ~spofy-ui-load-more~ fetches the next page and appends it to the existing results ([[#h:pagination][Pagination]]).
+The Spotify API returns results in pages.  Results load automatically as the user scrolls ([[#h:pagination][Pagination]]).
 
 ** Browsing
 :PROPERTIES:
@@ -409,7 +408,6 @@ The command ~spofy-view-album~ displays the tracks of a Spotify album in a =*Spo
 | =A=   | ~spofy-album-view-artist~  | View the artist                |
 | =s=   | ~spofy-album-save~         | Save album to library          |
 | =g=   | ~spofy-album-refresh~      | Refresh                        |
-| =m=   | ~spofy-ui-load-more~       | Load more tracks               |
 | =q=   | ~quit-window~              | Close                          |
 
 *** Artist view
@@ -428,7 +426,6 @@ The command ~spofy-view-artist~ displays an artist's albums in a =*Spofy Artist:
 | =t=   | ~spofy-artist-top-tracks~     | View top tracks             |
 | =a=   | ~spofy-artist-play-album~     | Play the album at point     |
 | =g=   | ~spofy-artist-refresh~        | Refresh                     |
-| =m=   | ~spofy-ui-load-more~          | Load more albums            |
 | =q=   | ~quit-window~                 | Close                       |
 
 The function ~spofy-view-artist-top-tracks~ fetches the artist's top tracks (as determined by Spotify's algorithm) and displays them in a =*Spofy Top Tracks: ARTIST*= buffer.  Tracks are listed with their name, album, and duration.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
@@ -450,7 +447,6 @@ The command ~spofy-view-playlist~ displays the tracks of a playlist in a =*Spofy
 | =d=   | ~spofy-playlist-view-remove-track~ | Remove track from playlist     |
 | =s=   | ~spofy-playlist-view-save-track~   | Save track to library          |
 | =g=   | ~spofy-playlist-view-refresh~      | Refresh                        |
-| =m=   | ~spofy-ui-load-more~               | Load more tracks               |
 | =q=   | ~quit-window~                      | Close                          |
 
 ** Playlist management
@@ -481,7 +477,6 @@ The command ~spofy-list-playlists~ displays all of the user's playlists in a =*S
 | =f=   | ~spofy-follow-playlist~      | Follow a playlist by ID or URI    |
 | =v=   | ~spofy-playlist-set-public~  | Toggle public/private             |
 | =g=   | ~spofy-playlists-refresh~    | Refresh                           |
-| =m=   | ~spofy-ui-load-more~         | Load more playlists               |
 | =q=   | ~quit-window~                | Close                             |
 
 The command ~spofy-create-playlist~ prompts for a name and description, then creates a new private playlist.  The command ~spofy-rename-playlist~ prompts for a new name with the current name pre-filled.  The command ~spofy-delete-playlist~ asks for confirmation with ~y-or-n-p~ before unfollowing the playlist (Spotify models deletion as unfollowing).
@@ -521,7 +516,6 @@ The command ~spofy-library-saved-tracks~ displays the user's saved tracks in a =
 | =S=   | ~spofy-library-tracks-unsave~         | Remove from library       |
 | =p=   | ~spofy-library-tracks-add-to-playlist~| Add to a playlist         |
 | =g=   | ~spofy-library-tracks-refresh~        | Refresh                   |
-| =m=   | ~spofy-ui-load-more~                  | Load more tracks          |
 | =q=   | ~quit-window~                         | Close                     |
 
 The command ~spofy-library-saved-albums~ displays saved albums in a =*Spofy Saved Albums*= buffer with columns for name, artist(s), year, and track count.
@@ -533,7 +527,6 @@ The command ~spofy-library-saved-albums~ displays saved albums in a =*Spofy Save
 | =A=   | ~spofy-library-albums-view-artist~    | View artist               |
 | =S=   | ~spofy-library-albums-unsave~         | Remove from library       |
 | =g=   | ~spofy-library-albums-refresh~        | Refresh                   |
-| =m=   | ~spofy-ui-load-more~                  | Load more albums          |
 | =q=   | ~quit-window~                         | Close                     |
 
 The command ~spofy-list-recently-played~ displays the last 50 recently played tracks in a =*Spofy Recently Played*= buffer.  The columns are the same as saved tracks.
@@ -544,7 +537,6 @@ The command ~spofy-list-recently-played~ displays the last 50 recently played tr
 | =a=   | ~spofy-recently-played-view-album~     | View album                |
 | =A=   | ~spofy-recently-played-view-artist~    | View artist               |
 | =g=   | ~spofy-recently-played-refresh~        | Refresh                   |
-| =m=   | ~spofy-ui-load-more~                   | Load more tracks          |
 | =q=   | ~quit-window~                          | Close                     |
 
 The command ~spofy-list-top-tracks~ displays the user's top tracks in a =*Spofy Top Tracks*= buffer.  It accepts an optional TIME-RANGE argument: ~"short_term"~ (4 weeks), ~"medium_term"~ (6 months, the default), or ~"long_term"~ (1 year).  The columns are the same as saved tracks.
@@ -555,7 +547,6 @@ The command ~spofy-list-top-tracks~ displays the user's top tracks in a =*Spofy 
 | =a=   | ~spofy-top-tracks-view-album~    | View album                |
 | =A=   | ~spofy-top-tracks-view-artist~   | View artist               |
 | =g=   | ~spofy-top-tracks-refresh~       | Refresh                   |
-| =m=   | ~spofy-ui-load-more~             | Load more tracks          |
 | =q=   | ~quit-window~                    | Close                     |
 
 The command ~spofy-list-top-artists~ displays the user's top artists in a =*Spofy Top Artists*= buffer with columns for name and genres.  It accepts the same TIME-RANGE argument as ~spofy-list-top-tracks~.
@@ -564,7 +555,6 @@ The command ~spofy-list-top-artists~ displays the user's top artists in a =*Spof
 |-------+-----------------------------------+---------------------------|
 | =RET= | ~spofy-top-artists-view~          | View artist               |
 | =g=   | ~spofy-top-artists-refresh~       | Refresh                   |
-| =m=   | ~spofy-ui-load-more~              | Load more artists         |
 | =q=   | ~quit-window~                     | Close                     |
 
 The command ~spofy-list-new-releases~ displays new album releases in a =*Spofy New Releases*= buffer with columns for album name, artist(s), year, and track count.  This data is not personalized.
@@ -574,7 +564,6 @@ The command ~spofy-list-new-releases~ displays new album releases in a =*Spofy N
 | =RET= | ~spofy-new-releases-view~          | View album                |
 | =A=   | ~spofy-new-releases-view-artist~   | View artist               |
 | =g=   | ~spofy-new-releases-refresh~       | Refresh                   |
-| =m=   | ~spofy-ui-load-more~               | Load more releases        |
 | =q=   | ~quit-window~                      | Close                     |
 
 The command ~spofy-library-save~ saves a Spotify entity (track or album) to the user's library.  It accepts a Spotify URI and determines the entity type from it.  The command ~spofy-library-unsave~ removes an entity from the library.  Both commands are available through keybindings in search, browse, and library buffers.
@@ -666,8 +655,6 @@ The function ~spofy-auth-refresh-token~ explicitly uses the stored refresh token
 #+findex: spofy-ui-format-artists
 #+findex: spofy-ui-truncate
 #+findex: spofy-ui-progress-bar
-#+findex: spofy-ui-load-more
-#+findex: spofy-ui-insert-pagination-footer
 #+findex: spofy-ui--after-tabulated-list-print
 
 The function ~spofy-ui-format-duration-ms~ takes a duration in milliseconds and returns a human-readable ~"M:SS"~ string.
@@ -683,9 +670,7 @@ The function ~spofy-ui-progress-bar~ builds a text progress bar for a given prog
 :CUSTOM_ID: h:pagination
 :END:
 
-All Spofy ~tabulated-list-mode~ buffers share a single pagination mechanism.  Results load automatically as the user scrolls: the function ~spofy-ui--maybe-load-more~ is registered on ~window-scroll-functions~ and triggers a fetch when the window end is within a few lines of the buffer end.  A guard variable (~spofy-ui--loading-more~) prevents duplicate requests while one is already in flight, and the URL is checked with ~stringp~ to avoid attempting a fetch when the JSON ~:null~ sentinel has not yet been normalized.  Pressing =m= calls ~spofy-ui-load-more~ to load the next page manually.  Each buffer stores a buffer-local handler (set by the module that created the buffer) that knows how to extract items and the next-page URL from the API response.  This keeps all pagination logic in one place in =spofy-ui.el= while letting each module control its own entry formatting.  Both ~spofy-api--extract-paged-results~ and ~spofy-ui-load-more~ normalize JSON ~:null~ values to ~nil~, so that a ~null~ next-page URL from the Spotify API is correctly treated as the end of results.
-
-The function ~spofy-ui-insert-pagination-footer~ appends a =[m] Load more= line at the end of a buffer when ~spofy-ui--next-page-url~ is non-nil.  It removes any existing footer before inserting, so it is safe to call after each render or load-more cycle.  The function ~spofy-ui--after-tabulated-list-print~ is installed as =:after= advice on ~tabulated-list-print~, so the footer is inserted automatically in every Spofy buffer that sets ~spofy-ui--next-page-url~.  Individual modules do not need to call ~spofy-ui-insert-pagination-footer~ manually.
+All Spofy ~tabulated-list-mode~ buffers share a single pagination mechanism.  Results load automatically as the user scrolls: the function ~spofy-ui--maybe-load-more~ is registered on ~window-scroll-functions~ and triggers a fetch when the window end is within a few lines of the buffer end.  A guard variable (~spofy-ui--loading-more~) prevents duplicate requests while one is already in flight, and the URL is checked with ~stringp~ to avoid attempting a fetch when the JSON ~:null~ sentinel has not yet been normalized.  Each buffer stores a buffer-local handler (set by the module that created the buffer) that knows how to extract items and the next-page URL from the API response.  This keeps all pagination logic in one place in =spofy-ui.el= while letting each module control its own entry formatting.  Both ~spofy-api--extract-paged-results~ and ~spofy-ui-load-more~ normalize JSON ~:null~ values to ~nil~, so that a ~null~ next-page URL from the Spotify API is correctly treated as the end of results.
 
 * Consult integration
 :PROPERTIES:
