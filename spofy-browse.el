@@ -101,7 +101,7 @@ Shows a play icon if TRACK-URI matches the currently playing track."
     (define-key map (kbd "A")   #'spofy-album-view-artist)
     (define-key map (kbd "g")   #'spofy-album-refresh)
     (define-key map (kbd "q")   #'quit-window)
-    (define-key map (kbd "m")   #'spofy-ui-load-more)
+
     map)
   "Keymap for `spofy-album-mode'.")
 
@@ -241,7 +241,7 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
     (define-key map (kbd "a")   #'spofy-artist-play-album)
     (define-key map (kbd "g")   #'spofy-artist-refresh)
     (define-key map (kbd "q")   #'quit-window)
-    (define-key map (kbd "m")   #'spofy-ui-load-more)
+
     map)
   "Keymap for `spofy-artist-mode'.")
 
@@ -478,7 +478,7 @@ ARTIST-ID is kept for refresh."
     (define-key map (kbd "s")   #'spofy-playlist-view-save-track)
     (define-key map (kbd "g")   #'spofy-playlist-view-refresh)
     (define-key map (kbd "q")   #'quit-window)
-    (define-key map (kbd "m")   #'spofy-ui-load-more)
+
     map)
   "Keymap for `spofy-playlist-view-mode'.")
 

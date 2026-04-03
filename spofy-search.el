@@ -67,7 +67,7 @@
     (define-key map (kbd "s")   #'spofy-search-save)
     (define-key map (kbd "S")   #'spofy-search-unsave)
     (define-key map (kbd "g")   #'spofy-search-refresh)
-    (define-key map (kbd "m")   #'spofy-ui-load-more)
+
     (define-key map (kbd "q")   #'quit-window)
     map)
   "Keymap for `spofy-search-mode'.")

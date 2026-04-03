@@ -122,7 +122,7 @@ Shows a play icon if TRACK-URI matches the currently playing track."
     (define-key map (kbd "S")   #'spofy-library-tracks-unsave)
     (define-key map (kbd "p")   #'spofy-library-tracks-add-to-playlist)
     (define-key map (kbd "g")   #'spofy-library-tracks-refresh)
-    (define-key map (kbd "m")   #'spofy-ui-load-more)
+
     (define-key map (kbd "q")   #'quit-window)
     map)
   "Keymap for `spofy-library-tracks-mode'.")
@@ -252,7 +252,7 @@ in a tabulated-list buffer."
     (define-key map (kbd "A")   #'spofy-library-albums-view-artist)
     (define-key map (kbd "S")   #'spofy-library-albums-unsave)
     (define-key map (kbd "g")   #'spofy-library-albums-refresh)
-    (define-key map (kbd "m")   #'spofy-ui-load-more)
+
     (define-key map (kbd "q")   #'quit-window)
     map)
   "Keymap for `spofy-library-albums-mode'.")
@@ -370,7 +370,7 @@ in a tabulated-list buffer."
     (define-key map (kbd "a")   #'spofy-recently-played-view-album)
     (define-key map (kbd "A")   #'spofy-recently-played-view-artist)
     (define-key map (kbd "g")   #'spofy-recently-played-refresh)
-    (define-key map (kbd "m")   #'spofy-ui-load-more)
+
     (define-key map (kbd "q")   #'quit-window)
     map)
   "Keymap for `spofy-recently-played-mode'.")
@@ -504,7 +504,7 @@ type string/symbol plus ID supplied separately."
     (define-key map (kbd "a")   #'spofy-top-tracks-view-album)
     (define-key map (kbd "A")   #'spofy-top-tracks-view-artist)
     (define-key map (kbd "g")   #'spofy-top-tracks-refresh)
-    (define-key map (kbd "m")   #'spofy-ui-load-more)
+
     (define-key map (kbd "q")   #'quit-window)
     map)
   "Keymap for `spofy-top-tracks-mode'.")
@@ -628,7 +628,7 @@ Defaults to \"medium_term\"."
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") #'spofy-top-artists-view)
     (define-key map (kbd "g")   #'spofy-top-artists-refresh)
-    (define-key map (kbd "m")   #'spofy-ui-load-more)
+
     (define-key map (kbd "q")   #'quit-window)
     map)
   "Keymap for `spofy-top-artists-mode'.")
@@ -728,7 +728,7 @@ Defaults to \"medium_term\"."
     (define-key map (kbd "RET") #'spofy-new-releases-view)
     (define-key map (kbd "A")   #'spofy-new-releases-view-artist)
     (define-key map (kbd "g")   #'spofy-new-releases-refresh)
-    (define-key map (kbd "m")   #'spofy-ui-load-more)
+
     (define-key map (kbd "q")   #'quit-window)
     map)
   "Keymap for `spofy-new-releases-mode'.")

@@ -355,33 +355,6 @@ LINES is a list of strings, each displayed on its own line with the
 (declare-function spofy-api--request "spofy-api"
                   (method url &optional params data callback))
 
-(defun spofy-ui-load-more ()
-  "Load the next page of results and append to the current buffer.
-Requires `spofy-ui--load-more-handler' to be set in the buffer."
-  (interactive)
-  (cond
-   ((null spofy-ui--load-more-handler)
-    (user-error "Spofy: this buffer does not support pagination"))
-   ((null spofy-ui--next-page-url)
-    (message "Spofy: no more results to load."))
-   (t
-    (require 'spofy-api)
-    (let ((buf (current-buffer))
-          (handler spofy-ui--load-more-handler))
-      (spofy-api--request
-       "GET" spofy-ui--next-page-url nil nil
-       (lambda (response)
-         (when (buffer-live-p buf)
-           (with-current-buffer buf
-             (pcase-let ((`(,new-entries . ,next-url)
-                          (funcall handler response)))
-               (setq spofy-ui--next-page-url
-                     (unless (eq next-url :null) next-url))
-               (setq tabulated-list-entries
-                     (append tabulated-list-entries new-entries))
-               (tabulated-list-print t)
-               (message "Spofy: loaded %d more." (length new-entries)))))))))))
-
 (defvar-local spofy-ui--loading-more nil
   "Non-nil while an auto-pagination request is in flight.")
 
@@ -391,7 +364,6 @@ Requires `spofy-ui--load-more-handler' to be set in the buffer."
     (when (and spofy-ui--load-more-handler
                (stringp spofy-ui--next-page-url)
                (not spofy-ui--loading-more)
-               ;; Trigger when window end is within 3 lines of point-max.
                (<= (- (point-max) (window-end window t)) 3))
       (setq spofy-ui--loading-more t)
       (require 'spofy-api)
@@ -409,30 +381,18 @@ Requires `spofy-ui--load-more-handler' to be set in the buffer."
                        (unless (eq next-url :null) next-url))
                  (setq tabulated-list-entries
                        (append tabulated-list-entries new-entries))
-                 (tabulated-list-print t))))))))))
+                 (let ((saved-point (point))
+                       (saved-start (window-start window)))
+                   (tabulated-list-print t)
+                   (goto-char saved-point)
+                   (set-window-start window saved-start t)))))))))))
 
 (add-hook 'window-scroll-functions #'spofy-ui--maybe-load-more)
 
-(defun spofy-ui-insert-pagination-footer ()
-  "Insert a pagination hint at the end of the current buffer.
-When `spofy-ui--next-page-url' is non-nil, append a line telling the
-user they can press \\`m' to load more results."
-  (let ((inhibit-read-only t))
-    (save-excursion
-      (goto-char (point-max))
-      ;; Remove any existing footer first.
-      (when (re-search-backward "^\\[m\\] Load more" nil t)
-        (delete-region (line-beginning-position) (point-max)))
-      (when spofy-ui--next-page-url
-        (goto-char (point-max))
-        (insert (propertize "\n[m] Load more" 'face 'spofy-muted))))))
-
 (defun spofy-ui--after-tabulated-list-print (&rest _)
   "Post-process Spofy tabulated-list buffers after printing.
-Insert the pagination footer and apply truncation fade overlays.
+Apply truncation fade overlays.
 Added as :after advice on `tabulated-list-print'."
-  (when (local-variable-p 'spofy-ui--next-page-url)
-    (spofy-ui-insert-pagination-footer))
   (when (string-prefix-p "*Spofy" (buffer-name))
     (spofy-ui--apply-buffer-fades)))
 

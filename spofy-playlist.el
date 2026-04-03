@@ -96,7 +96,7 @@ Buffer-local in `spofy-playlists-mode' buffers.")
     (define-key map (kbd "f")   #'spofy-follow-playlist)
     (define-key map (kbd "v")   #'spofy-playlist-set-public)
     (define-key map (kbd "g")   #'spofy-playlists-refresh)
-    (define-key map (kbd "m")   #'spofy-ui-load-more)
+
     (define-key map (kbd "q")   #'quit-window)
     map)
   "Keymap for `spofy-playlists-mode'.")
