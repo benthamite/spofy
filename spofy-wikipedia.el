@@ -73,6 +73,13 @@ When nil, defaults to `gptel-model'."
                  (symbol :tag "Model name"))
   :group 'spofy)
 
+(defcustom spofy-wikipedia-fallback-to-artist t
+  "Whether to fall back to the artist's Wikipedia page.
+When non-nil and no Wikipedia article is found for the album or
+musical work, open the artist's page instead of signaling an error."
+  :type 'boolean
+  :group 'spofy)
+
 ;;;; Constants
 
 (defconst spofy-wikipedia--classical-genres
@@ -396,6 +403,14 @@ Call CALLBACK with the Wikipedia article title string, or nil on failure."
 
 ;;;; Main lookup logic
 
+(defun spofy-wikipedia--fallback-or-error (artist message callback)
+  "If `spofy-wikipedia-fallback-to-artist' is non-nil, look up ARTIST.
+Otherwise signal a `user-error' with MESSAGE.  CALLBACK is called with
+the artist result on success."
+  (if spofy-wikipedia-fallback-to-artist
+      (spofy-wikipedia--lookup-artist artist callback)
+    (user-error "%s" message)))
+
 (defun spofy-wikipedia--lookup-album (album artist callback)
   "Look up the Wikipedia article for non-classical ALBUM by ARTIST.
 Call CALLBACK with (WIKI-TITLE . WIKI-URL) or signal an error."
@@ -411,8 +426,10 @@ Call CALLBACK with (WIKI-TITLE . WIKI-URL) or signal an error."
                (spofy-wikipedia--cache-store
                 "" album artist "album" "" (car result) (cdr result))
                (funcall callback result))
-           (user-error "Spofy: no Wikipedia article found for album \"%s\""
-                       album)))))))
+           (spofy-wikipedia--fallback-or-error
+            artist
+            (format "Spofy: no Wikipedia article found for album \"%s\"" album)
+            callback)))))))
 
 (defun spofy-wikipedia--lookup-work (track album artist callback)
   "Look up the Wikipedia article for classical TRACK on ALBUM by ARTIST.
@@ -425,7 +442,8 @@ Call CALLBACK with (WIKI-TITLE . WIKI-URL) or signal an error."
        track album artist
        (lambda (llm-title)
          (if (not llm-title)
-             (user-error "Spofy: LLM failed to identify the musical work")
+             (spofy-wikipedia--fallback-or-error
+              artist "Spofy: LLM failed to identify the musical work" callback)
            (spofy-wikipedia--validate-title
             llm-title
             (lambda (result)
@@ -435,8 +453,10 @@ Call CALLBACK with (WIKI-TITLE . WIKI-URL) or signal an error."
                      track album artist "work"
                      llm-title (car result) (cdr result))
                     (funcall callback result))
-                (user-error
-                 "Spofy: Wikipedia article \"%s\" not found" llm-title))))))))))
+                (spofy-wikipedia--fallback-or-error
+                 artist
+                 (format "Spofy: Wikipedia article \"%s\" not found" llm-title)
+                 callback))))))))))
 
 (defun spofy-wikipedia--lookup-artist (artist callback)
   "Look up the Wikipedia article for ARTIST.

@@ -763,6 +763,7 @@ The function ~spofy-org-export~ generates appropriate links for export backends.
 #+vindex: spofy-wikipedia-db-file
 #+vindex: spofy-wikipedia-backend
 #+vindex: spofy-wikipedia-model
+#+vindex: spofy-wikipedia-fallback-to-artist
 
 The file =spofy-wikipedia.el= provides a command to open the Wikipedia article for the album or musical work that is currently playing.  It handles non-classical and classical music differently, using two distinct lookup strategies.
 
@@ -790,6 +791,8 @@ The user option ~spofy-wikipedia-db-file~ specifies the path to the SQLite datab
 The user option ~spofy-wikipedia-backend~ specifies the =gptel= backend name to use for classical music lookups (e.g., ="Gemini"= or ="Claude"=).  When ~nil~ (the default), the backend is inferred from ~spofy-wikipedia-model~ or falls back to the global ~gptel-backend~.
 
 The user option ~spofy-wikipedia-model~ specifies the =gptel= model for classical music lookups.  When ~nil~ (the default), it uses the global ~gptel-model~.  These two options follow the same resolution pattern as =elfeed-ai.el=: setting the model alone is sufficient if it uniquely identifies a backend.
+
+The user option ~spofy-wikipedia-fallback-to-artist~ controls what happens when no Wikipedia article is found for the album or musical work.  When non-nil (the default), Spofy falls back to opening the artist's Wikipedia page instead.  This is useful because many albums and classical works lack dedicated Wikipedia articles, while their artists or composers typically do.  Set it to ~nil~ to signal an error instead.
 
 * Faces
 :PROPERTIES:
