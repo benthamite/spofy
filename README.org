@@ -299,7 +299,7 @@ The commands ~spofy-next~ and ~spofy-previous~ skip to the next or previous trac
 
 The commands ~spofy-seek-forward~ and ~spofy-seek-backward~ move the playback position by ~spofy-seek-seconds~ seconds ([[#h:user-options-playback][Playback options]]).
 
-The commands ~spofy-volume-up~ and ~spofy-volume-down~ adjust the volume by ~spofy-volume-step~ percent.  The command ~spofy-volume-set~ prompts for an exact volume level between 0 and 100.
+The commands ~spofy-volume-up~ and ~spofy-volume-down~ adjust the volume by ~spofy-volume-step~ percent.  The command ~spofy-volume-set~ prompts for an exact volume level between 0 and 100.  All three commands update the local player state optimistically so that repeated keypresses accumulate without waiting for the API response.
 
 The command ~spofy-toggle-shuffle~ toggles shuffle mode on or off.  The command ~spofy-toggle-repeat~ cycles through three repeat states: off, context (repeat the current album/playlist), and track (repeat the current track).  Both commands update the local player state immediately on success, so the mode line, tab bar, and transient menu reflect the new state without waiting for the next poll.  In the transient popup ([[#h:transient-popup][Transient popup]]), the current state is shown with the ~transient-value~ face, and both suffixes remain transient so that the user can toggle repeatedly without reopening the menu.
 

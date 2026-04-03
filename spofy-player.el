@@ -286,6 +286,7 @@ a `user-error' so the caller can retry once the app is ready."
   (spofy-player--ensure-device)
   (let* ((current (or (alist-get 'volume spofy-player--current-state) 50))
          (new-vol (min 100 (+ current spofy-volume-step))))
+    (spofy-player--update-state 'volume new-vol)
     (spofy-api-put (format "me/player/volume?volume_percent=%d" new-vol) nil
                    (lambda (_) (message "Spofy: volume %d%%" new-vol)))))
 
@@ -296,6 +297,7 @@ a `user-error' so the caller can retry once the app is ready."
   (spofy-player--ensure-device)
   (let* ((current (or (alist-get 'volume spofy-player--current-state) 50))
          (new-vol (max 0 (- current spofy-volume-step))))
+    (spofy-player--update-state 'volume new-vol)
     (spofy-api-put (format "me/player/volume?volume_percent=%d" new-vol) nil
                    (lambda (_) (message "Spofy: volume %d%%" new-vol)))))
 
@@ -305,6 +307,7 @@ a `user-error' so the caller can retry once the app is ready."
   (interactive "nVolume (0-100): ")
   (spofy-player--ensure-device)
   (let ((vol (max 0 (min 100 volume))))
+    (spofy-player--update-state 'volume vol)
     (spofy-api-put (format "me/player/volume?volume_percent=%d" vol) nil
                    (lambda (_) (message "Spofy: volume set to %d%%" vol)))))
 
