@@ -382,6 +382,37 @@ Requires `spofy-ui--load-more-handler' to be set in the buffer."
                (tabulated-list-print t)
                (message "Spofy: loaded %d more." (length new-entries)))))))))))
 
+(defvar-local spofy-ui--loading-more nil
+  "Non-nil while an auto-pagination request is in flight.")
+
+(defun spofy-ui--maybe-load-more (window _start)
+  "Auto-load the next page when WINDOW scrolls near the end of the buffer."
+  (with-current-buffer (window-buffer window)
+    (when (and spofy-ui--load-more-handler
+               spofy-ui--next-page-url
+               (not spofy-ui--loading-more)
+               ;; Trigger when window end is within 3 lines of point-max.
+               (<= (- (point-max) (window-end window t)) 3))
+      (setq spofy-ui--loading-more t)
+      (require 'spofy-api)
+      (let ((buf (current-buffer))
+            (handler spofy-ui--load-more-handler))
+        (spofy-api--request
+         "GET" spofy-ui--next-page-url nil nil
+         (lambda (response)
+           (when (buffer-live-p buf)
+             (with-current-buffer buf
+               (setq spofy-ui--loading-more nil)
+               (pcase-let ((`(,new-entries . ,next-url)
+                            (funcall handler response)))
+                 (setq spofy-ui--next-page-url
+                       (unless (eq next-url :null) next-url))
+                 (setq tabulated-list-entries
+                       (append tabulated-list-entries new-entries))
+                 (tabulated-list-print t))))))))))
+
+(add-hook 'window-scroll-functions #'spofy-ui--maybe-load-more)
+
 (defun spofy-ui-insert-pagination-footer ()
   "Insert a pagination hint at the end of the current buffer.
 When `spofy-ui--next-page-url' is non-nil, append a line telling the
