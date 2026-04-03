@@ -364,7 +364,11 @@ Call CALLBACK with (WIKI-TITLE . WIKI-URL) or nil if not found."
 
 (defun spofy-wikipedia--search-artist (artist callback)
   "Search Wikipedia for ARTIST.
-Call CALLBACK with (WIKI-TITLE . WIKI-URL) or nil if not found."
+Call CALLBACK with (WIKI-TITLE . WIKI-URL) or nil if not found.
+Unlike album search, no infobox validation is performed because
+artist articles use a variety of infobox templates (Infobox musical
+artist, Infobox classical composer, Infobox person) and some notable
+artists have no infobox at all."
   (let ((first-artist (spofy-wikipedia--first-artist artist)))
     (spofy-wikipedia--api-get
      `(("action" . "query")
@@ -377,8 +381,8 @@ Call CALLBACK with (WIKI-TITLE . WIKI-URL) or nil if not found."
               (title (and (> (length search) 0)
                           (alist-get 'title (aref search 0)))))
          (if title
-             (spofy-wikipedia--validate-infobox
-              title "Template:Infobox musical artist" callback)
+             (funcall callback
+                      (cons title (spofy-wikipedia--article-url title)))
            (funcall callback nil)))))))
 
 (defun spofy-wikipedia--validate-infobox (title template callback)
@@ -569,7 +573,7 @@ with (WIKI-TITLE . WIKI-URL) or signal an error."
                      "" "" artist "artist" "" (car result) (cdr result))
                     (funcall callback result))
                 (user-error "Spofy: no Wikipedia article found for artist \"%s\""
-                            artist))))))))))
+                            (spofy-wikipedia--first-artist artist)))))))))))
 
 ;;;; Interactive command
 
