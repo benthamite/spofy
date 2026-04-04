@@ -657,13 +657,14 @@ Signals `user-error' if authentication tokens are not available."
     ("s p" "Playlists" spofy-search-playlists)
     ""
     "Browse"
-    ("l"  "Library"   spofy-library-menu)
+    ("t"  "Tracks"    spofy-library-saved-tracks)
+    ("a"  "Albums"    spofy-library-saved-albums)
     ("y"  "Playlists" spofy-list-playlists)
-    ("d"  "Devices"   spofy-select-device)
     ""
     "Other"
+    ("d" "Devices"   spofy-select-device)
     ("w" "Wikipedia" spofy-wikipedia)
-    ("RET" "Dashboard" spofy)
+    ("D" "Dashboard" spofy)
     ("q" "Quit"      transient-quit-one)]])
 
 ;;;###autoload (autoload 'spofy-menu "spofy" nil t)
@@ -675,13 +676,6 @@ showing the transient menu."
   (spofy--ensure-global-mode)
   (call-interactively #'spofy--menu))
 
-;;;###autoload (autoload 'spofy-library-menu "spofy" nil t)
-(transient-define-prefix spofy-library-menu ()
-  "Spofy library sub-menu."
-  ["Library"
-   ("t" "Saved tracks" spofy-library-saved-tracks)
-   ("a" "Saved albums" spofy-library-saved-albums)
-   ("q" "Back"         transient-quit-one)])
 
 ;;;; Convenience commands
 
