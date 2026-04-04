@@ -645,18 +645,18 @@ Signals `user-error' if authentication tokens are not available."
     ("v" "Set volume"  spofy-volume-set)
     ""
     "Mode"
-    ("S" spofy-toggle-shuffle
-     :description (lambda ()
-                    (if (alist-get 'shuffle spofy-player--current-state)
-                        (concat "Shuffle " (propertize "on" 'face 'transient-value))
-                      "Shuffle off"))
-     :transient t)
     ("R" spofy-toggle-repeat
      :description (lambda ()
                     (let ((state (or (alist-get 'repeat spofy-player--current-state) "off")))
                       (if (equal state "off")
                           "Repeat off"
                         (concat "Repeat " (propertize state 'face 'transient-value)))))
+     :transient t)
+    ("S" spofy-toggle-shuffle
+     :description (lambda ()
+                    (if (alist-get 'shuffle spofy-player--current-state)
+                        (concat "Shuffle " (propertize "on" 'face 'transient-value))
+                      "Shuffle off"))
      :transient t)]
    ["Search"
     ("s t" "Tracks"    spofy-search-tracks)
@@ -665,9 +665,9 @@ Signals `user-error' if authentication tokens are not available."
     ("s p" "Playlists" spofy-search-playlists)
     ""
     "Browse"
-    ("t"  "Tracks"    spofy-library-saved-tracks)
-    ("a"  "Albums"    spofy-library-saved-albums)
-    ("y"  "Playlists" spofy-list-playlists)
+    ("b t" "Tracks"    spofy-library-saved-tracks)
+    ("b a" "Albums"    spofy-library-saved-albums)
+    ("b p" "Playlists" spofy-list-playlists)
     ""
     "Other"
     ("d" "Devices"   spofy-select-device)
