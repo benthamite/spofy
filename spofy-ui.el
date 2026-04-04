@@ -58,17 +58,17 @@
   :group 'spofy-faces)
 
 (defface spofy-now-playing-track
-  '((t :inherit spofy-track-name :height 1.3))
+  '((t :inherit spofy-track-name :height 1.15))
   "Face for the track name in the now-playing dashboard section."
   :group 'spofy-faces)
 
 (defface spofy-now-playing-artist
-  '((t :inherit spofy-artist-name :height 1.3))
+  '((t :inherit spofy-artist-name :height 1.15))
   "Face for the artist name in the now-playing dashboard section."
   :group 'spofy-faces)
 
 (defface spofy-now-playing-album
-  '((t :inherit spofy-album-name :height 1.3))
+  '((t :inherit spofy-album-name :height 1.15))
   "Face for the album name in the now-playing dashboard section."
   :group 'spofy-faces)
 

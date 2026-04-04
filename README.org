@@ -840,7 +840,7 @@ Spofy defines a set of faces in the ~spofy-faces~ customization group for contro
 - ~spofy-track-name~ is used for track names in all listings.  It inherits from ~font-lock-keyword-face~.
 - ~spofy-artist-name~ is used for artist names.  It inherits from ~font-lock-function-name-face~.
 - ~spofy-album-name~ is used for album names.  It inherits from ~font-lock-type-face~.
-- ~spofy-now-playing-track~, ~spofy-now-playing-artist~, and ~spofy-now-playing-album~ are used in the dashboard now-playing section.  They inherit from the corresponding base faces with a larger height (1.3×).
+- ~spofy-now-playing-track~, ~spofy-now-playing-artist~, and ~spofy-now-playing-album~ are used in the dashboard now-playing section.  They inherit from the corresponding base faces with a larger height (1.15×).
 - ~spofy-playing~ marks the currently playing track in any listing.  It uses bold weight and the Spotify green color (=#1DB954=).
 - ~spofy-playing-icon~ is used for the ▶ icon on the currently playing track.  It inherits from ~spofy-playing~.
 - ~spofy-header~ is used for the header area in album, artist, and playlist detail views.  It inherits from ~header-line~.
