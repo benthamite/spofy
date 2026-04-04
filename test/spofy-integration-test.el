@@ -77,7 +77,6 @@
 (ert-deftest spofy-player-test-ensure-device-refreshes-on-empty-state ()
   "Device checks refresh the player state before failing."
   (let ((spofy-player--current-state nil)
-        (spofy-no-device-action 'prompt)
         polled)
     (cl-letf (((symbol-function 'spofy-player--poll-sync)
                (lambda ()

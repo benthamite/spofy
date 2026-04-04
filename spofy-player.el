@@ -50,13 +50,6 @@
   :type 'integer
   :group 'spofy)
 
-(defcustom spofy-no-device-action 'prompt
-  "Action to take when no active playback device is found.
-`prompt' displays a message asking the user to open Spotify.
-`launch' attempts to start the local Spotify application."
-  :type '(choice (const :tag "Prompt the user" prompt)
-                 (const :tag "Launch Spotify" launch))
-  :group 'spofy)
 
 ;;;; Hooks
 
@@ -205,22 +198,13 @@ Adds elapsed wall-clock time since the last poll if the track is playing."
 
 (defun spofy-player--ensure-device ()
   "Ensure an active playback device is available.
-If no device is found, take action based on `spofy-no-device-action':
-`prompt' signals a `user-error'; `launch' starts Spotify and signals
-a `user-error' so the caller can retry once the app is ready."
+If no device is found, calls `spofy-select-device' so the user can
+pick one.  Refreshes state once before prompting, since cold sessions
+may have no cached state even when a device is already active."
   (unless (alist-get 'device spofy-player--current-state)
-    ;; Cold sessions can have no cached state even when Spotify already has
-    ;; an active device, so refresh once before failing.
     (spofy-player--poll-sync))
   (unless (alist-get 'device spofy-player--current-state)
-    (pcase spofy-no-device-action
-      ('prompt
-       (user-error "Spofy: no active device found; please open Spotify on a device"))
-      ('launch
-       (pcase system-type
-         ('darwin (start-process "spotify" nil "open" "-a" "Spotify"))
-         (_ (start-process "spotify" nil "spotify")))
-       (user-error "Spofy: no active device found; launching Spotify — please retry in a moment")))))
+    (spofy-select-device)))
 
 ;;;###autoload
 (defun spofy-select-device ()
