@@ -563,16 +563,6 @@ TIME-RANGE is \"short_term\", \"medium_term\", or \"long_term\"."
     ('top-artists-long "Loading top artists (1 year)...")
     ('new-releases "Loading new releases...")))
 
-;;;;; Dashboard: keybinding hints
-
-(defun spofy--dashboard-insert-hints ()
-  "Insert keybinding hints at the bottom of the dashboard."
-  (insert "\n"
-          (propertize
-           "SPC Play/Pause  n Next  p Previous  / Search  q Quit"
-           'face 'spofy-muted)
-          "\n"))
-
 ;;;;; Dashboard: now-playing auto-refresh
 
 (defvar spofy--dashboard-now-playing-marker nil
@@ -583,7 +573,7 @@ TIME-RANGE is \"short_term\", \"medium_term\", or \"long_term\"."
 
 (defvar spofy--dashboard-section-markers nil
   "Alist mapping section index to start marker.
-The last entry is a sentinel marking the start of the hints section.")
+The last entry is a sentinel marking the end of the last section.")
 
 (defvar spofy--dashboard-progress-timer nil
   "Timer for updating the progress bar every second.")
@@ -638,7 +628,7 @@ Assumes the current buffer is in `spofy-dashboard-mode'."
     (setq-local spofy--dashboard-now-playing-marker (point-marker))
     (spofy--dashboard-insert-now-playing)
     (setq-local spofy--dashboard-now-playing-end-marker (point-marker))
-    ;; Create markers for each async section + a sentinel for hints
+    ;; Create markers for each async section + a sentinel
     (setq-local spofy--dashboard-section-markers nil)
     (let ((idx 0))
       (dolist (section sections)
@@ -652,7 +642,6 @@ Assumes the current buffer is in `spofy-dashboard-mode'."
       (push (cons idx (point-marker)) spofy--dashboard-section-markers))
     (setq spofy--dashboard-section-markers
           (nreverse spofy--dashboard-section-markers))
-    (spofy--dashboard-insert-hints)
     (goto-char (point-min))
     ;; Fire async requests for each section
     (let ((buf (current-buffer)))
