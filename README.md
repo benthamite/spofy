@@ -62,7 +62,7 @@ Optional integrations extend `spofy` into the broader Emacs ecosystem:
 
 ## Roadmap
 
-- [ ] Personalized recommendations and radio based on seed tracks, artists, or genres
+- [ ] ~Personalized recommendations and radio based on seed tracks, artists, or genres~. *Spotify has discontinued the relevant API endpoints, so implementing this feature is no longer feasible.*
 - [ ] Queue management (view upcoming tracks, add to queue)
 - [ ] Album art display in GUI Emacs frames
 - [ ] Social features (follow users, real-time collaborative playlist editing)
