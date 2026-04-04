@@ -658,12 +658,12 @@ Signals `user-error' if authentication tokens are not available."
     ""
     "Browse"
     ("l"  "Library"   spofy-library-menu)
-    ("P"  "Playlists" spofy-list-playlists)
+    ("y"  "Playlists" spofy-list-playlists)
     ("d"  "Devices"   spofy-select-device)
     ""
     "Other"
     ("w" "Wikipedia" spofy-wikipedia)
-    ("D" "Dashboard" spofy)
+    ("RET" "Dashboard" spofy)
     ("q" "Quit"      transient-quit-one)]])
 
 ;;;###autoload (autoload 'spofy-menu "spofy" nil t)
