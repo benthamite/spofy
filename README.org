@@ -297,7 +297,7 @@ In addition, Spofy auto-enables the mode at package load time when a display fea
 
 The command ~spofy-play-pause~ toggles playback between playing and paused.  It checks the current state and sends the appropriate API call.  On success, the local player state is updated immediately so that the mode line and tab bar reflect the change without waiting for the next poll cycle.  When pausing, the interpolated progress is snapshotted so the displayed position does not jump backwards.  When resuming, the interpolation anchor is reset and Spofy issues an immediate re-poll, which picks up any track change that Spotify may have made (for example, advancing to the next track in the queue).
 
-The commands ~spofy-next~ and ~spofy-previous~ skip to the next or previous track, respectively.
+The commands ~spofy-next~ and ~spofy-previous~ skip to the next or previous track, respectively.  Both commands issue an immediate re-poll on success so the UI reflects the new track without waiting for the next poll cycle.
 
 The commands ~spofy-seek-forward~ and ~spofy-seek-backward~ move the playback position by ~spofy-seek-seconds~ seconds ([[#h:user-options-playback][Playback options]]).
 
@@ -824,6 +824,9 @@ The user option ~spofy-wikipedia-fallback-to-artist~ controls what happens when 
 #+vindex: spofy-track-name
 #+vindex: spofy-artist-name
 #+vindex: spofy-album-name
+#+vindex: spofy-now-playing-track
+#+vindex: spofy-now-playing-artist
+#+vindex: spofy-now-playing-album
 #+vindex: spofy-playing
 #+vindex: spofy-playing-icon
 #+vindex: spofy-header
@@ -836,6 +839,7 @@ Spofy defines a set of faces in the ~spofy-faces~ customization group for contro
 - ~spofy-track-name~ is used for track names in all listings.  It inherits from ~font-lock-keyword-face~.
 - ~spofy-artist-name~ is used for artist names.  It inherits from ~font-lock-function-name-face~.
 - ~spofy-album-name~ is used for album names.  It inherits from ~font-lock-type-face~.
+- ~spofy-now-playing-track~, ~spofy-now-playing-artist~, and ~spofy-now-playing-album~ are used in the dashboard now-playing section.  They inherit from the corresponding base faces with a larger height (1.3×).
 - ~spofy-playing~ marks the currently playing track in any listing.  It uses bold weight and the Spotify green color (=#1DB954=).
 - ~spofy-playing-icon~ is used for the ▶ icon on the currently playing track.  It inherits from ~spofy-playing~.
 - ~spofy-header~ is used for the header area in album, artist, and playlist detail views.  It inherits from ~header-line~.

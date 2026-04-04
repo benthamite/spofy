@@ -274,7 +274,9 @@ may have no cached state even when a device is already active."
   (interactive)
   (spofy-player--ensure-device)
   (spofy-api-post "me/player/next" nil
-                  (lambda (_) (message "Spofy: next track"))))
+                  (lambda (_)
+                    (message "Spofy: next track")
+                    (spofy-player--poll))))
 
 ;;;###autoload
 (defun spofy-previous ()
@@ -282,7 +284,9 @@ may have no cached state even when a device is already active."
   (interactive)
   (spofy-player--ensure-device)
   (spofy-api-post "me/player/previous" nil
-                  (lambda (_) (message "Spofy: previous track"))))
+                  (lambda (_)
+                    (message "Spofy: previous track")
+                    (spofy-player--poll))))
 
 ;;;###autoload
 (defun spofy-seek-forward ()
