@@ -186,6 +186,9 @@ Return an alist with keys `wiki-title', `wiki-url', `work', or nil."
       VALUES (?, ?, ?)"
      (list artist-id (if is-classical 1 0) (round (float-time))))))
 
+;; Regexp matching catalog numbers, key signatures, movement labels, and
+;; tempo markings commonly found in classical track names.  Used as a
+;; heuristic fallback when the artist has no genre tags on Spotify.
 (defconst spofy-wikipedia--classical-track-patterns
   (concat
    "\\(?:"
@@ -251,6 +254,7 @@ CALLBACK receives a list of result bindings, or nil on failure."
                       (url-hexify-string sparql)))
          (url-request-method "GET")
          (url-request-extra-headers
+          ;; Wikidata requires a descriptive User-Agent per their API policy.
           '(("Accept" . "application/sparql-results+json")
             ("User-Agent" . "Spofy/0.1 (Emacs; spofy-wikipedia.el)")))
          (url-show-status nil))

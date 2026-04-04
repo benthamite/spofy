@@ -65,11 +65,11 @@ Keys are lists of (METHOD URL PARAMS).
 Values are lists of (DATA TIMESTAMP TTL).")
 
 (defvar spofy-api--cache-ttls
-  '(("search" . 300)
-    ("me/playlists" . 60)
-    ("playlists/.*/tracks" . 120)
-    ("albums/" . 600)
-    ("artists/" . 600))
+  '(("search" . 300)              ; 5 min — results change slowly
+    ("me/playlists" . 60)         ; 1 min — user edits playlists often
+    ("playlists/.*/tracks" . 120) ; 2 min — tracks change less than list metadata
+    ("albums/" . 600)             ; 10 min — album data is essentially static
+    ("artists/" . 600))           ; 10 min — artist data is essentially static
   "Alist of endpoint URL patterns to cache TTL in seconds.
 Patterns are matched as regexps against the URL.")
 

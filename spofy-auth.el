@@ -116,6 +116,7 @@ key)."
   "Build the Spotify authorization URL.
 Includes client ID, redirect URI, all required scopes, response
 type, and a random state parameter."
+  ;; Generate 64 bits of random hex as a CSRF-prevention nonce.
   (setq spofy-auth--state (format "%08x%08x"
                                   (random (expt 16 8))
                                   (random (expt 16 8))))
@@ -131,6 +132,8 @@ type, and a random state parameter."
 
 (defun spofy-auth--token-expired-p ()
   "Return non-nil if the access token is expired or expires within 60 seconds."
+  ;; Treat as expired 60 seconds early to allow preemptive refresh
+  ;; before the token actually becomes invalid mid-request.
   (or (null spofy-auth--token-expiry)
       (<= spofy-auth--token-expiry (+ (float-time) 60))))
 

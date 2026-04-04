@@ -58,7 +58,7 @@
   :group 'spofy-faces)
 
 (defface spofy-playing
-  '((t :inherit bold :foreground "#1DB954"))
+  '((t :inherit bold :foreground "#1DB954")) ; Spotify brand green
   "Face for the currently playing track."
   :group 'spofy-faces)
 
@@ -159,6 +159,7 @@ fill the window.  Flex columns consume weights in order of appearance."
         (cl-incf fixed-total (cadr col))))
     (let* ((weights (seq-take (alist-get view spofy-columns) flex-count))
            (total-weight (max 1 (apply #'+ weights)))
+           ;; Floor of 20 chars prevents degenerate layouts in very narrow windows.
            (available (max 20 (- (window-body-width) padding fixed-total num-cols)))
            (computed nil)
            (flex-idx 0))
@@ -166,6 +167,8 @@ fill the window.  Flex columns consume weights in order of appearance."
           (apply #'vector
                  (mapcar (lambda (col)
                            (if (eq (cadr col) :flex)
+                               ;; Floor of 8 chars keeps columns readable
+                               ;; even when the window is extremely narrow.
                                (let ((w (max 8 (floor (* available
                                                          (/ (float (nth flex-idx weights))
                                                             total-weight))))))
@@ -224,6 +227,8 @@ Return a hex color string, or nil if either color is unresolvable."
   (let ((fv (color-values fg))
         (bv (color-values bg)))
     (when (and fv bv)
+      ;; `color-values' returns 16-bit components (0-65535); shift right
+      ;; by 8 to convert to 8-bit hex (0-255) for the #RRGGBB format.
       (format "#%02x%02x%02x"
               (ash (round (+ (* (- 1.0 ratio) (nth 0 fv))
                              (* ratio (nth 0 bv))))
@@ -260,8 +265,11 @@ text property for post-rendering color blending."
 (defun spofy-ui--apply-buffer-fades ()
   "Create fade overlays for characters marked with `spofy-fade'.
 Each marked character gets an overlay whose foreground is the base
-face's foreground blended toward the default background.  Levels
-1, 2, 3 blend at 25%, 50%, 75% respectively."
+face's foreground blended toward the default background.  The last
+three characters of a truncated string are faded progressively:
+level 1 at 25%, level 2 at 50%, level 3 at 75% — producing a
+gradient that visually communicates \"text continues beyond here\"
+without an abrupt ellipsis."
   (mapc #'delete-overlay spofy-ui--fade-overlays)
   (setq spofy-ui--fade-overlays nil)
   (let ((bg (face-background 'default nil t)))
@@ -364,6 +372,8 @@ LINES is a list of strings, each displayed on its own line with the
     (when (and spofy-ui--load-more-handler
                (stringp spofy-ui--next-page-url)
                (not spofy-ui--loading-more)
+               ;; Trigger when fewer than 3 characters remain below the
+               ;; visible window — i.e., the user has scrolled to the bottom.
                (<= (- (point-max) (window-end window t)) 3))
       (setq spofy-ui--loading-more t)
       (require 'spofy-api)

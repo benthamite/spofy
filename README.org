@@ -572,7 +572,7 @@ The command ~spofy-library-save~ saves a Spotify entity (track or album) to the 
 
 #+findex: spofy-clear-cache
 
-Spofy caches API responses in memory to reduce network requests and improve responsiveness.  Each endpoint type has its own time-to-live: search results are cached for 5 minutes, user playlists for 1 minute, playlist tracks for 2 minutes, and album/artist details for 10 minutes.  The player state endpoint is never cached.
+Spofy caches API responses in memory to reduce network requests and improve responsiveness.  Each endpoint type has its own time-to-live, chosen to balance freshness against API rate limits: search results are cached for 5 minutes (results change slowly), user playlists for 1 minute (users edit playlists often), playlist tracks for 2 minutes (tracks change less frequently than list metadata), and album/artist details for 10 minutes (essentially static data).  The player state endpoint is never cached.
 
 The command ~spofy-clear-cache~ flushes the entire in-memory cache.  Use it when you suspect stale data, for example after making changes to a playlist in the Spotify app.  The cache is also cleared automatically when Emacs restarts.
 

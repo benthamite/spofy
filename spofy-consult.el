@@ -229,6 +229,8 @@ FORMAT-FN is called on each result item to produce a candidate string."
            (consult--dynamic-collection
             (spofy-consult--search-collection
              "track" #'spofy-consult--format-track)
+            ;; 300ms debounce avoids flooding the Spotify API on fast typing;
+            ;; min-input 1 prevents an empty initial search.
             :debounce 0.3
             :min-input 1)
            :prompt "Spofy track: "
