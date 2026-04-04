@@ -35,7 +35,6 @@
 (require 'cl-lib)
 
 ;; Functions from other Spofy modules that may not be loaded yet.
-(declare-function spofy-player-current-track-id "spofy-player" ())
 (declare-function spofy-play-track "spofy-player" (track-uri &optional context-uri))
 (declare-function spofy-play-context "spofy-player" (context-uri))
 (declare-function spofy-view-album "spofy-browse" (album-id))
@@ -43,13 +42,6 @@
 (declare-function spofy-playlist-add-track "spofy-playlist" (track-uri))
 
 ;;;; Helpers
-
-(defun spofy-library--extract-id (uri)
-  "Extract the Spotify ID from URI.
-For example, \"spotify:track:1234\" returns \"1234\"."
-  (if (string-match "spotify:[^:]+:\\(.+\\)" uri)
-      (match-string 1 uri)
-    uri))
 
 (defun spofy-library--extract-type (uri)
   "Extract the entity type from URI.
@@ -70,45 +62,12 @@ For example, \"spotify:track:1234\" returns \"track\"."
   (if id
       (cons (spofy-library--normalize-type uri-or-type) id)
     (cons (spofy-library--normalize-type (spofy-library--extract-type uri-or-type))
-          (spofy-library--extract-id uri-or-type))))
-
-;;;; Entity storage
-
-(defvar-local spofy-library--entities nil
-  "Hash table mapping entity URIs to their full API response alists.
-Buffer-local in every Spofy library buffer.")
-
-(defun spofy-library--store-entity (uri entity)
-  "Store ENTITY alist under URI in the buffer-local entity table."
-  (unless spofy-library--entities
-    (setq spofy-library--entities (make-hash-table :test #'equal)))
-  (puthash uri entity spofy-library--entities))
-
-(defun spofy-library-entity-at-point ()
-  "Return the full alist for the entity on the current tabulated-list row.
-The row ID (a Spotify URI) is used as the key into
-`spofy-library--entities'."
-  (when-let* ((id (tabulated-list-get-id)))
-    (and spofy-library--entities
-         (gethash id spofy-library--entities))))
+          (spofy-ui-extract-id uri-or-type))))
 
 (defun spofy-library--entity-type-at-point ()
   "Return the entity type at point based on buffer context.
 Returns \"track\" or \"album\"."
   (symbol-name (or spofy-ui--entity-type 'track)))
-
-;;;; Now-playing indicator
-
-(defun spofy-library--playing-indicator (track-uri)
-  "Return a now-playing indicator string for TRACK-URI.
-Shows a play icon if TRACK-URI matches the currently playing track."
-  (let* ((current-id (and (fboundp 'spofy-player-current-track-id)
-                          (spofy-player-current-track-id)))
-         (playing-p (and current-id track-uri
-                         (string-match-p (regexp-quote current-id) track-uri))))
-    (if playing-p
-        (propertize "\u25B6" 'face 'spofy-playing-icon)
-      "")))
 
 ;;; ========================================================================
 ;;;; Saved tracks
@@ -139,7 +98,6 @@ Shows a play icon if TRACK-URI matches the currently playing track."
      ("Artist(s)" :flex t)
      ("Album"     :flex t)
      ("Duration"  6 nil :right-align t)))
-  (setq-local spofy-library--entities (make-hash-table :test #'equal))
   (setq-local spofy-ui--entity-type 'track)
   (tabulated-list-init-header))
 
@@ -155,8 +113,8 @@ ITEM is the wrapper alist from /me/tracks which contains a `track' key."
          (duration-ms (or (alist-get 'duration_ms track) 0))
          (artist-str (spofy-ui-format-artists artists))
          (duration-str (spofy-ui-format-duration-ms duration-ms))
-         (playing (spofy-library--playing-indicator uri)))
-    (spofy-library--store-entity uri track)
+         (playing (spofy-ui-playing-indicator uri)))
+    (spofy-ui-store-entity uri track)
     (list uri
           (vector playing
                   (spofy-ui-truncate name (spofy-ui-col 'library-track 0)
@@ -173,24 +131,17 @@ ITEM is the wrapper alist from /me/tracks which contains a `track' key."
          (items (alist-get 'items paged))
          (next-url (alist-get 'next paged))
          (buf-name "*Spofy Saved Tracks*"))
-    (with-current-buffer (get-buffer-create buf-name)
-      (let ((inhibit-read-only t))
-        (erase-buffer))
-      (spofy-library-tracks-mode)
-      (setq-local spofy-ui--next-page-url next-url)
-      (setq-local spofy-ui--load-more-handler
-                  (lambda (response)
-                    (let ((items (alist-get 'items response))
-                          (next-url (alist-get 'next response)))
-                      (cons (cl-loop for item across items
-                                     collect (spofy-library--format-saved-track item))
-                            next-url))))
-      (setq tabulated-list-entries
-            (cl-loop for item across items
-                     collect (spofy-library--format-saved-track item)))
-      (tabulated-list-print t)
-      (goto-char (point-min))
-      (pop-to-buffer (current-buffer)))))
+    (spofy-ui-render-list
+     buf-name #'spofy-library-tracks-mode
+     (cl-loop for item across items
+              collect (spofy-library--format-saved-track item))
+     next-url
+     (lambda (response)
+       (let ((items (alist-get 'items response))
+             (next-url (alist-get 'next response)))
+         (cons (cl-loop for item across items
+                        collect (spofy-library--format-saved-track item))
+               next-url))))))
 
 ;;;###autoload
 (defun spofy-library-saved-tracks ()
@@ -210,7 +161,7 @@ in a tabulated-list buffer."
 (defun spofy-library-tracks-view-album ()
   "View the album for the track at point."
   (interactive)
-  (when-let* ((entity (spofy-library-entity-at-point))
+  (when-let* ((entity (spofy-ui-entity-at-point))
               (album (alist-get 'album entity))
               (album-id (alist-get 'id album)))
     (spofy-view-album album-id)))
@@ -218,7 +169,7 @@ in a tabulated-list buffer."
 (defun spofy-library-tracks-view-artist ()
   "View the artist for the track at point."
   (interactive)
-  (when-let* ((entity (spofy-library-entity-at-point))
+  (when-let* ((entity (spofy-ui-entity-at-point))
               (artists (alist-get 'artists entity))
               ((_notempty (> (length artists) 0)))
               (artist (aref artists 0))
@@ -269,7 +220,6 @@ in a tabulated-list buffer."
      ("Artist(s)" :flex t)
      ("Year"      6 t)
      ("Tracks"    6 nil :right-align t)))
-  (setq-local spofy-library--entities (make-hash-table :test #'equal))
   (setq-local spofy-ui--entity-type 'album)
   (tabulated-list-init-header))
 
@@ -281,12 +231,9 @@ ITEM is the wrapper alist from /me/albums which contains an `album' key."
          (name (or (alist-get 'name album) ""))
          (artists (or (alist-get 'artists album) []))
          (artist-str (spofy-ui-format-artists artists))
-         (release-date (or (alist-get 'release_date album) ""))
-         (year (if (>= (length release-date) 4)
-                   (substring release-date 0 4)
-                 release-date))
+         (year (spofy-ui-album-year album))
          (total-tracks (or (alist-get 'total_tracks album) 0)))
-    (spofy-library--store-entity uri album)
+    (spofy-ui-store-entity uri album)
     (list uri
           (vector (spofy-ui-truncate name (spofy-ui-col 'library-album 0) 'spofy-album-name)
                   (spofy-ui-truncate artist-str (spofy-ui-col 'library-album 1) 'spofy-artist-name)
@@ -300,24 +247,17 @@ ITEM is the wrapper alist from /me/albums which contains an `album' key."
          (items (alist-get 'items paged))
          (next-url (alist-get 'next paged))
          (buf-name "*Spofy Saved Albums*"))
-    (with-current-buffer (get-buffer-create buf-name)
-      (let ((inhibit-read-only t))
-        (erase-buffer))
-      (spofy-library-albums-mode)
-      (setq-local spofy-ui--next-page-url next-url)
-      (setq-local spofy-ui--load-more-handler
-                  (lambda (response)
-                    (let ((items (alist-get 'items response))
-                          (next-url (alist-get 'next response)))
-                      (cons (cl-loop for item across items
-                                     collect (spofy-library--format-saved-album item))
-                            next-url))))
-      (setq tabulated-list-entries
-            (cl-loop for item across items
-                     collect (spofy-library--format-saved-album item)))
-      (tabulated-list-print t)
-      (goto-char (point-min))
-      (pop-to-buffer (current-buffer)))))
+    (spofy-ui-render-list
+     buf-name #'spofy-library-albums-mode
+     (cl-loop for item across items
+              collect (spofy-library--format-saved-album item))
+     next-url
+     (lambda (response)
+       (let ((items (alist-get 'items response))
+             (next-url (alist-get 'next response)))
+         (cons (cl-loop for item across items
+                        collect (spofy-library--format-saved-album item))
+               next-url))))))
 
 ;;;###autoload
 (defun spofy-library-saved-albums ()
@@ -332,7 +272,7 @@ in a tabulated-list buffer."
   "View the album at point."
   (interactive)
   (when-let* ((uri (tabulated-list-get-id))
-              (album-id (spofy-library--extract-id uri)))
+              (album-id (spofy-ui-extract-id uri)))
     (spofy-view-album album-id)))
 
 (defun spofy-library-albums-play ()
@@ -344,7 +284,7 @@ in a tabulated-list buffer."
 (defun spofy-library-albums-view-artist ()
   "View the artist for the album at point."
   (interactive)
-  (when-let* ((entity (spofy-library-entity-at-point))
+  (when-let* ((entity (spofy-ui-entity-at-point))
               (artists (alist-get 'artists entity))
               ((_notempty (> (length artists) 0)))
               (artist (aref artists 0))
@@ -389,7 +329,6 @@ in a tabulated-list buffer."
      ("Artist(s)" :flex t)
      ("Album"     :flex t)
      ("Duration"  6 nil :right-align t)))
-  (setq-local spofy-library--entities (make-hash-table :test #'equal))
   (setq-local spofy-ui--entity-type 'track)
   (tabulated-list-init-header))
 
@@ -398,24 +337,17 @@ in a tabulated-list buffer."
   (let* ((items (alist-get 'items response))
          (next-url (alist-get 'next response))
          (buf-name "*Spofy Recently Played*"))
-    (with-current-buffer (get-buffer-create buf-name)
-      (let ((inhibit-read-only t))
-        (erase-buffer))
-      (spofy-recently-played-mode)
-      (setq-local spofy-ui--next-page-url next-url)
-      (setq-local spofy-ui--load-more-handler
-                  (lambda (response)
-                    (let ((items (alist-get 'items response))
-                          (next-url (alist-get 'next response)))
-                      (cons (cl-loop for item across items
-                                     collect (spofy-library--format-saved-track item))
-                            next-url))))
-      (setq tabulated-list-entries
-            (cl-loop for item across items
-                     collect (spofy-library--format-saved-track item)))
-      (tabulated-list-print t)
-      (goto-char (point-min))
-      (pop-to-buffer (current-buffer)))))
+    (spofy-ui-render-list
+     buf-name #'spofy-recently-played-mode
+     (cl-loop for item across items
+              collect (spofy-library--format-saved-track item))
+     next-url
+     (lambda (response)
+       (let ((items (alist-get 'items response))
+             (next-url (alist-get 'next response)))
+         (cons (cl-loop for item across items
+                        collect (spofy-library--format-saved-track item))
+               next-url))))))
 
 ;;;###autoload
 (defun spofy-list-recently-played ()
@@ -433,7 +365,7 @@ in a tabulated-list buffer."
 (defun spofy-recently-played-view-album ()
   "View the album for the track at point."
   (interactive)
-  (when-let* ((entity (spofy-library-entity-at-point))
+  (when-let* ((entity (spofy-ui-entity-at-point))
               (album (alist-get 'album entity))
               (album-id (alist-get 'id album)))
     (spofy-view-album album-id)))
@@ -441,7 +373,7 @@ in a tabulated-list buffer."
 (defun spofy-recently-played-view-artist ()
   "View the artist for the track at point."
   (interactive)
-  (when-let* ((entity (spofy-library-entity-at-point))
+  (when-let* ((entity (spofy-ui-entity-at-point))
               (artists (alist-get 'artists entity))
               ((_notempty (> (length artists) 0)))
               (artist (aref artists 0))
@@ -524,7 +456,6 @@ type string/symbol plus ID supplied separately."
      ("Artist(s)" :flex t)
      ("Album"     :flex t)
      ("Duration"  6 nil :right-align t)))
-  (setq-local spofy-library--entities (make-hash-table :test #'equal))
   (setq-local spofy-ui--entity-type 'track)
   (tabulated-list-init-header))
 
@@ -541,8 +472,8 @@ type string/symbol plus ID supplied separately."
          (duration-ms (or (alist-get 'duration_ms item) 0))
          (artist-str (spofy-ui-format-artists artists))
          (duration-str (spofy-ui-format-duration-ms duration-ms))
-         (playing (spofy-library--playing-indicator uri)))
-    (spofy-library--store-entity uri item)
+         (playing (spofy-ui-playing-indicator uri)))
+    (spofy-ui-store-entity uri item)
     (list uri
           (vector playing
                   (spofy-ui-truncate name (spofy-ui-col 'library-track 0)
@@ -563,25 +494,19 @@ TIME-RANGE is the time range string used for the query."
                   ("medium_term" "6 months")
                   ("long_term" "1 year")))
          (buf-name (format "*Spofy Top Tracks (%s)*" label)))
-    (with-current-buffer (get-buffer-create buf-name)
-      (let ((inhibit-read-only t))
-        (erase-buffer))
-      (spofy-top-tracks-mode)
-      (setq-local spofy-top-tracks--time-range time-range)
-      (setq-local spofy-ui--next-page-url next-url)
-      (setq-local spofy-ui--load-more-handler
-                  (lambda (response)
-                    (let ((items (alist-get 'items response))
-                          (next-url (alist-get 'next response)))
-                      (cons (cl-loop for item across items
-                                     collect (spofy-top-tracks--format item))
-                            next-url))))
-      (setq tabulated-list-entries
-            (cl-loop for item across items
-                     collect (spofy-top-tracks--format item)))
-      (tabulated-list-print t)
-      (goto-char (point-min))
-      (pop-to-buffer (current-buffer)))))
+    (spofy-ui-render-list
+     buf-name #'spofy-top-tracks-mode
+     (cl-loop for item across items
+              collect (spofy-top-tracks--format item))
+     next-url
+     (lambda (response)
+       (let ((items (alist-get 'items response))
+             (next-url (alist-get 'next response)))
+         (cons (cl-loop for item across items
+                        collect (spofy-top-tracks--format item))
+               next-url))))
+    (with-current-buffer (get-buffer buf-name)
+      (setq-local spofy-top-tracks--time-range time-range))))
 
 ;;;###autoload
 (defun spofy-list-top-tracks (&optional time-range)
@@ -604,7 +529,7 @@ Defaults to \"medium_term\"."
 (defun spofy-top-tracks-view-album ()
   "View the album for the track at point."
   (interactive)
-  (when-let* ((entity (spofy-library-entity-at-point))
+  (when-let* ((entity (spofy-ui-entity-at-point))
               (album (alist-get 'album entity))
               (album-id (alist-get 'id album)))
     (spofy-view-album album-id)))
@@ -612,7 +537,7 @@ Defaults to \"medium_term\"."
 (defun spofy-top-tracks-view-artist ()
   "View the artist for the track at point."
   (interactive)
-  (when-let* ((entity (spofy-library-entity-at-point))
+  (when-let* ((entity (spofy-ui-entity-at-point))
               (artists (alist-get 'artists entity))
               ((_notempty (> (length artists) 0)))
               (artist (aref artists 0))
@@ -646,7 +571,6 @@ Defaults to \"medium_term\"."
    'search-artist
    '(("Name"   :flex t)
      ("Genres" :flex t)))
-  (setq-local spofy-library--entities (make-hash-table :test #'equal))
   (setq-local spofy-ui--entity-type 'artist)
   (tabulated-list-init-header))
 
@@ -664,7 +588,7 @@ Defaults to \"medium_term\"."
                                    (seq-take (append genres nil) 3)
                                    ", ")
                       "")))
-    (spofy-library--store-entity uri item)
+    (spofy-ui-store-entity uri item)
     (list uri
           (vector (spofy-ui-truncate name (spofy-ui-col 'search-artist 0) 'spofy-track-name)
                   (spofy-ui-truncate genre-str (spofy-ui-col 'search-artist 1) 'spofy-muted)))))
@@ -679,25 +603,19 @@ TIME-RANGE is the time range string used for the query."
                   ("medium_term" "6 months")
                   ("long_term" "1 year")))
          (buf-name (format "*Spofy Top Artists (%s)*" label)))
-    (with-current-buffer (get-buffer-create buf-name)
-      (let ((inhibit-read-only t))
-        (erase-buffer))
-      (spofy-top-artists-mode)
-      (setq-local spofy-top-artists--time-range time-range)
-      (setq-local spofy-ui--next-page-url next-url)
-      (setq-local spofy-ui--load-more-handler
-                  (lambda (response)
-                    (let ((items (alist-get 'items response))
-                          (next-url (alist-get 'next response)))
-                      (cons (cl-loop for item across items
-                                     collect (spofy-top-artists--format item))
-                            next-url))))
-      (setq tabulated-list-entries
-            (cl-loop for item across items
-                     collect (spofy-top-artists--format item)))
-      (tabulated-list-print t)
-      (goto-char (point-min))
-      (pop-to-buffer (current-buffer)))))
+    (spofy-ui-render-list
+     buf-name #'spofy-top-artists-mode
+     (cl-loop for item across items
+              collect (spofy-top-artists--format item))
+     next-url
+     (lambda (response)
+       (let ((items (alist-get 'items response))
+             (next-url (alist-get 'next response)))
+         (cons (cl-loop for item across items
+                        collect (spofy-top-artists--format item))
+               next-url))))
+    (with-current-buffer (get-buffer buf-name)
+      (setq-local spofy-top-artists--time-range time-range))))
 
 ;;;###autoload
 (defun spofy-list-top-artists (&optional time-range)
@@ -715,7 +633,7 @@ Defaults to \"medium_term\"."
   "View the artist at point."
   (interactive)
   (when-let* ((uri (tabulated-list-get-id))
-              (id (spofy-library--extract-id uri)))
+              (id (spofy-ui-extract-id uri)))
     (spofy-view-artist id)))
 
 (defun spofy-top-artists-refresh ()
@@ -748,7 +666,6 @@ Defaults to \"medium_term\"."
      ("Artist(s)" :flex t)
      ("Year"      6 t)
      ("Tracks"    6 nil :right-align t)))
-  (setq-local spofy-library--entities (make-hash-table :test #'equal))
   (setq-local spofy-ui--entity-type 'album)
   (tabulated-list-init-header))
 
@@ -758,12 +675,9 @@ Defaults to \"medium_term\"."
          (name (or (alist-get 'name item) ""))
          (artists (or (alist-get 'artists item) []))
          (artist-str (spofy-ui-format-artists artists))
-         (release-date (or (alist-get 'release_date item) ""))
-         (year (if (>= (length release-date) 4)
-                   (substring release-date 0 4)
-                 release-date))
+         (year (spofy-ui-album-year item))
          (total-tracks (or (alist-get 'total_tracks item) 0)))
-    (spofy-library--store-entity uri item)
+    (spofy-ui-store-entity uri item)
     (list uri
           (vector (spofy-ui-truncate name (spofy-ui-col 'library-album 0) 'spofy-album-name)
                   (spofy-ui-truncate artist-str (spofy-ui-col 'library-album 1) 'spofy-artist-name)
@@ -776,25 +690,18 @@ Defaults to \"medium_term\"."
          (items (and albums (alist-get 'items albums)))
          (next-url (and albums (alist-get 'next albums)))
          (buf-name "*Spofy New Releases*"))
-    (with-current-buffer (get-buffer-create buf-name)
-      (let ((inhibit-read-only t))
-        (erase-buffer))
-      (spofy-new-releases-mode)
-      (setq-local spofy-ui--next-page-url next-url)
-      (setq-local spofy-ui--load-more-handler
-                  (lambda (response)
-                    (let* ((albums (alist-get 'albums response))
-                           (items (and albums (alist-get 'items albums)))
-                           (next-url (and albums (alist-get 'next albums))))
-                      (cons (cl-loop for item across items
-                                     collect (spofy-new-releases--format item))
-                            next-url))))
-      (setq tabulated-list-entries
-            (cl-loop for item across items
-                     collect (spofy-new-releases--format item)))
-      (tabulated-list-print t)
-      (goto-char (point-min))
-      (pop-to-buffer (current-buffer)))))
+    (spofy-ui-render-list
+     buf-name #'spofy-new-releases-mode
+     (cl-loop for item across items
+              collect (spofy-new-releases--format item))
+     next-url
+     (lambda (response)
+       (let* ((albums (alist-get 'albums response))
+              (items (and albums (alist-get 'items albums)))
+              (next-url (and albums (alist-get 'next albums))))
+         (cons (cl-loop for item across items
+                        collect (spofy-new-releases--format item))
+               next-url))))))
 
 ;;;###autoload
 (defun spofy-list-new-releases ()
@@ -807,13 +714,13 @@ Defaults to \"medium_term\"."
   "View the album at point."
   (interactive)
   (when-let* ((uri (tabulated-list-get-id))
-              (album-id (spofy-library--extract-id uri)))
+              (album-id (spofy-ui-extract-id uri)))
     (spofy-view-album album-id)))
 
 (defun spofy-new-releases-view-artist ()
   "View the artist for the album at point."
   (interactive)
-  (when-let* ((entity (spofy-library-entity-at-point))
+  (when-let* ((entity (spofy-ui-entity-at-point))
               (artists (alist-get 'artists entity))
               ((_notempty (> (length artists) 0)))
               (artist (aref artists 0))

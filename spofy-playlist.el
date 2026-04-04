@@ -53,36 +53,12 @@ subsequent calls."
                        (setq spofy-playlist--user-id-cache id)
                        (funcall callback id))))))
 
-;;;; Entity storage
-
-(defvar-local spofy-playlist--entities nil
-  "Hash table mapping playlist URIs to their full API alists.
-Buffer-local in `spofy-playlists-mode' buffers.")
-
 ;;;; Helpers
-
-(defun spofy-playlist--extract-id-from-uri (uri)
-  "Extract the Spotify ID from URI (e.g. \"spotify:playlist:xyz\" -> \"xyz\")."
-  (if (string-match "spotify:[^:]+:\\(.+\\)" uri)
-      (match-string 1 uri)
-    uri))
-
-(defun spofy-playlist--entity-at-point ()
-  "Return the playlist alist for the entry at point, or nil."
-  (when-let* ((id (tabulated-list-get-id)))
-    (and spofy-playlist--entities
-         (gethash id spofy-playlist--entities))))
 
 (defun spofy-playlist--id-at-point ()
   "Return the Spotify playlist ID for the entry at point, or nil."
   (when-let* ((uri (tabulated-list-get-id)))
-    (spofy-playlist--extract-id-from-uri uri)))
-
-(defun spofy-playlist--store-entity (uri entity)
-  "Store ENTITY alist under URI in the buffer-local entity table."
-  (unless spofy-playlist--entities
-    (setq spofy-playlist--entities (make-hash-table :test #'equal)))
-  (puthash uri entity spofy-playlist--entities))
+    (spofy-ui-extract-id uri)))
 
 ;;;; Mode definition
 
@@ -112,7 +88,6 @@ Derived from `tabulated-list-mode'."
      ("Owner"   :flex t)
      ("Tracks"   8 nil :right-align t)
      ("Public"   7 t)))
-  (setq-local spofy-playlist--entities (make-hash-table :test #'equal))
   (tabulated-list-init-header))
 
 ;;;; Formatting
@@ -128,7 +103,7 @@ Return a list of (ID [COLUMNS...])."
          (total-tracks (or (and tracks-info (alist-get 'total tracks-info)) 0))
          (public-p (alist-get 'public playlist))
          (public-str (if public-p "Yes" "No")))
-    (spofy-playlist--store-entity uri playlist)
+    (spofy-ui-store-entity uri playlist)
     (list uri
           (vector (spofy-ui-truncate name (spofy-ui-col 'playlist-list 0) 'spofy-track-name)
                   (spofy-ui-truncate owner-name (spofy-ui-col 'playlist-list 1) 'spofy-muted)
@@ -140,26 +115,19 @@ Return a list of (ID [COLUMNS...])."
 (defun spofy-playlist--display (items next-url)
   "Display playlist ITEMS in the *Spofy Playlists* buffer.
 NEXT-URL is the URL for the next page of results, or nil."
-  (let ((buf (get-buffer-create "*Spofy Playlists*")))
-    (with-current-buffer buf
-      (let ((inhibit-read-only t))
-        (erase-buffer))
-      (spofy-playlists-mode)
-      (setq spofy-ui--next-page-url next-url)
-      (setq spofy-ui--entity-type "playlist")
-      (setq-local spofy-ui--load-more-handler
-                  (lambda (response)
-                    (let ((items (alist-get 'items response))
-                          (next-url (alist-get 'next response)))
-                      (cons (cl-loop for item across items
-                                     collect (spofy-playlist--format-entry item))
-                            next-url))))
-      (setq tabulated-list-entries
-            (cl-loop for item across items
-                     collect (spofy-playlist--format-entry item)))
-      (tabulated-list-print t)
-      (goto-char (point-min)))
-    (pop-to-buffer buf)))
+  (let ((entries (cl-loop for item across items
+                         collect (spofy-playlist--format-entry item)))
+        (load-more-handler
+         (lambda (response)
+           (let ((items (alist-get 'items response))
+                 (next-url (alist-get 'next response)))
+             (cons (cl-loop for item across items
+                            collect (spofy-playlist--format-entry item))
+                   next-url)))))
+    (spofy-ui-render-list "*Spofy Playlists*" #'spofy-playlists-mode
+                          entries next-url load-more-handler)
+    (with-current-buffer "*Spofy Playlists*"
+      (setq spofy-ui--entity-type "playlist"))))
 
 ;;;###autoload
 (defun spofy-list-playlists ()
@@ -217,7 +185,7 @@ playlists buffer if it exists."
 Prompts for a new name and sends a PUT request to update it."
   (interactive)
   (let ((playlist-id (spofy-playlist--id-at-point))
-        (entity (spofy-playlist--entity-at-point)))
+        (entity (spofy-ui-entity-at-point)))
     (unless playlist-id
       (user-error "No playlist at point"))
     (let* ((old-name (or (and entity (alist-get 'name entity)) ""))
@@ -236,7 +204,7 @@ Prompts for a new name and sends a PUT request to update it."
   "Unfollow (delete) the playlist at point after confirmation."
   (interactive)
   (let ((playlist-id (spofy-playlist--id-at-point))
-        (entity (spofy-playlist--entity-at-point)))
+        (entity (spofy-ui-entity-at-point)))
     (unless playlist-id
       (user-error "No playlist at point"))
     (let ((name (or (and entity (alist-get 'name entity)) playlist-id)))
@@ -255,7 +223,7 @@ Prompts for a new name and sends a PUT request to update it."
   "Toggle the public/private state of the playlist at point."
   (interactive)
   (let ((playlist-id (spofy-playlist--id-at-point))
-        (entity (spofy-playlist--entity-at-point)))
+        (entity (spofy-ui-entity-at-point)))
     (unless playlist-id
       (user-error "No playlist at point"))
     (let* ((currently-public (eq (alist-get 'public entity) t))
@@ -276,7 +244,7 @@ Prompts for a new name and sends a PUT request to update it."
   "Follow a Spotify playlist.
 PLAYLIST-ID-OR-URI is the playlist ID or URI to follow."
   (interactive "sPlaylist ID or URI: ")
-  (let ((playlist-id (spofy-playlist--extract-id-from-uri playlist-id-or-uri)))
+  (let ((playlist-id (spofy-ui-extract-id playlist-id-or-uri)))
     (spofy-api-put
      (format "playlists/%s/followers" playlist-id)
      nil

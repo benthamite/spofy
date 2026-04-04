@@ -83,21 +83,6 @@ When `right', the segment is placed after
 
 ;;;; Building the tab-bar string
 
-(defun spofy-tab-bar--play-pause-icon (state)
-  "Return the play/pause icon based on STATE."
-  (if (alist-get 'is-playing state) "⏸" "▶"))
-
-(defun spofy-tab-bar--shuffle-indicator (state)
-  "Return the shuffle indicator based on STATE."
-  (if (alist-get 'shuffle state) "⇌" ""))
-
-(defun spofy-tab-bar--repeat-indicator (state)
-  "Return the repeat indicator based on STATE."
-  (pcase (alist-get 'repeat state)
-    ("context" "↻")
-    ("track"   "↻₁")
-    (_         "")))
-
 (defun spofy-tab-bar--construct-string ()
   "Build the tab-bar string from `spofy-tab-bar-format' and current state.
 Returns nil if no player state is available."
@@ -105,9 +90,9 @@ Returns nil if no player state is available."
               (track (or (alist-get 'track state) ""))
               (artist (or (alist-get 'artist state) ""))
               (album (or (alist-get 'album state) "")))
-    (let* ((play-pause (spofy-tab-bar--play-pause-icon state))
-           (shuffle (spofy-tab-bar--shuffle-indicator state))
-           (repeat (spofy-tab-bar--repeat-indicator state))
+    (let* ((play-pause (spofy-ui-play-pause-icon state))
+           (shuffle (spofy-ui-shuffle-indicator state))
+           (repeat (spofy-ui-repeat-indicator state))
            (propertized-track (propertize track 'face 'spofy-track-name))
            (propertized-artist (propertize artist 'face 'spofy-artist-name))
            (result spofy-tab-bar-format))

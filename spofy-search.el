@@ -32,7 +32,6 @@
 (require 'spofy-ui)
 (require 'tabulated-list)
 
-(declare-function spofy-player-current-track-id "spofy-player" ())
 (declare-function spofy-play-context "spofy-player" (context-uri))
 (declare-function spofy-play-track "spofy-player" (track-uri &optional context-uri))
 (declare-function spofy-view-album "spofy-browse" (album-id))
@@ -46,9 +45,6 @@
 (declare-function consult-spofy-playlist "spofy-consult" ())
 
 ;;;; Buffer-local variables
-
-(defvar-local spofy-search--entities (make-hash-table :test #'equal)
-  "Hash table mapping entity URIs to their full API response alists.")
 
 (defvar-local spofy-search--query nil
   "The search query used for the current buffer.")
@@ -76,8 +72,7 @@
   "Major mode for Spofy search results.
 Derived from `tabulated-list-mode' with keybindings for playing,
 browsing, and managing Spotify entities."
-  :group 'spofy
-  (setq-local spofy-search--entities (make-hash-table :test #'equal)))
+  :group 'spofy)
 
 ;;;; Formatting helpers
 
@@ -92,15 +87,9 @@ Return a list of (ID [COLUMNS...])."
          (duration-ms (or (alist-get 'duration_ms track) 0))
          (artist-str (spofy-ui-format-artists artists))
          (duration-str (spofy-ui-format-duration-ms duration-ms))
-         (current-id (condition-case nil
-                         (spofy-player-current-track-id)
-                       (error nil)))
-         (track-id (alist-get 'id track))
-         (playing-p (and current-id track-id
-                         (string= current-id track-id)))
-         (play-icon (if playing-p
-                        (propertize "▶" 'face 'spofy-playing-icon)
-                      " ")))
+         (playing (spofy-ui-playing-indicator uri))
+         (playing-p (not (string-empty-p playing)))
+         (play-icon (if playing-p playing " ")))
     (list uri
           (vector play-icon
                   (spofy-ui-truncate name (spofy-ui-col 'search-track 0)
@@ -116,10 +105,7 @@ Return a list of (ID [COLUMNS...])."
          (name (or (alist-get 'name album) ""))
          (artists (or (alist-get 'artists album) []))
          (artist-str (spofy-ui-format-artists artists))
-         (release-date (or (alist-get 'release_date album) ""))
-         (year (if (>= (length release-date) 4)
-                   (substring release-date 0 4)
-                 release-date))
+         (year (spofy-ui-album-year album))
          (total-tracks (or (alist-get 'total_tracks album) 0)))
     (list uri
           (vector (spofy-ui-truncate name (spofy-ui-col 'search-album 0) 'spofy-album-name)
@@ -216,14 +202,14 @@ Return a `tabulated-list-entries' entry (ID [COLUMNS...])."
     ("artist" (spofy-search--format-artist-entry entity))
     ("playlist" (spofy-search--format-playlist-entry entity))))
 
-(defun spofy-search--store-entities (entities-table items type)
-  "Store ITEMS in ENTITIES-TABLE, keyed by URI.
+(defun spofy-search--store-entities (items type)
+  "Store ITEMS in the buffer-local entity table, keyed by URI.
 TYPE is the search type (unused but reserved for future use)."
   (ignore type)
   (seq-doseq (item items)
     (let ((uri (alist-get 'uri item)))
       (when uri
-        (puthash uri item entities-table)))))
+        (spofy-ui-store-entity uri item)))))
 
 (defun spofy-search--display-results (type query items next-url)
   "Display search ITEMS of TYPE for QUERY in a tabulated-list buffer.
@@ -244,7 +230,7 @@ NEXT-URL is the URL for the next page of results, or nil."
                              (next-url (alist-get 'next section)))
                         (when items
                           (spofy-search--store-entities
-                           spofy-search--entities items search-type))
+                           items search-type))
                         (cons (mapcar (lambda (item)
                                         (spofy-search--format-entry search-type item))
                                       (append items nil))
@@ -254,7 +240,7 @@ NEXT-URL is the URL for the next page of results, or nil."
       (let ((entries (mapcar (lambda (item)
                                (spofy-search--format-entry type item))
                              (append items nil))))
-        (spofy-search--store-entities spofy-search--entities items type)
+        (spofy-search--store-entities items type)
         (setq tabulated-list-entries entries))
       (tabulated-list-init-header)
       (tabulated-list-print t)
@@ -333,11 +319,6 @@ When `spofy-consult' is loaded, use incremental search instead."
 
 ;;;; Actions
 
-(defun spofy-search--entity-at-point ()
-  "Return the entity alist for the item at point, or nil."
-  (when-let* ((id (tabulated-list-get-id)))
-    (gethash id spofy-search--entities)))
-
 (defun spofy-search--uri-at-point ()
   "Return the Spotify URI for the item at point, or nil."
   (tabulated-list-get-id))
@@ -356,7 +337,7 @@ play the context (all tracks from the beginning)."
 (defun spofy-search-view-album ()
   "View the album for the item at point."
   (interactive)
-  (when-let* ((entity (spofy-search--entity-at-point)))
+  (when-let* ((entity (spofy-ui-entity-at-point)))
     (let ((album-id
            (pcase spofy-search--type
              ("track"
@@ -371,7 +352,7 @@ play the context (all tracks from the beginning)."
 (defun spofy-search-view-artist ()
   "View the artist for the item at point."
   (interactive)
-  (when-let* ((entity (spofy-search--entity-at-point)))
+  (when-let* ((entity (spofy-ui-entity-at-point)))
     (let ((artist-id
            (pcase spofy-search--type
              ("artist"

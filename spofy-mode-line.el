@@ -73,21 +73,6 @@ ellipsis."
 
 ;;;; Building the mode-line string
 
-(defun spofy-mode-line--play-pause-icon (state)
-  "Return the play/pause icon based on STATE."
-  (if (alist-get 'is-playing state) "⏸" "▶"))
-
-(defun spofy-mode-line--shuffle-indicator (state)
-  "Return the shuffle indicator based on STATE."
-  (if (alist-get 'shuffle state) "⇌" ""))
-
-(defun spofy-mode-line--repeat-indicator (state)
-  "Return the repeat indicator based on STATE."
-  (pcase (alist-get 'repeat state)
-    ("context" "↻")
-    ("track"   "↻₁")
-    (_         "")))
-
 (defun spofy-mode-line--construct-string ()
   "Build the mode-line string from `spofy-mode-line-format' and current state.
 Returns nil if no player state is available."
@@ -95,9 +80,9 @@ Returns nil if no player state is available."
               (track (or (alist-get 'track state) ""))
               (artist (or (alist-get 'artist state) ""))
               (album (or (alist-get 'album state) "")))
-    (let* ((play-pause (spofy-mode-line--play-pause-icon state))
-           (shuffle (spofy-mode-line--shuffle-indicator state))
-           (repeat (spofy-mode-line--repeat-indicator state))
+    (let* ((play-pause (spofy-ui-play-pause-icon state))
+           (shuffle (spofy-ui-shuffle-indicator state))
+           (repeat (spofy-ui-repeat-indicator state))
            (propertized-track (propertize track 'face 'spofy-track-name))
            (propertized-artist (propertize artist 'face 'spofy-artist-name))
            (result spofy-mode-line-format))

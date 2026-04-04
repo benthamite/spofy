@@ -43,8 +43,6 @@
 (declare-function spofy-view-artist "spofy-browse" (artist-id))
 (declare-function spofy-view-playlist "spofy-browse" (playlist-id))
 (declare-function spofy-ui-format-artists "spofy-ui" (artists))
-(declare-function spofy-api-put "spofy-api" (endpoint &optional data callback))
-(declare-function spofy-auth-access-token "spofy-auth" ())
 
 ;;;; Customization
 
@@ -84,27 +82,6 @@ appended as-is."
   "Signal a user-facing error when Consult is unavailable."
   (unless (spofy-consult--available-p)
     (user-error "Spofy: Consult is not installed")))
-
-;;;; Synchronous API helper
-
-(defun spofy-consult--api-get-sync (endpoint params)
-  "Synchronous GET from the Spotify API.
-ENDPOINT is a relative path.  PARAMS is an alist of query parameters.
-Return the parsed JSON response, or nil on error."
-  (when-let* ((token (spofy-auth-access-token)))
-    (let* ((url (spofy-api--build-url endpoint params))
-           (url-request-method "GET")
-           (url-request-extra-headers
-            `(("Authorization" . ,(format "Bearer %s" token))))
-           (url-show-status nil)
-           (buf (url-retrieve-synchronously url t nil 10)))
-      (when buf
-        (unwind-protect
-            (with-current-buffer buf
-              (let ((status (spofy-api--response-status)))
-                (when (and status (>= status 200) (< status 300))
-                  (spofy-api--parse-response))))
-          (kill-buffer buf))))))
 
 ;;;; Helpers
 
@@ -230,7 +207,7 @@ The full entity is stored as a text property."
   "Return a synchronous dynamic collection function searching Spotify for TYPE.
 FORMAT-FN is called on each result item to produce a candidate string."
   (lambda (input)
-    (let* ((response (spofy-consult--api-get-sync
+    (let* ((response (spofy-api-get-sync
                       "search"
                       `(("q" . ,input) ("type" . ,type) ("limit" . "20"))))
            (section-key (intern (concat type "s")))
@@ -339,7 +316,7 @@ Results are fetched once and cached for subsequent calls."
     (lambda (_input)
       (or cache
           (setq cache
-                (let* ((response (spofy-consult--api-get-sync
+                (let* ((response (spofy-api-get-sync
                                   "me/playlists" '(("limit" . "50"))))
                        (items (alist-get 'items response)))
                   (when items
@@ -375,7 +352,7 @@ Results are fetched once and cached for subsequent calls."
     (lambda (_input)
       (or cache
           (setq cache
-                (let* ((data (spofy-consult--api-get-sync
+                (let* ((data (spofy-api-get-sync
                               "me/player/devices" nil))
                        (devices (alist-get 'devices data)))
                   (when devices

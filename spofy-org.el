@@ -31,15 +31,12 @@
 
 (require 'org)
 (require 'ol)
+(require 'spofy-ui)
 
 (declare-function spofy-play-track "spofy-player" (uri &optional context-uri))
 (declare-function spofy-view-album "spofy-browse" (album-id))
 (declare-function spofy-view-artist "spofy-browse" (artist-id))
 (declare-function spofy-view-playlist "spofy-browse" (playlist-id))
-(declare-function spofy-browse-entity-at-point "spofy-browse" ())
-(declare-function spofy-search--entity-at-point "spofy-search" ())
-(declare-function spofy-library-entity-at-point "spofy-library" ())
-(declare-function spofy-playlist--entity-at-point "spofy-playlist" ())
 
 ;;;; URI parsing
 
@@ -69,16 +66,8 @@ PATH is the part after \"spotify:\", e.g. \"track:abc123\"."
 ;;;; Store handler
 
 (defun spofy-org--entity-at-point ()
-  "Return the Spotify entity at point in any Spofy buffer.
-Tries the browse, search, library, and playlist entity accessors."
-  (or (and (fboundp 'spofy-browse-entity-at-point)
-           (spofy-browse-entity-at-point))
-      (and (fboundp 'spofy-search--entity-at-point)
-           (spofy-search--entity-at-point))
-      (and (fboundp 'spofy-library-entity-at-point)
-           (spofy-library-entity-at-point))
-      (and (fboundp 'spofy-playlist--entity-at-point)
-           (spofy-playlist--entity-at-point))))
+  "Return the Spotify entity at point in any Spofy buffer."
+  (spofy-ui-entity-at-point))
 
 (defun spofy-org--entity-type-from-uri (uri)
   "Extract the entity type from a Spotify URI.

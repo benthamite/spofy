@@ -34,60 +34,11 @@
 (require 'cl-lib)
 
 ;; Functions from other Spofy modules that may not be loaded yet.
-(declare-function spofy-player-current-track-id "spofy-player" ())
 (declare-function spofy-play-track "spofy-player" (track-uri &optional context-uri))
 (declare-function spofy-play-context "spofy-player" (context-uri))
 (declare-function spofy-playlist-remove-track "spofy-playlist" (&optional playlist-id track-uri))
 (declare-function spofy-library-save "spofy-library" (uri-or-type &optional id))
 (declare-function spofy-library-unsave "spofy-library" (uri-or-type &optional id))
-
-;;;; Entity storage
-
-(defvar-local spofy-browse--entities nil
-  "Hash table mapping entity URIs to their full API alists.
-Buffer-local in every Spofy browse buffer.")
-
-(defun spofy-browse--store-entity (uri entity)
-  "Store ENTITY alist under URI in the buffer-local entity table."
-  (unless spofy-browse--entities
-    (setq spofy-browse--entities (make-hash-table :test #'equal)))
-  (puthash uri entity spofy-browse--entities))
-
-(defun spofy-browse-entity-at-point ()
-  "Return the full alist for the entity on the current tabulated-list row.
-The row ID is used as the key into `spofy-browse--entities'."
-  (when-let* ((entry (tabulated-list-get-entry))
-              (id (tabulated-list-get-id)))
-    (and spofy-browse--entities
-         (gethash id spofy-browse--entities))))
-
-;;;; Now-playing indicator
-
-(defun spofy-browse--playing-indicator (track-uri)
-  "Return the now-playing indicator string for TRACK-URI.
-Shows a play icon if TRACK-URI matches the currently playing track."
-  (let* ((current-id (and (fboundp 'spofy-player-current-track-id)
-                          (spofy-player-current-track-id)))
-         (playing-p (and current-id track-uri
-                         (string-match-p (regexp-quote current-id) track-uri))))
-    (if playing-p
-        (propertize "\u25B6" 'face 'spofy-playing-icon)
-      "")))
-
-;;;; Helpers
-
-(defun spofy-browse--extract-id-from-uri (uri)
-  "Extract the Spotify ID from URI (e.g. \"spotify:album:xyz\" -> \"xyz\")."
-  (if (string-match "spotify:[^:]+:\\(.+\\)" uri)
-      (match-string 1 uri)
-    uri))
-
-(defun spofy-browse--album-year (album)
-  "Extract the release year from ALBUM alist."
-  (let ((date (or (alist-get 'release_date album) "")))
-    (if (string-match "\\`\\([0-9]\\{4\\}\\)" date)
-        (match-string 1 date)
-      date)))
 
 ;;; ========================================================================
 ;;;; Album view
@@ -125,11 +76,11 @@ ALBUM-URI is the album context URI for playback."
          (track-number (alist-get 'track_number track))
          (artists (alist-get 'artists track))
          (duration (alist-get 'duration_ms track))
-         (playing (spofy-browse--playing-indicator uri))
+         (playing (spofy-ui-playing-indicator uri))
          (num-str (if track-number (number-to-string track-number) ""))
          (artists-str (if artists (spofy-ui-format-artists artists) ""))
          (dur-str (if duration (spofy-ui-format-duration-ms duration) "")))
-    (spofy-browse--store-entity uri track)
+    (spofy-ui-store-entity uri track)
     (list uri
           (vector (if (string-empty-p playing) num-str
                     (propertize num-str 'face 'spofy-playing))
@@ -143,7 +94,7 @@ ALBUM-URI is the album context URI for playback."
   "Render ALBUM data into the current buffer."
   (let* ((name (or (alist-get 'name album) "Unknown Album"))
          (artists (alist-get 'artists album))
-         (year (spofy-browse--album-year album))
+         (year (spofy-ui-album-year album))
          (tracks-obj (alist-get 'tracks album))
          (total (alist-get 'total tracks-obj))
          (tracks (alist-get 'items tracks-obj))
@@ -214,7 +165,7 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
 (defun spofy-album-view-artist ()
   "View the artist of the track at point."
   (interactive)
-  (when-let* ((entity (spofy-browse-entity-at-point))
+  (when-let* ((entity (spofy-ui-entity-at-point))
               (artists (alist-get 'artists entity))
               ((_notempty (> (length artists) 0)))
               (artist (aref artists 0))
@@ -258,10 +209,10 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
   "Format ALBUM alist as a tabulated-list entry for the artist view."
   (let* ((uri (alist-get 'uri album))
          (name (or (alist-get 'name album) ""))
-         (year (spofy-browse--album-year album))
+         (year (spofy-ui-album-year album))
          (album-type (or (alist-get 'album_type album) ""))
          (total-tracks (alist-get 'total_tracks album)))
-    (spofy-browse--store-entity uri album)
+    (spofy-ui-store-entity uri album)
     (list uri
           (vector (spofy-ui-truncate name (spofy-ui-col 'artist-album 0) 'spofy-album-name)
                   (propertize year 'face 'spofy-muted)
@@ -340,7 +291,7 @@ Fetches artist info and albums, then displays in a tabulated-list buffer."
   "View the album at point."
   (interactive)
   (when-let* ((uri (tabulated-list-get-id))
-              (album-id (spofy-browse--extract-id-from-uri uri)))
+              (album-id (spofy-ui-extract-id uri)))
     (spofy-view-album album-id)))
 
 (defun spofy-artist-play-album ()
@@ -396,9 +347,9 @@ Fetches artist info and albums, then displays in a tabulated-list buffer."
          (album (alist-get 'album track))
          (album-name (if album (or (alist-get 'name album) "") ""))
          (duration (alist-get 'duration_ms track))
-         (playing (spofy-browse--playing-indicator uri))
+         (playing (spofy-ui-playing-indicator uri))
          (dur-str (if duration (spofy-ui-format-duration-ms duration) "")))
-    (spofy-browse--store-entity uri track)
+    (spofy-ui-store-entity uri track)
     (list uri
           (vector playing
                   (spofy-ui-truncate name (spofy-ui-col 'artist-top-track 0)
@@ -444,7 +395,7 @@ ARTIST-ID is kept for refresh."
 (defun spofy-artist-top-tracks-view-album ()
   "View the album of the track at point."
   (interactive)
-  (when-let* ((entity (spofy-browse-entity-at-point))
+  (when-let* ((entity (spofy-ui-entity-at-point))
               (album (alist-get 'album entity))
               (album-id (alist-get 'id album)))
     (spofy-view-album album-id)))
@@ -505,11 +456,11 @@ PLAYLIST-URI is the playlist context URI for playback."
              (album (alist-get 'album track))
              (album-name (if album (or (alist-get 'name album) "") ""))
              (duration (alist-get 'duration_ms track))
-             (playing (spofy-browse--playing-indicator uri))
+             (playing (spofy-ui-playing-indicator uri))
              (artists-str (if artists (spofy-ui-format-artists artists) ""))
              (dur-str (if duration (spofy-ui-format-duration-ms duration) "")))
         ;; Store the full wrapper so we have added_by and track data.
-        (spofy-browse--store-entity uri item)
+        (spofy-ui-store-entity uri item)
         ;; Store playlist-uri for playback context.
         (ignore playlist-uri)
         (list uri
@@ -590,7 +541,7 @@ Fetches playlist data from the API and displays it in a tabulated-list buffer."
 (defun spofy-playlist-view-album ()
   "View the album of the track at point."
   (interactive)
-  (when-let* ((entity (spofy-browse-entity-at-point))
+  (when-let* ((entity (spofy-ui-entity-at-point))
               (track (or (alist-get 'track entity) entity))
               (album (alist-get 'album track))
               (album-id (alist-get 'id album)))
@@ -599,7 +550,7 @@ Fetches playlist data from the API and displays it in a tabulated-list buffer."
 (defun spofy-playlist-view-artist ()
   "View the artist of the track at point."
   (interactive)
-  (when-let* ((entity (spofy-browse-entity-at-point))
+  (when-let* ((entity (spofy-ui-entity-at-point))
               (track (or (alist-get 'track entity) entity))
               (artists (alist-get 'artists track))
               ((_notempty (> (length artists) 0)))

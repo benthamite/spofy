@@ -243,7 +243,7 @@ on success, or signals an error on failure."
                  (if access-token
                      (funcall callback access-token refresh-token expires-in)
                    (message "Spofy: token exchange returned no access token: %S" json))))
-           (kill-buffer buf))))))))
+           (kill-buffer buf)))))))
 
 ;;;; Token refresh
 

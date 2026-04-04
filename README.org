@@ -494,7 +494,6 @@ The command ~spofy-follow-playlist~ prompts for a playlist ID or URI and follows
 :CUSTOM_ID: h:library-management
 :END:
 
-#+findex: spofy-library-menu
 #+findex: spofy-library-saved-tracks
 #+findex: spofy-library-saved-albums
 #+findex: spofy-list-recently-played
@@ -602,12 +601,9 @@ The function ~spofy-player-current-track-id~ returns the Spotify ID of the curre
 :CUSTOM_ID: h:entity-access
 :END:
 
-#+findex: spofy-browse-entity-at-point
-#+findex: spofy-library-entity-at-point
+#+findex: spofy-ui-entity-at-point
 
-The function ~spofy-browse-entity-at-point~ returns the full Spotify API alist for the entity on the current ~tabulated-list~ row in any browse buffer ([[#h:browsing][Browsing]]).  This is useful for writing custom actions or hook functions that need to access entity metadata.
-
-The function ~spofy-library-entity-at-point~ does the same for library buffers ([[#h:library-management][Library management]]).
+The function ~spofy-ui-entity-at-point~ returns the full Spotify API alist for the entity on the current ~tabulated-list~ row in any Spofy buffer.  It works uniformly across browse, search, library, and playlist buffers by looking up the row ID in a shared buffer-local entity table managed by =spofy-ui.el=.  This is useful for writing custom actions or hook functions that need to access entity metadata.
 
 ** API client
 :PROPERTIES:
@@ -669,6 +665,28 @@ The function ~spofy-ui-progress-bar~ builds a text progress bar for a given prog
 :END:
 
 All Spofy ~tabulated-list-mode~ buffers share a single pagination mechanism.  Results load automatically as the user scrolls: the function ~spofy-ui--maybe-load-more~ is registered on ~window-scroll-functions~ and triggers a fetch when the window end is within a few lines of the buffer end.  A guard variable (~spofy-ui--loading-more~) prevents duplicate requests while one is already in flight, and the URL is checked with ~stringp~ to avoid attempting a fetch when the JSON ~:null~ sentinel has not yet been normalized.  Each buffer stores a buffer-local handler (set by the module that created the buffer) that knows how to extract items and the next-page URL from the API response.  This keeps all pagination logic in one place in =spofy-ui.el= while letting each module control its own entry formatting.  Both ~spofy-api--extract-paged-results~ and ~spofy-ui-load-more~ normalize JSON ~:null~ values to ~nil~, so that a ~null~ next-page URL from the Spotify API is correctly treated as the end of results.
+
+*** Entity storage and list rendering
+:PROPERTIES:
+:CUSTOM_ID: h:entity-storage-and-list-rendering
+:END:
+
+#+findex: spofy-ui-store-entity
+#+findex: spofy-ui-entity-at-point
+#+findex: spofy-ui-extract-id
+#+findex: spofy-ui-album-year
+#+findex: spofy-ui-playing-indicator
+#+findex: spofy-ui-render-list
+
+All Spofy list buffers share a common entity storage mechanism provided by =spofy-ui.el=.  The buffer-local variable ~spofy-ui--entities~ holds a hash table mapping row IDs (typically Spotify URIs) to the full API alists returned by the Spotify Web API.  The function ~spofy-ui-store-entity~ stores an entity under a given key, lazily creating the hash table on first use.  The function ~spofy-ui-entity-at-point~ retrieves the entity for the current ~tabulated-list~ row by looking up its ID in the hash table.  Modules such as =spofy-playlist.el=, =spofy-browse.el=, =spofy-search.el=, and =spofy-library.el= use these functions instead of maintaining their own per-module entity tables.
+
+The function ~spofy-ui-extract-id~ extracts the bare Spotify ID from a URI of the form ~spotify:TYPE:ID~, returning the ID portion.  If the string does not match the URI pattern, it is returned unchanged, so plain IDs can be passed through safely.
+
+The function ~spofy-ui-album-year~ extracts the four-digit release year from an album alist.  It reads the ~release_date~ field and returns the first four characters if they form a year, or the raw value otherwise.  All album formatting functions in the library, browse, and search modules use this instead of inlining the extraction logic.
+
+The function ~spofy-ui-playing-indicator~ returns a now-playing indicator string for a given track URI.  It compares the URI against the currently playing track ID (via ~spofy-player-current-track-id~) and returns a play icon (=▶=) propertized with the ~spofy-playing-icon~ face when they match, or an empty string otherwise.  Track formatting functions in library, browse, and search buffers call this to mark the active row.
+
+The function ~spofy-ui-render-list~ provides the standard recipe for setting up a Spofy ~tabulated-list-mode~ buffer.  It takes a buffer name, a mode function, a list of entries, a next-page URL, and an optional load-more handler and display function.  It creates or reuses the named buffer, erases it, activates the mode, sets the pagination state and entries, prints the list, and displays the buffer (defaulting to ~pop-to-buffer~; browse views pass ~switch-to-buffer~ instead).  Modules call this function instead of duplicating the buffer-setup boilerplate.
 
 * Consult integration
 :PROPERTIES:

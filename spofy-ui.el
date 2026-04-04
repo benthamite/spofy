@@ -398,5 +398,91 @@ Added as :after advice on `tabulated-list-print'."
 
 (advice-add 'tabulated-list-print :after #'spofy-ui--after-tabulated-list-print)
 
+;;;; Entity storage
+
+(defvar-local spofy-ui--entities nil
+  "Hash table mapping entity URIs/IDs to their full API alists.
+Buffer-local in every Spofy list buffer.")
+
+(defun spofy-ui-store-entity (key entity)
+  "Store ENTITY alist under KEY in the buffer-local entity table."
+  (unless spofy-ui--entities
+    (setq spofy-ui--entities (make-hash-table :test #'equal)))
+  (puthash key entity spofy-ui--entities))
+
+(defun spofy-ui-entity-at-point ()
+  "Return the full alist for the entity on the current tabulated-list row.
+The row ID is used as the key into `spofy-ui--entities'."
+  (when-let* ((id (tabulated-list-get-id)))
+    (and spofy-ui--entities
+         (gethash id spofy-ui--entities))))
+
+;;;; URI and metadata helpers
+
+(declare-function spofy-player-current-track-id "spofy-player" ())
+
+(defun spofy-ui-extract-id (uri)
+  "Extract the Spotify ID from URI (e.g. \"spotify:track:xyz\" -> \"xyz\")."
+  (if (string-match "spotify:[^:]+:\\(.+\\)" uri)
+      (match-string 1 uri)
+    uri))
+
+(defun spofy-ui-album-year (album)
+  "Extract the release year from ALBUM alist."
+  (let ((date (or (alist-get 'release_date album) "")))
+    (if (string-match "\\`\\([0-9]\\{4\\}\\)" date)
+        (match-string 1 date)
+      date)))
+
+(defun spofy-ui-playing-indicator (track-uri)
+  "Return a now-playing indicator string for TRACK-URI.
+Shows a play icon if TRACK-URI matches the currently playing track."
+  (let* ((current-id (and (fboundp 'spofy-player-current-track-id)
+                          (spofy-player-current-track-id)))
+         (playing-p (and current-id track-uri
+                         (string-match-p (regexp-quote current-id) track-uri))))
+    (if playing-p
+        (propertize "\u25B6" 'face 'spofy-playing-icon)
+      "")))
+
+;;;; Player state indicators
+
+(defun spofy-ui-play-pause-icon (state)
+  "Return the play/pause icon based on player STATE."
+  (if (alist-get 'is-playing state) "⏸" "▶"))
+
+(defun spofy-ui-shuffle-indicator (state)
+  "Return the shuffle indicator based on player STATE."
+  (if (alist-get 'shuffle state) "⇌" ""))
+
+(defun spofy-ui-repeat-indicator (state)
+  "Return the repeat indicator based on player STATE."
+  (pcase (alist-get 'repeat state)
+    ("context" "↻")
+    ("track"   "↻₁")
+    (_         "")))
+
+;;;; List buffer rendering
+
+(defun spofy-ui-render-list (buf-name mode-fn entries next-url
+                                      &optional load-more-handler display-fn)
+  "Render ENTRIES in BUF-NAME using MODE-FN with pagination.
+NEXT-URL is the URL for the next page of results, or nil.
+LOAD-MORE-HANDLER, when non-nil, is set as `spofy-ui--load-more-handler'.
+DISPLAY-FN controls how the buffer is displayed: defaults to `pop-to-buffer';
+pass `switch-to-buffer' for browse views."
+  (let ((buf (get-buffer-create buf-name)))
+    (with-current-buffer buf
+      (let ((inhibit-read-only t))
+        (erase-buffer))
+      (funcall mode-fn)
+      (setq-local spofy-ui--next-page-url next-url)
+      (when load-more-handler
+        (setq-local spofy-ui--load-more-handler load-more-handler))
+      (setq tabulated-list-entries entries)
+      (tabulated-list-print t)
+      (goto-char (point-min)))
+    (funcall (or display-fn #'pop-to-buffer) buf)))
+
 (provide 'spofy-ui)
 ;;; spofy-ui.el ends here
