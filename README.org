@@ -297,7 +297,7 @@ In addition, Spofy auto-enables the mode at package load time when a display fea
 
 The command ~spofy-play-pause~ toggles playback between playing and paused.  It checks the current state and sends the appropriate API call.  On success, the local player state is updated immediately so that the mode line and tab bar reflect the change without waiting for the next poll cycle.  When pausing, the interpolated progress is snapshotted so the displayed position does not jump backwards.  When resuming, the interpolation anchor is reset and Spofy issues an immediate re-poll, which picks up any track change that Spotify may have made (for example, advancing to the next track in the queue).
 
-The commands ~spofy-next~ and ~spofy-previous~ skip to the next or previous track, respectively.  Both commands issue an immediate re-poll on success so the UI reflects the new track without waiting for the next poll cycle.
+The commands ~spofy-next~ and ~spofy-previous~ skip to the next or previous track, respectively.  Both commands re-poll after a short delay on success so the UI reflects the new track without waiting for the next poll cycle.  If the user was playing when they skipped, the playing state is preserved through Spotify's brief transitional pause.
 
 The commands ~spofy-seek-forward~ and ~spofy-seek-backward~ move the playback position by ~spofy-seek-seconds~ seconds ([[#h:user-options-playback][Playback options]]).
 

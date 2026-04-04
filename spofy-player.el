@@ -274,20 +274,38 @@ may have no cached state even when a device is already active."
   "Skip to the next track."
   (interactive)
   (spofy-player--ensure-device)
-  (spofy-api-post "me/player/next" nil
-                  (lambda (_)
-                    (message "Spofy: next track")
-                    (spofy-player--poll))))
+  (let ((was-playing (spofy-player-playing-p)))
+    (spofy-api-post "me/player/next" nil
+                    (lambda (_)
+                      (message "Spofy: next track")
+                      (spofy-player--poll-after-skip was-playing)))))
 
 ;;;###autoload
 (defun spofy-previous ()
   "Skip to the previous track."
   (interactive)
   (spofy-player--ensure-device)
-  (spofy-api-post "me/player/previous" nil
-                  (lambda (_)
-                    (message "Spofy: previous track")
-                    (spofy-player--poll))))
+  (let ((was-playing (spofy-player-playing-p)))
+    (spofy-api-post "me/player/previous" nil
+                    (lambda (_)
+                      (message "Spofy: previous track")
+                      (spofy-player--poll-after-skip was-playing)))))
+
+(defun spofy-player--poll-after-skip (was-playing)
+  "Poll player state after a skip command.
+Delay slightly so Spotify has time to transition to the new track.
+If WAS-PLAYING is non-nil, preserve the playing state in case the
+poll catches a brief transitional pause."
+  (run-with-timer
+   0.5 nil
+   (lambda ()
+     (spofy-api-get
+      "me/player" nil
+      (lambda (data)
+        (when (and was-playing data)
+          ;; Ensure Spotify's transitional pause doesn't stop our playback
+          (setf (alist-get 'is_playing data) t))
+        (spofy-player--handle-poll-response data))))))
 
 ;;;###autoload
 (defun spofy-seek-forward ()
