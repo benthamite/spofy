@@ -254,7 +254,7 @@ The command ~spofy-menu~ opens a transient popup that provides quick access to a
 The popup is organized into two columns:
 
 - *Column 1 — Playback, Volume, Mode:* play/pause, next, previous, seek forward, seek backward; volume up/down and set; shuffle and repeat toggles.
-- *Column 2 — Search, Browse, Other:* search tracks (=s t=), albums (=s l=), artists (=s a=), playlists (=s p=); saved tracks (=t=), saved albums (=a=), playlists (=y=); devices (=d=), Wikipedia lookup (=w=), dashboard (=D=), quit (=q=).
+- *Column 2 — Search, Browse, Other:* search tracks (=s t=), albums (=s l=), artists (=s a=), playlists (=s p=); saved tracks (=t=), saved albums (=a=), playlists (=y=); devices (=d=), Wikipedia lookup (=w=), dashboard (=/=), quit (=q=).
 
 Volume up/down, seek forward/backward, shuffle, and repeat all keep the menu open so they can be used repeatedly.
 

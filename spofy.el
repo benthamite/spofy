@@ -664,7 +664,7 @@ Signals `user-error' if authentication tokens are not available."
     "Other"
     ("d" "Devices"   spofy-select-device)
     ("w" "Wikipedia" spofy-wikipedia)
-    ("D" "Dashboard" spofy)
+    ("/" "Dashboard" spofy)
     ("q" "Quit"      transient-quit-one)]])
 
 ;;;###autoload (autoload 'spofy-menu "spofy" nil t)
