@@ -357,7 +357,7 @@ When truncated, mark the last three characters with the
           (insert "\n")))))
   (insert "\n  ")
   (insert-text-button
-   (propertize "View all recently played..." 'face 'spofy-muted)
+   (propertize "View all recently played" 'face 'spofy-muted)
    'action (lambda (_btn)
              (require 'spofy-library)
              (spofy-list-recently-played))
@@ -389,7 +389,7 @@ When truncated, mark the last three characters with the
         (insert "\n"))))
   (insert "\n  ")
   (insert-text-button
-   (propertize "View all playlists..." 'face 'spofy-muted)
+   (propertize "View all playlists" 'face 'spofy-muted)
    'action (lambda (_btn)
              (require 'spofy-playlist)
              (spofy-list-playlists))
@@ -427,7 +427,7 @@ TIME-RANGE is \"short_term\", \"medium_term\", or \"long_term\"."
           (insert "\n"))))
     (insert "\n  ")
     (insert-text-button
-     (propertize "View all..." 'face 'spofy-muted)
+     (propertize "View all" 'face 'spofy-muted)
      'action (let ((tr time-range))
                (lambda (_btn)
                  (require 'spofy-library)
@@ -470,7 +470,7 @@ TIME-RANGE is \"short_term\", \"medium_term\", or \"long_term\"."
           (insert "\n"))))
     (insert "\n  ")
     (insert-text-button
-     (propertize "View all..." 'face 'spofy-muted)
+     (propertize "View all" 'face 'spofy-muted)
      'action (let ((tr time-range))
                (lambda (_btn)
                  (require 'spofy-library)
@@ -502,7 +502,7 @@ TIME-RANGE is \"short_term\", \"medium_term\", or \"long_term\"."
         (insert "\n"))))
   (insert "\n  ")
   (insert-text-button
-   (propertize "View all..." 'face 'spofy-muted)
+   (propertize "View all" 'face 'spofy-muted)
    'action (lambda (_btn)
              (require 'spofy-library)
              (spofy-list-new-releases))

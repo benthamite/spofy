@@ -170,7 +170,7 @@ The user option ~spofy-dashboard-sections~ controls which sections appear on the
 
 The user option ~spofy-dashboard-album-art~ controls whether album artwork is displayed in the now-playing section.  It defaults to ~t~.  When enabled, the album cover appears between the track information (track, artist, album) and the player controls (progress bar, shuffle/repeat state).  Album art is fetched asynchronously from the Spotify API and cached on disk under =XDG_CACHE_HOME/spofy/album-art/= (defaulting to =~/.cache/spofy/album-art/=).  The image updates automatically when the track changes.  This option has no effect in terminal frames, since Emacs cannot display images there.
 
-The now-playing section always appears at the top regardless of this option.  Each section is fetched asynchronously and includes a "View all..." link that opens a full tabulated-list buffer.  Track and artist names in every section are truncated to the window width with a fade-out gradient when they would otherwise overflow.
+The now-playing section always appears at the top regardless of this option.  Each section is fetched asynchronously and includes a "View all" link that opens a full tabulated-list buffer.  Track and artist names in every section are truncated to the window width with a fade-out gradient when they would otherwise overflow.
 
 ** Column widths
 :PROPERTIES:
@@ -227,7 +227,7 @@ Any Spofy command that requires an active session will prompt for authentication
 #+findex: spofy-dashboard-refresh
 #+findex: spofy-stop
 
-The command ~spofy~ is the main entry point.  It ensures that the user is authenticated (prompting if not), starts player state polling, and opens the =*Spofy*= dashboard buffer.  The dashboard always shows a *now playing* section at the top (track name, artist, and album with release year each on its own line, progress bar, and playback state indicators).  Below it, a configurable list of sections is displayed according to ~spofy-dashboard-sections~ ([[#h:user-options-global][Global options]]).  By default, the dashboard shows recently played tracks and user playlists.  Each section includes a "View all..." link that opens the full list in a tabulated-list buffer.
+The command ~spofy~ is the main entry point.  It ensures that the user is authenticated (prompting if not), starts player state polling, and opens the =*Spofy*= dashboard buffer.  The dashboard always shows a *now playing* section at the top (track name, artist, and album with release year each on its own line, progress bar, and playback state indicators).  Below it, a configurable list of sections is displayed according to ~spofy-dashboard-sections~ ([[#h:user-options-global][Global options]]).  By default, the dashboard shows recently played tracks and user playlists.  Each section includes a "View all" link that opens the full list in a tabulated-list buffer.
 
 The now-playing section refreshes automatically when the player state changes.  A 1-second timer interpolates the progress bar between polls so it animates smoothly.  The command ~spofy-dashboard-refresh~ forces a full refresh of the entire dashboard.
 
