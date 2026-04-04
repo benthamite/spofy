@@ -10,7 +10,7 @@
 #+texinfo_dir_title: Spofy: (spofy)
 #+texinfo_dir_desc: Spotify player for Emacs
 
-This manual describes the features and customization options of =spofy=, a Spotify player for Emacs.
+This manual describes the features and customization options for the Emacs Lisp package =spofy=.
 
 * Overview
 :PROPERTIES:
@@ -238,9 +238,9 @@ The dashboard keymap provides these bindings:
 | =SPC= | ~spofy-play-pause~        |
 | =n=   | ~spofy-next~              |
 | =p=   | ~spofy-previous~          |
-=/=  | ~spofy-menu~           |
-| =g= | ~spofy-dashboard-refresh~   |
-| =q= | ~quit-window~               |
+| =/=   | ~spofy-menu~              |
+| =g=   | ~spofy-dashboard-refresh~ |
+| =q=   | ~quit-window~             |
 
 ** Transient popup
 :PROPERTIES:
@@ -589,12 +589,15 @@ The command ~spofy-clear-cache~ flushes the entire in-memory cache.  Use it when
 #+findex: spofy-player-current-track
 #+findex: spofy-player-playing-p
 #+findex: spofy-player-current-track-id
+#+findex: spofy-player-interpolated-progress
 
 The function ~spofy-player-current-track~ returns the current track as a cons cell ~(NAME . ARTIST)~, or ~nil~ if nothing is playing.  This is useful in custom mode-line constructs or hook functions.
 
 The function ~spofy-player-playing-p~ returns non-nil if Spotify is currently playing.
 
 The function ~spofy-player-current-track-id~ returns the Spotify ID of the currently playing track, or ~nil~.  This is used internally by search and browse buffers to highlight the now-playing row.
+
+The function ~spofy-player-interpolated-progress~ returns the estimated current playback position in milliseconds.  When the track is playing, it adds the wall-clock time elapsed since the last poll to the last-known progress, clamping at the track duration.  When paused, it returns the stored progress directly.  The dashboard progress bar and tab-bar =%g= specifier use this function to update smoothly between poll cycles.
 
 ** Entity access in buffers
 :PROPERTIES:
@@ -649,6 +652,10 @@ The function ~spofy-auth-refresh-token~ explicitly uses the stored refresh token
 #+findex: spofy-ui-format-artists
 #+findex: spofy-ui-truncate
 #+findex: spofy-ui-progress-bar
+#+findex: spofy-ui-insert-header
+#+findex: spofy-ui-play-pause-icon
+#+findex: spofy-ui-shuffle-indicator
+#+findex: spofy-ui-repeat-indicator
 #+findex: spofy-ui--after-tabulated-list-print
 
 The function ~spofy-ui-format-duration-ms~ takes a duration in milliseconds and returns a human-readable ~"M:SS"~ string.
@@ -658,6 +665,10 @@ The function ~spofy-ui-format-artists~ takes a list of artist alists (as returne
 The function ~spofy-ui-truncate~ truncates a string to a given maximum display width.  It accepts an optional FACE argument; when provided, the face is applied to the result and, if truncation occurred, the last three characters are marked with the ~spofy-fade~ text property (levels 1, 2, 3).  After ~tabulated-list-print~, the advice function ~spofy-ui--after-tabulated-list-print~ calls ~spofy-ui--apply-buffer-fades~, which creates overlays on the marked characters with foreground colors blended toward the default background at 25%, 50%, and 75% respectively.  This produces a smooth fade-out effect instead of a hard cut or an explicit ellipsis character.  Because the color blending happens at display time via overlays rather than being baked into text properties, the fade automatically adapts when the user switches themes: ~spofy-ui--refresh-fades~ is registered on ~enable-theme-functions~ and recomputes all fade overlays in Spofy buffers.  It uses ~truncate-string-to-width~ internally, so column alignment is correct even with variable-width characters.  To prevent ~tabulated-list-mode~ from adding its own ellipsis (which in Emacs 30 uses a ~display~ text property that overrides the fade), ~spofy-ui-set-format~ sets ~truncate-string-ellipsis~ to ~""~ buffer-locally.  All entry formatting functions in the browse, library, search, consult, and playlist modules pass the appropriate face to ~spofy-ui-truncate~, which handles both truncation and propertizing in one call.  The mode-line and tab-bar modules call it without a face, so truncation there is silent.
 
 The function ~spofy-ui-progress-bar~ builds a text progress bar for a given progress and duration (both in milliseconds) at a given character width.  It uses full-block characters (U+2588) for the filled portion with the ~spofy-progress-filled~ face, and light-shade characters (U+2591) for the empty portion with ~spofy-progress-empty~.  A time display in ~"M:SS / M:SS"~ format is appended after the bar.  This function is shared between the dashboard and the tab-bar =%g= format specifier.
+
+The function ~spofy-ui-insert-header~ inserts a list of strings at the top of the current buffer, each on its own line with the ~spofy-header~ face.  It is used by the album, artist, and playlist browse views to render header metadata above the track listing.
+
+The function ~spofy-ui-play-pause-icon~ returns a play or pause icon string based on the player state alist: =⏸= when playing, =▶= when paused.  The function ~spofy-ui-shuffle-indicator~ returns =⇌= when shuffle is on, or an empty string when off.  The function ~spofy-ui-repeat-indicator~ returns =↻= for context repeat, =↻₁= for track repeat, or an empty string when repeat is off.  These functions are used by the mode-line and tab-bar display modules.
 
 *** Pagination
 :PROPERTIES:
@@ -782,7 +793,11 @@ All lookup results are cached persistently in a SQLite database (Emacs 29+ built
 
 The command ~spofy-wikipedia~ is the main entry point.  It reads the currently playing track from the player state ([[#h:playback-control][Playback control]]), classifies the artist, and dispatches to the appropriate lookup path.  When a Wikipedia article is found, it is opened via ~browse-url~.  The command is also available in the transient popup ([[#h:transient-popup][Transient popup]]) under =w=.
 
-Wikipedia lookup actions are available through Embark ([[#h:embark-integration][Embark integration]]) on tracks, albums, and artists (bound to =w= in each keymap).  For tracks, the command classifies the artist and uses either the album or work lookup.  For albums, the Wikipedia search path is used directly.  For artists, the command searches for the artist's Wikipedia page and validates it against =Template:Infobox musical artist=.
+#+findex: spofy-wikipedia-track
+#+findex: spofy-wikipedia-album
+#+findex: spofy-wikipedia-artist
+
+Wikipedia lookup actions are available through Embark ([[#h:embark-integration][Embark integration]]) on tracks, albums, and artists (bound to =w= in each keymap).  The function ~spofy-wikipedia-track~ classifies the artist and dispatches to either the album or work lookup.  The function ~spofy-wikipedia-album~ performs a direct album lookup.  The function ~spofy-wikipedia-artist~ looks up the artist's Wikipedia page.  All three receive the Embark target string and extract entity metadata from its text properties.
 
 ** Wikipedia user options
 :PROPERTIES:
@@ -839,7 +854,7 @@ All faces can be customized with =M-x customize-group RET spofy-faces RET=.
 
 The hook ~spofy-player-state-changed-hook~ runs whenever any aspect of the player state changes: track, play/pause state, shuffle, repeat, volume, or device.  The mode-line display and dashboard now-playing section both use this hook to stay up to date.  Add your own functions to this hook if you want to react to any state change.
 
-The hook ~spofy-player-track-changed-hook~ runs only when the current track changes.  This is a subset of state changes and is useful for notifications or logging.  The desktop notification feature ([[#h:user-options-playback][Playback options]]) hooks into this.
+The hook ~spofy-player-track-changed-hook~ runs only when the current track changes.  This is a subset of state changes and is useful for notifications or logging.
 
 The hook ~spofy-authenticated-hook~ runs once after a successful OAuth2 authentication.  Use it to perform setup that depends on having a valid token, such as pre-fetching the user's playlists.
 
