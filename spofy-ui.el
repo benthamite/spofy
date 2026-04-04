@@ -414,6 +414,18 @@ LINES is a list of strings, each displayed on its own line with the
 
 (add-hook 'window-scroll-functions #'spofy-ui--maybe-load-more)
 
+(defun spofy-ui--maybe-load-more-post-command ()
+  "Check for auto-pagination after each command.
+This complements `window-scroll-functions', which can miss scroll
+events under `pixel-scroll-precision-mode'."
+  (when-let* ((window (selected-window))
+              (buf (window-buffer window)))
+    (when (and (buffer-local-value 'spofy-ui--load-more-handler buf)
+               (string-prefix-p "*Spofy" (buffer-name buf)))
+      (spofy-ui--maybe-load-more window nil))))
+
+(add-hook 'post-command-hook #'spofy-ui--maybe-load-more-post-command)
+
 (defun spofy-ui--after-tabulated-list-print (&rest _)
   "Post-process Spofy tabulated-list buffers after printing.
 Apply truncation fade overlays.
