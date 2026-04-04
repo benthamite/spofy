@@ -145,6 +145,7 @@ The user option ~spofy-tab-bar-alignment~ controls whether the Spofy segment app
 #+vindex: spofy-global-key
 #+vindex: spofy-enable-mode-line
 #+vindex: spofy-enable-tab-bar
+#+vindex: spofy-dashboard-album-art
 #+vindex: spofy-dashboard-sections
 
 The user option ~spofy-global-key~ sets the prefix key that ~spofy-global-mode~ binds to ~spofy-menu~.  It defaults to ~"C-c s"~.  Change this if the default conflicts with other bindings.
@@ -166,6 +167,8 @@ The user option ~spofy-dashboard-sections~ controls which sections appear on the
 - ~top-artists-medium~ :: Top artists from the last 6 months.
 - ~top-artists-long~ :: Top artists from the last year.
 - ~new-releases~ :: New album releases (not personalized).
+
+The user option ~spofy-dashboard-album-art~ controls whether album artwork is displayed in the now-playing section.  It defaults to ~t~.  Album art is fetched asynchronously from the Spotify API and cached on disk under =XDG_CACHE_HOME/spofy/album-art/= (defaulting to =~/.cache/spofy/album-art/=).  The image updates automatically when the track changes.  This option has no effect in terminal frames, since Emacs cannot display images there.
 
 The now-playing section always appears at the top regardless of this option.  Each section is fetched asynchronously and includes a "View all..." link that opens a full tabulated-list buffer.
 

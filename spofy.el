@@ -132,6 +132,12 @@ When `spofy-global-mode' is enabled, this key opens `spofy-menu'."
   :type 'boolean
   :group 'spofy)
 
+(defcustom spofy-dashboard-album-art t
+  "Whether to display album art in the now-playing section.
+Requires a graphical Emacs frame with image support."
+  :type 'boolean
+  :group 'spofy)
+
 (defcustom spofy-dashboard-sections
   '(recently-played playlists)
   "Sections to display on the dashboard, in order.
@@ -174,6 +180,74 @@ Each element is a symbol naming a section.  Available sections:
   "Major mode for the Spofy dashboard buffer."
   :group 'spofy)
 
+;;;;; Dashboard: album art
+
+(defvar spofy--album-art-cache-dir nil
+  "Directory for cached album art images.")
+
+(defvar spofy--album-art-current-album-id nil
+  "Album ID whose art is currently loaded or being fetched.")
+
+(defvar spofy--album-art-image nil
+  "Emacs image object for the current album art, or nil if unavailable.")
+
+(defun spofy--album-art-cache-dir ()
+  "Return the album art cache directory, creating it if needed."
+  (unless spofy--album-art-cache-dir
+    (setq spofy--album-art-cache-dir
+          (expand-file-name "spofy/album-art/"
+                            (or (getenv "XDG_CACHE_HOME")
+                                (expand-file-name "~/.cache")))))
+  (unless (file-directory-p spofy--album-art-cache-dir)
+    (make-directory spofy--album-art-cache-dir t))
+  spofy--album-art-cache-dir)
+
+(defun spofy--album-art-cache-file (album-id)
+  "Return the cache file path for ALBUM-ID."
+  (expand-file-name (concat album-id ".dat")
+                    (spofy--album-art-cache-dir)))
+
+(defun spofy--album-art-load (file)
+  "Load album art from FILE.
+The next 1-second progress timer tick will pick up the new image."
+  (setq spofy--album-art-image
+        (create-image file nil nil
+                      :max-height 300
+                      :max-width 300
+                      :ascent 'center)))
+
+(defun spofy--album-art-download (url file)
+  "Download album art from URL to FILE, then load it."
+  (url-retrieve
+   url
+   (lambda (status)
+     (unwind-protect
+         (unless (plist-get status :error)
+           (goto-char (point-min))
+           (when (re-search-forward "\r?\n\r?\n" nil t)
+             (let ((coding-system-for-write 'binary)
+                   (data (buffer-substring-no-properties (point) (point-max))))
+               (with-temp-file file
+                 (set-buffer-multibyte nil)
+                 (insert data)))))
+       (kill-buffer))
+     (when (file-exists-p file)
+       (spofy--album-art-load file)))
+   nil t))
+
+(defun spofy--album-art-update (album-id image-url)
+  "Fetch album art for ALBUM-ID from IMAGE-URL if it changed."
+  (when (and spofy-dashboard-album-art
+             (display-graphic-p)
+             album-id image-url
+             (not (equal album-id spofy--album-art-current-album-id)))
+    (setq spofy--album-art-current-album-id album-id)
+    (setq spofy--album-art-image nil)
+    (let ((cache-file (spofy--album-art-cache-file album-id)))
+      (if (file-exists-p cache-file)
+          (spofy--album-art-load cache-file)
+        (spofy--album-art-download image-url cache-file)))))
+
 ;;;;; Dashboard: now-playing section
 
 (defun spofy--dashboard-insert-now-playing ()
@@ -190,7 +264,21 @@ Each element is a symbol naming a section.  Available sections:
          (repeat-state (and state (alist-get 'repeat state))))
     (insert (propertize "Now playing" 'face 'spofy-header) "\n\n")
     (if (not track)
-        (insert (propertize "  No track playing" 'face 'spofy-muted) "\n")
+        (progn
+          (setq spofy--album-art-current-album-id nil
+                spofy--album-art-image nil)
+          (insert (propertize "  No track playing" 'face 'spofy-muted) "\n"))
+      ;; Album art (above text)
+      (when (and spofy-dashboard-album-art (display-graphic-p))
+        (spofy--album-art-update (alist-get 'album-id state)
+                                 (alist-get 'album-image-url state))
+        (when (and spofy--album-art-image
+                   (equal (alist-get 'album-id state)
+                          spofy--album-art-current-album-id))
+          (insert "  ")
+          (insert-image spofy--album-art-image "[album art]")
+          (insert "\n")))
+      ;; Track info
       (insert "  "
               (propertize track 'face 'spofy-track-name)
               " "

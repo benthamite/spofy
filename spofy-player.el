@@ -74,6 +74,19 @@ device, volume, track-id.")
 
 ;;;; State extraction
 
+(defun spofy-player--best-image-url (images)
+  "Return the URL of the image closest to 300px from IMAGES.
+IMAGES is the `images' array from a Spotify album object."
+  (when (and images (> (length images) 0))
+    (let ((best nil)
+          (best-diff most-positive-fixnum))
+      (seq-doseq (img images)
+        (let* ((h (or (alist-get 'height img) 0))
+               (diff (abs (- h 300))))
+          (when (< diff best-diff)
+            (setq best img best-diff diff))))
+      (alist-get 'url best))))
+
 (defun spofy-player--extract-state (data)
   "Extract a normalized state alist from the Spotify player DATA response."
   (when data
@@ -88,6 +101,8 @@ device, volume, track-id.")
                        (alist-get 'id (aref artists 0))))
         (album     . ,(alist-get 'name album))
         (album-id  . ,(alist-get 'id album))
+        (album-image-url . ,(spofy-player--best-image-url
+                              (alist-get 'images album)))
         (progress  . ,(alist-get 'progress_ms data))
         (duration  . ,(alist-get 'duration_ms item))
         (is-playing . ,(eq (alist-get 'is_playing data) t))
