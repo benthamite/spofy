@@ -327,27 +327,27 @@ Intended for `enable-theme-functions'."
 (add-hook 'enable-theme-functions #'spofy-ui--refresh-fades)
 
 
-(defun spofy-ui-progress-bar (progress-ms duration-ms width)
+(defun spofy-ui-progress-bar-only (progress-ms duration-ms width)
   "Build a text progress bar for PROGRESS-MS out of DURATION-MS.
 WIDTH is the total character width of the bar.  Uses full-block
 characters (U+2588) for the filled portion and light-shade
-characters (U+2591) for the empty portion.
-
-The time display (e.g. \"1:23 / 3:45\") is appended after the bar."
+characters (U+2591) for the empty portion."
   (let* ((progress (or progress-ms 0))
          (duration (max 1 (or duration-ms 1)))
          (fraction (min 1.0 (/ (float progress) duration)))
          (filled (round (* fraction width)))
-         (empty (- width filled))
-         (filled-str (propertize (make-string (max 0 filled) ?\u2588)
-                                 'face 'spofy-progress-filled))
-         (empty-str (propertize (make-string (max 0 empty) ?\u2591)
-                                'face 'spofy-progress-empty))
-         (progress-str (spofy-ui-format-duration-ms progress))
-         (duration-str (spofy-ui-format-duration-ms duration)))
-    (format "%s%s %s / %s"
-            filled-str empty-str
-            progress-str duration-str)))
+         (empty (- width filled)))
+    (concat (propertize (make-string (max 0 filled) ?\u2588)
+                        'face 'spofy-progress-filled)
+            (propertize (make-string (max 0 empty) ?\u2591)
+                        'face 'spofy-progress-empty))))
+
+(defun spofy-ui-progress-time (progress-ms duration-ms)
+  "Build a time display string for PROGRESS-MS out of DURATION-MS.
+Returns a string like \"1:23 / 3:45\"."
+  (let ((progress-str (spofy-ui-format-duration-ms (or progress-ms 0)))
+        (duration-str (spofy-ui-format-duration-ms (max 1 (or duration-ms 1)))))
+    (format "%s / %s" progress-str duration-str)))
 
 (defvar-local spofy-ui--next-page-url nil
   "URL for the next page of results in this buffer.")

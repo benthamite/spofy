@@ -260,7 +260,6 @@ The next 1-second progress timer tick will pick up the new image."
          (album-date (and state (alist-get 'album-date state)))
          (progress (and state (spofy-player-interpolated-progress)))
          (duration (and state (alist-get 'duration state)))
-         (is-playing (and state (alist-get 'is-playing state)))
          (shuffle (and state (alist-get 'shuffle state)))
          (repeat-state (and state (alist-get 'repeat state))))
     (insert (propertize "Now playing" 'face 'spofy-header) "\n\n")
@@ -300,15 +299,15 @@ The next 1-second progress timer tick will pick up the new image."
             (insert-image spofy--album-art-image "[album art]")
             (insert "\n")
             (setq art-char-width (car (image-size spofy--album-art-image)))))
-        (insert "  "
-                (spofy-ui-progress-bar progress (or duration 0)
-                                       (if art-char-width
-                                           (max 10 (truncate art-char-width))
-                                         20))
-                "\n"))
+        (let ((bar-width (if art-char-width
+                            (max 10 (truncate art-char-width))
+                          20)))
+          (insert "  "
+                  (spofy-ui-progress-bar-only progress (or duration 0) bar-width)
+                  " "
+                  (spofy-ui-progress-time progress (or duration 0))
+                  "\n")))
       (insert "  "
-              (if is-playing "⏸" "▶")
-              "  "
               (format "shuffle: %s" (if shuffle "on" "off"))
               "  "
               (format "repeat: %s" (or repeat-state "off"))

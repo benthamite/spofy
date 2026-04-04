@@ -129,9 +129,9 @@ The user option ~spofy-mode-line-separator~ is the string inserted before the Sp
 #+vindex: spofy-tab-bar-max-length
 #+vindex: spofy-tab-bar-alignment
 
-The user option ~spofy-tab-bar-format~ is a format string that controls what the tab-bar segment displays.  It defaults to ~"%t %a %s%r"~, which shows the track and artist followed by the shuffle and repeat mode indicators.  The same format specifiers as ~spofy-mode-line-format~ are supported ([[#h:user-options-mode-line][Mode-line]]), plus an additional specifier =%g= that inserts a Unicode progress bar showing the current playback position.
+The user option ~spofy-tab-bar-format~ is a format string that controls what the tab-bar segment displays.  It defaults to ~"%t %a %s%r %G"~, which shows the track and artist, shuffle and repeat indicators, and a progress bar.  The same format specifiers as ~spofy-mode-line-format~ are supported ([[#h:user-options-mode-line][Mode-line]]), plus two additional specifiers: =%G= inserts a progress bar, and =%T= inserts the timestamps (e.g. "1:23 / 3:45").
 
-The user option ~spofy-tab-bar-progress-width~ sets the width in characters of the progress bar in the tab bar.  It defaults to ~10~.  This option is only relevant when the format string contains =%g=.
+The user option ~spofy-tab-bar-progress-width~ sets the width in characters of the progress bar in the tab bar.  It defaults to ~15~.  This option is only relevant when the format string contains =%G=.
 
 The user option ~spofy-tab-bar-max-length~ sets the maximum character length of the tab-bar string.  It defaults to ~50~.  Longer strings are silently truncated.  Set it to ~nil~ to disable truncation entirely.
 
@@ -599,7 +599,7 @@ The function ~spofy-player-playing-p~ returns non-nil if Spotify is currently pl
 
 The function ~spofy-player-current-track-id~ returns the Spotify ID of the currently playing track, or ~nil~.  This is used internally by search and browse buffers to highlight the now-playing row.
 
-The function ~spofy-player-interpolated-progress~ returns the estimated current playback position in milliseconds.  When the track is playing, it adds the wall-clock time elapsed since the last poll to the last-known progress, clamping at the track duration.  When paused, it returns the stored progress directly.  The dashboard progress bar and tab-bar =%g= specifier use this function to update smoothly between poll cycles.
+The function ~spofy-player-interpolated-progress~ returns the estimated current playback position in milliseconds.  When the track is playing, it adds the wall-clock time elapsed since the last poll to the last-known progress, clamping at the track duration.  When paused, it returns the stored progress directly.  The dashboard progress bar and tab-bar =%G= specifier use this function to update smoothly between poll cycles.
 
 ** Entity access in buffers
 :PROPERTIES:
@@ -653,7 +653,8 @@ The function ~spofy-auth-refresh-token~ explicitly uses the stored refresh token
 #+findex: spofy-ui-format-duration-ms
 #+findex: spofy-ui-format-artists
 #+findex: spofy-ui-truncate
-#+findex: spofy-ui-progress-bar
+#+findex: spofy-ui-progress-bar-only
+#+findex: spofy-ui-progress-time
 #+findex: spofy-ui-insert-header
 #+findex: spofy-ui-play-pause-icon
 #+findex: spofy-ui-shuffle-indicator
@@ -666,7 +667,7 @@ The function ~spofy-ui-format-artists~ takes a list of artist alists (as returne
 
 The function ~spofy-ui-truncate~ truncates a string to a given maximum display width.  It accepts an optional FACE argument; when provided, the face is applied to the result and, if truncation occurred, the last three characters are marked with the ~spofy-fade~ text property (levels 1, 2, 3).  After ~tabulated-list-print~, the advice function ~spofy-ui--after-tabulated-list-print~ calls ~spofy-ui--apply-buffer-fades~, which creates overlays on the marked characters with foreground colors blended toward the default background at 25%, 50%, and 75% respectively.  This produces a smooth fade-out effect instead of a hard cut or an explicit ellipsis character.  Because the color blending happens at display time via overlays rather than being baked into text properties, the fade automatically adapts when the user switches themes: ~spofy-ui--refresh-fades~ is registered on ~enable-theme-functions~ and recomputes all fade overlays in Spofy buffers.  It uses ~truncate-string-to-width~ internally, so column alignment is correct even with variable-width characters.  To prevent ~tabulated-list-mode~ from adding its own ellipsis (which in Emacs 30 uses a ~display~ text property that overrides the fade), ~spofy-ui-set-format~ sets ~truncate-string-ellipsis~ to ~""~ buffer-locally.  All entry formatting functions in the browse, library, search, consult, and playlist modules pass the appropriate face to ~spofy-ui-truncate~, which handles both truncation and propertizing in one call.  The mode-line and tab-bar modules call it without a face, so truncation there is silent.
 
-The function ~spofy-ui-progress-bar~ builds a text progress bar for a given progress and duration (both in milliseconds) at a given character width.  It uses full-block characters (U+2588) for the filled portion with the ~spofy-progress-filled~ face, and light-shade characters (U+2591) for the empty portion with ~spofy-progress-empty~.  A time display in ~"M:SS / M:SS"~ format is appended after the bar.  This function is shared between the dashboard and the tab-bar =%g= format specifier.
+The function ~spofy-ui-progress-bar-only~ builds a text progress bar for a given progress and duration (both in milliseconds) at a given character width.  It uses full-block characters (U+2588) for the filled portion with the ~spofy-progress-filled~ face, and light-shade characters (U+2591) for the empty portion with ~spofy-progress-empty~.  The function ~spofy-ui-progress-time~ returns a time display string (e.g. ~"1:23 / 3:45"~) for a given progress and duration.  These functions are used by the dashboard and the tab-bar =%G= and =%T= format specifiers respectively.
 
 The function ~spofy-ui-insert-header~ inserts a list of strings at the top of the current buffer, each on its own line with the ~spofy-header~ face.  It is used by the album, artist, and playlist browse views to render header metadata above the track listing.
 

@@ -38,7 +38,7 @@
 
 ;;;; Customization
 
-(defcustom spofy-tab-bar-format "%t %a %s%r"
+(defcustom spofy-tab-bar-format "%t %a %s%r %G"
   "Format string for the Spofy tab-bar segment.
 The following format specifiers are supported:
   %t  track name
@@ -47,13 +47,14 @@ The following format specifiers are supported:
   %p  play/pause icon (⏸ when playing, ▶ when paused)
   %s  shuffle indicator (⇌ when on, empty when off)
   %r  repeat indicator (↻ for context, ↻₁ for track, empty for off)
-  %g  progress bar"
+  %G  progress bar
+  %T  timestamps (e.g. \"1:23 / 3:45\")"
   :type 'string
   :group 'spofy)
 
-(defcustom spofy-tab-bar-progress-width 10
+(defcustom spofy-tab-bar-progress-width 15
   "Width in characters of the progress bar in the tab bar.
-Only used when the format string contains %g."
+Only used when the format string contains %G."
   :type 'integer
   :group 'spofy)
 
@@ -102,15 +103,23 @@ Returns nil if no player state is available."
       (setq result (string-replace "%p" play-pause result))
       (setq result (string-replace "%s" shuffle result))
       (setq result (string-replace "%r" repeat result))
-      (when (string-search "%g" result)
+      (when (string-match-p "%[GT]" result)
         (let* ((progress (and (fboundp 'spofy-player-interpolated-progress)
                               (spofy-player-interpolated-progress)))
-               (duration (alist-get 'duration state)))
-          (setq result (string-replace "%g"
-                                       (spofy-ui-progress-bar
-                                        (or progress 0) (or duration 0)
-                                        spofy-tab-bar-progress-width)
-                                       result))))
+               (duration (alist-get 'duration state))
+               (prog-val (or progress 0))
+               (dur-val (or duration 0)))
+          (when (string-search "%G" result)
+            (setq result (string-replace "%G"
+                                         (spofy-ui-progress-bar-only
+                                          prog-val dur-val
+                                          spofy-tab-bar-progress-width)
+                                         result)))
+          (when (string-search "%T" result)
+            (setq result (string-replace "%T"
+                                         (spofy-ui-progress-time
+                                          prog-val dur-val)
+                                         result)))))
       (if spofy-tab-bar-max-length
           (spofy-ui-truncate result spofy-tab-bar-max-length)
         result))))
@@ -175,8 +184,8 @@ Also removes `tab-bar-format-align-right' if it was added by this mode."
   "Timer for updating the tab-bar progress bar every second.")
 
 (defun spofy-tab-bar--needs-progress-timer-p ()
-  "Return non-nil if the tab-bar format includes a progress bar."
-  (string-search "%g" spofy-tab-bar-format))
+  "Return non-nil if the tab-bar format includes a progress bar or timestamps."
+  (string-match-p "%[GT]" spofy-tab-bar-format))
 
 (defun spofy-tab-bar--start-progress-timer ()
   "Start a 1-second timer to refresh the tab-bar progress bar."
