@@ -293,7 +293,7 @@ In addition, Spofy auto-enables the mode at package load time when a display fea
 #+findex: spofy-play-track
 #+findex: spofy-play-context
 
-The command ~spofy-play-pause~ toggles playback between playing and paused.  It checks the current state and sends the appropriate API call.  On success, the local player state is updated immediately so that the mode line and tab bar reflect the change without waiting for the next poll cycle.
+The command ~spofy-play-pause~ toggles playback between playing and paused.  It checks the current state and sends the appropriate API call.  On success, the local player state is updated immediately so that the mode line and tab bar reflect the change without waiting for the next poll cycle.  When pausing, the interpolated progress is snapshotted so the displayed position does not jump backwards.  When resuming, the interpolation anchor is reset and Spofy issues an immediate re-poll, which picks up any track change that Spotify may have made (for example, advancing to the next track in the queue).
 
 The commands ~spofy-next~ and ~spofy-previous~ skip to the next or previous track, respectively.
 

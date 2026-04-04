@@ -89,8 +89,10 @@ device, volume, track-id.")
            (album (alist-get 'album item))
            (device (alist-get 'device data)))
       `((track     . ,(alist-get 'name item))
-        (artist    . ,(when artists (spofy-ui-format-artists artists)))
-        (artist-id . ,(when artists (alist-get 'id (aref artists 0))))
+        (artist    . ,(when (and artists (> (length artists) 0))
+                       (spofy-ui-format-artists artists)))
+        (artist-id . ,(when (and artists (> (length artists) 0))
+                       (alist-get 'id (aref artists 0))))
         (album     . ,(alist-get 'name album))
         (album-id  . ,(alist-get 'id album))
         (progress  . ,(alist-get 'progress_ms data))
@@ -248,12 +250,22 @@ a `user-error' so the caller can retry once the app is ready."
   (unless spofy-player--current-state
     (spofy-player--poll-sync))
   (let ((pausing (spofy-player-playing-p)))
-    (spofy-player--update-state 'is-playing (not pausing))
     (if pausing
-        (spofy-api-put "me/player/pause" nil
-                       (lambda (_) (message "Spofy: paused")))
+        ;; Snapshot interpolated progress so display doesn't jump backwards
+        (progn
+          (setf (alist-get 'progress spofy-player--current-state)
+                (spofy-player-interpolated-progress))
+          (spofy-player--update-state 'is-playing nil)
+          (spofy-api-put "me/player/pause" nil
+                         (lambda (_) (message "Spofy: paused"))))
+      ;; Reset poll-time so interpolation starts fresh from stored progress
+      (setf (alist-get 'poll-time spofy-player--current-state) (float-time))
+      (spofy-player--update-state 'is-playing t)
       (spofy-api-put "me/player/play" nil
-                     (lambda (_) (message "Spofy: playing"))))))
+                     (lambda (_)
+                       (message "Spofy: playing")
+                       ;; Re-poll to pick up any track change Spotify made on resume
+                       (spofy-player--poll))))))
 
 ;;;###autoload
 (defun spofy-next ()
