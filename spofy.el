@@ -280,7 +280,8 @@ TIME-RANGE is \"short_term\", \"medium_term\", or \"long_term\"."
   (let ((label (pcase time-range
                  ("short_term" "Top tracks (4 weeks)")
                  ("medium_term" "Top tracks (6 months)")
-                 ("long_term" "Top tracks (1 year)"))))
+                 ("long_term" "Top tracks (1 year)")
+                 (_ (format "Top tracks (%s)" time-range)))))
     (insert "\n" (propertize label 'face 'spofy-header) "\n\n")
     (if (or (null items) (= (length items) 0))
         (insert (propertize "  No tracks" 'face 'spofy-muted) "\n")
@@ -317,7 +318,8 @@ TIME-RANGE is \"short_term\", \"medium_term\", or \"long_term\"."
   (let ((label (pcase time-range
                  ("short_term" "Top artists (4 weeks)")
                  ("medium_term" "Top artists (6 months)")
-                 ("long_term" "Top artists (1 year)"))))
+                 ("long_term" "Top artists (1 year)")
+                 (_ (format "Top artists (%s)" time-range)))))
     (insert "\n" (propertize label 'face 'spofy-header) "\n\n")
     (if (or (null items) (= (length items) 0))
         (insert (propertize "  No artists" 'face 'spofy-muted) "\n")
@@ -584,6 +586,12 @@ authentication, starts polling, and displays the dashboard buffer."
   (let ((buf (get-buffer-create "*Spofy*")))
     (with-current-buffer buf
       (spofy-dashboard-mode)
+      (add-hook 'kill-buffer-hook
+                (lambda ()
+                  (spofy--dashboard-stop-progress-timer)
+                  (remove-hook 'spofy-player-state-changed-hook
+                               #'spofy--dashboard-refresh-now-playing))
+                nil t)
       (spofy--dashboard-render))
     (pop-to-buffer buf)))
 
@@ -592,7 +600,7 @@ authentication, starts polling, and displays the dashboard buffer."
   (interactive)
   (require 'spofy-api)
   (require 'spofy-player)
-  (when (string= (buffer-name) "*Spofy*")
+  (when (derived-mode-p 'spofy-dashboard-mode)
     (spofy--dashboard-render)))
 
 ;;;; Initialization helper

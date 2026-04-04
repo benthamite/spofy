@@ -144,12 +144,15 @@ type, and a random state parameter."
         (file (expand-file-name spofy-token-file))
         (epa-file-select-keys 'silent))
     (condition-case err
-        (progn
-          (with-temp-file file
-            (let ((print-length nil)
-                  (print-level nil))
-              (prin1 data (current-buffer))))
-          (set-file-modes file #o600))
+        (let ((saved-umask (default-file-modes)))
+          (unwind-protect
+              (progn
+                (set-default-file-modes #o600)
+                (with-temp-file file
+                  (let ((print-length nil)
+                        (print-level nil))
+                    (prin1 data (current-buffer)))))
+            (set-default-file-modes saved-umask)))
       (error
        (message "Spofy: failed to persist tokens to %s: %s" file
                 (error-message-string err))))))
@@ -168,16 +171,22 @@ Tokens are stored both in memory and in `spofy-token-file'."
 Returns non-nil if tokens were found."
   (let ((file (expand-file-name spofy-token-file)))
     (when (file-exists-p file)
-      (with-temp-buffer
-        (insert-file-contents file)
-        (let ((data (read (current-buffer))))
-          (when-let* ((access (alist-get 'access-token data)))
-            (setq spofy-auth--access-token access))
-          (when-let* ((refresh (alist-get 'refresh-token data)))
-            (setq spofy-auth--refresh-token refresh))
-          (when-let* ((expiry (alist-get 'token-expiry data)))
-            (setq spofy-auth--token-expiry expiry))
-          (and spofy-auth--access-token spofy-auth--refresh-token))))))
+      (condition-case err
+          (with-temp-buffer
+            (insert-file-contents file)
+            (let ((data (read (current-buffer))))
+              (when (listp data)
+                (when-let* ((access (alist-get 'access-token data)))
+                  (setq spofy-auth--access-token access))
+                (when-let* ((refresh (alist-get 'refresh-token data)))
+                  (setq spofy-auth--refresh-token refresh))
+                (when-let* ((expiry (alist-get 'token-expiry data)))
+                  (setq spofy-auth--token-expiry expiry))
+                (and spofy-auth--access-token spofy-auth--refresh-token))))
+        (error
+         (message "Spofy: failed to read token file %s: %s"
+                  file (error-message-string err))
+         nil)))))
 
 ;;;; Token access
 
@@ -217,16 +226,24 @@ on success, or signals an error on failure."
     (url-retrieve
      "https://accounts.spotify.com/api/token"
      (lambda (status)
-       (if (plist-get status :error)
-           (error "Spofy: token exchange failed: %S" (plist-get status :error))
-         (goto-char url-http-end-of-headers)
-         (let* ((json (json-parse-buffer :object-type 'alist))
-                (access-token (alist-get 'access_token json))
-                (refresh-token (alist-get 'refresh_token json))
-                (expires-in (alist-get 'expires_in json)))
-           (if access-token
-               (funcall callback access-token refresh-token expires-in)
-             (error "Spofy: token exchange returned no access token: %S" json))))))))
+       (let ((buf (current-buffer)))
+         (unwind-protect
+             (if (plist-get status :error)
+                 (message "Spofy: token exchange failed: %S" (plist-get status :error))
+               (goto-char url-http-end-of-headers)
+               (let* ((json (condition-case err
+                                (json-parse-buffer :object-type 'alist)
+                              (error
+                               (message "Spofy: failed to parse token response: %s"
+                                        (error-message-string err))
+                               nil)))
+                      (access-token (and json (alist-get 'access_token json)))
+                      (refresh-token (and json (alist-get 'refresh_token json)))
+                      (expires-in (and json (alist-get 'expires_in json))))
+                 (if access-token
+                     (funcall callback access-token refresh-token expires-in)
+                   (message "Spofy: token exchange returned no access token: %S" json))))
+           (kill-buffer buf))))))))
 
 ;;;; Token refresh
 
@@ -251,14 +268,20 @@ Updates the stored tokens on success."
       (unwind-protect
           (with-current-buffer buf
             (goto-char url-http-end-of-headers)
-            (let* ((json (json-parse-buffer :object-type 'alist))
-                   (access-token (alist-get 'access_token json))
-                   (new-refresh (alist-get 'refresh_token json))
-                   (expires-in (alist-get 'expires_in json)))
-              (when access-token
-                (spofy-auth--store-tokens access-token
-                                          (or new-refresh spofy-auth--refresh-token)
-                                          expires-in))))
+            (let* ((json (condition-case nil
+                             (json-parse-buffer :object-type 'alist)
+                           (json-parse-error nil)))
+                   (access-token (and json (alist-get 'access_token json)))
+                   (new-refresh (and json (alist-get 'refresh_token json)))
+                   (expires-in (and json (alist-get 'expires_in json))))
+              (if access-token
+                  (spofy-auth--store-tokens access-token
+                                            (or new-refresh spofy-auth--refresh-token)
+                                            expires-in)
+                (message "Spofy: token refresh failed: %s"
+                         (or (and json (alist-get 'error_description json))
+                             (and json (alist-get 'error json))
+                             "no access token in response")))))
         (kill-buffer buf)))))
 
 ;;;; Callback parsing
@@ -326,6 +349,7 @@ the code for tokens, and sends an HTTP response to the browser."
      ((not (equal (alist-get 'state params) spofy-auth--state))
       (spofy-auth--send-response proc 400
                                   "Invalid state parameter. You can close this window.")
+      (spofy-auth--stop-server)
       (message "Spofy: OAuth2 state mismatch — possible CSRF attack"))
      ((alist-get 'code params)
       (spofy-auth--send-response proc 200
@@ -340,11 +364,16 @@ the code for tokens, and sends an HTTP response to the browser."
      (t
       (spofy-auth--send-response proc 400
                                   "Missing authorization code. You can close this window.")
+      (spofy-auth--stop-server)
       (message "Spofy: callback received without authorization code")))))
 
 (defun spofy-auth--send-response (proc status-code body)
   "Send an HTTP response to PROC with STATUS-CODE and BODY text."
-  (let ((status-text (if (= status-code 200) "OK" "Bad Request")))
+  (let ((status-text (pcase status-code
+                       (200 "OK")
+                       (400 "Bad Request")
+                       (404 "Not Found")
+                       (_ "Error"))))
     (process-send-string
      proc
      (format "HTTP/1.1 %d %s\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n<html><body><h2>%s</h2></body></html>"

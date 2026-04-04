@@ -145,9 +145,12 @@ or not valid JSON."
     (when (re-search-forward "\r?\n\r?\n" nil t)
       (let ((body (buffer-substring-no-properties (point) (point-max))))
         (when (and body (not (string-empty-p (string-trim body))))
-          (condition-case nil
+          (condition-case err
               (json-parse-string body :object-type 'alist :array-type 'array)
-            (json-parse-error nil)))))))
+            (json-parse-error
+             (message "Spofy: failed to parse JSON response: %s"
+                      (error-message-string err))
+             nil)))))))
 
 ;;;; URL construction
 
@@ -160,12 +163,13 @@ ENDPOINT is a relative path (e.g. \"me/playlists\") or a full URL
                (concat spofy-api--base-url
                        (string-remove-prefix "/" endpoint)))))
     (if params
-        (concat url "?" (mapconcat
-                         (lambda (pair)
-                           (format "%s=%s"
-                                   (url-hexify-string (car pair))
-                                   (url-hexify-string (cdr pair))))
-                         params "&"))
+        (concat url (if (string-match-p "\\?" url) "&" "?")
+                (mapconcat
+                 (lambda (pair)
+                   (format "%s=%s"
+                           (url-hexify-string (car pair))
+                           (url-hexify-string (cdr pair))))
+                 params "&"))
       url)))
 
 ;;;; Backoff
@@ -197,12 +201,12 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
   ;; Check cache for GET requests
   (let* ((full-url (if params (spofy-api--build-url url params) url))
          (cache-key (spofy-api--cache-key method full-url nil)))
-    (if (and (equal method "GET")
-             (not (spofy-api--skip-cache-p full-url))
-             (spofy-api--cache-get cache-key))
+    (if-let* ((cached (and (equal method "GET")
+                         (not (spofy-api--skip-cache-p full-url))
+                         (spofy-api--cache-get cache-key))))
         ;; Return cached result
         (when callback
-          (funcall callback (spofy-api--cache-get cache-key)))
+          (funcall callback cached))
       ;; Make the actual request.  Spotify requires a JSON body (even
       ;; "{}") on PUT/POST/DELETE; omitting it causes "Malformed json".
       (let* ((token (spofy-auth-access-token))
@@ -240,19 +244,22 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
                   ;; Unauthorized (401): refresh token and retry once
                   ((and (eql status-code 401) (not refreshed-p))
                    (kill-buffer buf)
-                   (condition-case nil
+                   (condition-case err
                        (spofy-auth-refresh-token)
-                     (error nil))
+                     (error
+                      (message "Spofy: token refresh failed: %s"
+                               (error-message-string err))))
                    (spofy-api--request-with-retries
                     method url params data callback retry-count t))
                   ;; Rate limited (429): retry after delay
-                  ((eql status-code 429)
+                  ((and (eql status-code 429)
+                        (< retry-count spofy-api--max-retries))
                    (let ((delay (spofy-api--parse-retry-after)))
                      (kill-buffer buf)
                      (run-at-time delay nil
                                   #'spofy-api--request-with-retries
                                   method url params data callback
-                                  retry-count refreshed-p)))
+                                  (1+ retry-count) refreshed-p)))
                   ;; Server error (5xx): exponential backoff
                   ((and status-code (>= status-code 500)
                         (< retry-count spofy-api--max-retries))

@@ -68,7 +68,7 @@ The row ID is used as the key into `spofy-browse--entities'."
 Shows a play icon if TRACK-URI matches the currently playing track."
   (let* ((current-id (and (fboundp 'spofy-player-current-track-id)
                           (spofy-player-current-track-id)))
-         (playing-p (and current-id
+         (playing-p (and current-id track-uri
                          (string-match-p (regexp-quote current-id) track-uri))))
     (if playing-p
         (propertize "\u25B6" 'face 'spofy-playing-icon)
@@ -130,10 +130,6 @@ ALBUM-URI is the album context URI for playback."
          (artists-str (if artists (spofy-ui-format-artists artists) ""))
          (dur-str (if duration (spofy-ui-format-duration-ms duration) "")))
     (spofy-browse--store-entity uri track)
-    ;; Store album-uri in buffer context for playback
-    (setq-local spofy-ui--buffer-context
-                (cons (cons 'album-uri album-uri)
-                      (assq-delete-all 'album-uri spofy-ui--buffer-context)))
     (list uri
           (vector (if (string-empty-p playing) num-str
                     (propertize num-str 'face 'spofy-playing))
@@ -220,6 +216,7 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
   (interactive)
   (when-let* ((entity (spofy-browse-entity-at-point))
               (artists (alist-get 'artists entity))
+              ((_notempty (> (length artists) 0)))
               (artist (aref artists 0))
               (artist-id (alist-get 'id artist)))
     (spofy-view-artist artist-id)))
@@ -371,10 +368,10 @@ Fetches artist info and albums, then displays in a tabulated-list buffer."
 
 (defvar spofy-artist-top-tracks-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") #'spofy-top-tracks-play)
-    (define-key map (kbd "a")   #'spofy-top-tracks-view-album)
-    (define-key map (kbd "s")   #'spofy-top-tracks-save)
-    (define-key map (kbd "g")   #'spofy-top-tracks-refresh)
+    (define-key map (kbd "RET") #'spofy-artist-top-tracks-play)
+    (define-key map (kbd "a")   #'spofy-artist-top-tracks-view-album)
+    (define-key map (kbd "s")   #'spofy-artist-top-tracks-save)
+    (define-key map (kbd "g")   #'spofy-artist-top-tracks-refresh)
     (define-key map (kbd "q")   #'quit-window)
     map)
   "Keymap for `spofy-artist-top-tracks-mode'.")
@@ -438,13 +435,13 @@ ARTIST-ID is kept for refresh."
                    (let ((tracks (alist-get 'tracks response)))
                      (spofy-top-tracks--render artist-id artist-name tracks)))))
 
-(defun spofy-top-tracks-play ()
+(defun spofy-artist-top-tracks-play ()
   "Play the track at point."
   (interactive)
   (when-let* ((uri (tabulated-list-get-id)))
     (spofy-play-track uri nil)))
 
-(defun spofy-top-tracks-view-album ()
+(defun spofy-artist-top-tracks-view-album ()
   "View the album of the track at point."
   (interactive)
   (when-let* ((entity (spofy-browse-entity-at-point))
@@ -452,14 +449,14 @@ ARTIST-ID is kept for refresh."
               (album-id (alist-get 'id album)))
     (spofy-view-album album-id)))
 
-(defun spofy-top-tracks-save ()
+(defun spofy-artist-top-tracks-save ()
   "Save the track at point to the user's library."
   (interactive)
   (when-let* ((uri (tabulated-list-get-id)))
     (spofy-library-save uri)))
 
-(defun spofy-top-tracks-refresh ()
-  "Refresh the top tracks view."
+(defun spofy-artist-top-tracks-refresh ()
+  "Refresh the artist top tracks view."
   (interactive)
   (when-let* ((artist-id (alist-get 'artist-id spofy-ui--buffer-context))
               (artist-name (alist-get 'artist-name spofy-ui--buffer-context)))
@@ -605,6 +602,7 @@ Fetches playlist data from the API and displays it in a tabulated-list buffer."
   (when-let* ((entity (spofy-browse-entity-at-point))
               (track (or (alist-get 'track entity) entity))
               (artists (alist-get 'artists track))
+              ((_notempty (> (length artists) 0)))
               (artist (aref artists 0))
               (artist-id (alist-get 'id artist)))
     (spofy-view-artist artist-id)))

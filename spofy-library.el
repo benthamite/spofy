@@ -104,7 +104,7 @@ Returns \"track\" or \"album\"."
 Shows a play icon if TRACK-URI matches the currently playing track."
   (let* ((current-id (and (fboundp 'spofy-player-current-track-id)
                           (spofy-player-current-track-id)))
-         (playing-p (and current-id
+         (playing-p (and current-id track-uri
                          (string-match-p (regexp-quote current-id) track-uri))))
     (if playing-p
         (propertize "\u25B6" 'face 'spofy-playing-icon)
@@ -220,6 +220,7 @@ in a tabulated-list buffer."
   (interactive)
   (when-let* ((entity (spofy-library-entity-at-point))
               (artists (alist-get 'artists entity))
+              ((_notempty (> (length artists) 0)))
               (artist (aref artists 0))
               (artist-id (alist-get 'id artist)))
     (spofy-view-artist artist-id)))
@@ -345,6 +346,7 @@ in a tabulated-list buffer."
   (interactive)
   (when-let* ((entity (spofy-library-entity-at-point))
               (artists (alist-get 'artists entity))
+              ((_notempty (> (length artists) 0)))
               (artist (aref artists 0))
               (artist-id (alist-get 'id artist)))
     (spofy-view-artist artist-id)))
@@ -441,6 +443,7 @@ in a tabulated-list buffer."
   (interactive)
   (when-let* ((entity (spofy-library-entity-at-point))
               (artists (alist-get 'artists entity))
+              ((_notempty (> (length artists) 0)))
               (artist (aref artists 0))
               (artist-id (alist-get 'id artist)))
     (spofy-view-artist artist-id)))
@@ -611,6 +614,7 @@ Defaults to \"medium_term\"."
   (interactive)
   (when-let* ((entity (spofy-library-entity-at-point))
               (artists (alist-get 'artists entity))
+              ((_notempty (> (length artists) 0)))
               (artist (aref artists 0))
               (artist-id (alist-get 'id artist)))
     (spofy-view-artist artist-id)))
@@ -811,6 +815,7 @@ Defaults to \"medium_term\"."
   (interactive)
   (when-let* ((entity (spofy-library-entity-at-point))
               (artists (alist-get 'artists entity))
+              ((_notempty (> (length artists) 0)))
               (artist (aref artists 0))
               (artist-id (alist-get 'id artist)))
     (spofy-view-artist artist-id)))

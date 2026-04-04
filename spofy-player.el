@@ -131,11 +131,13 @@ Compare to previous state and run appropriate hooks."
           ;; Preserve optimistic volume during the grace period after a
           ;; user-initiated volume change, so the poll doesn't overwrite it
           ;; with a stale value from Spotify.
-          (when (and spofy-player--volume-set-time
-                     (< (- (float-time) spofy-player--volume-set-time)
-                        spofy-poll-interval))
-            (setf (alist-get 'volume new-state)
-                  (alist-get 'volume spofy-player--current-state)))
+          (when spofy-player--volume-set-time
+            (if (< (- (float-time) spofy-player--volume-set-time)
+                   spofy-poll-interval)
+                (when spofy-player--current-state
+                  (setf (alist-get 'volume new-state)
+                        (alist-get 'volume spofy-player--current-state)))
+              (setq spofy-player--volume-set-time nil)))
           (let ((old-state spofy-player--current-state))
             (setq spofy-player--current-state new-state)
             (unless (equal old-state new-state)
@@ -224,21 +226,21 @@ a `user-error' so the caller can retry once the app is ready."
 (defun spofy-select-device ()
   "List available Spotify devices and transfer playback to the selected one."
   (interactive)
-  (spofy-api-get
-   "me/player/devices" nil
-   (lambda (data)
-     (let* ((devices (alist-get 'devices data))
-            (names (mapcar (lambda (d) (alist-get 'name d)) devices))
-            (choice (completing-read "Spofy device: " names nil t)))
-       (when-let* ((device (cl-find choice devices
-                                    :key (lambda (d) (alist-get 'name d))
-                                    :test #'equal))
-                   (device-id (alist-get 'id device)))
-         (spofy-api-put "me/player"
-                        `((device_ids . [,device-id])
-                          (play . t))
-                        (lambda (_)
-                          (message "Spofy: transferred playback to %s" choice))))))))
+  (let* ((data (spofy-api-get-sync "me/player/devices"))
+         (devices (and data (alist-get 'devices data)))
+         (names (mapcar (lambda (d) (alist-get 'name d)) devices)))
+    (unless devices
+      (user-error "Spofy: no devices found"))
+    (let ((choice (completing-read "Spofy device: " names nil t)))
+      (when-let* ((device (cl-find choice devices
+                                   :key (lambda (d) (alist-get 'name d))
+                                   :test #'equal))
+                  (device-id (alist-get 'id device)))
+        (spofy-api-put "me/player"
+                       `((device_ids . [,device-id])
+                         (play . t))
+                       (lambda (_)
+                         (message "Spofy: transferred playback to %s" choice)))))))
 
 ;;;; Playback commands
 
@@ -288,8 +290,9 @@ a `user-error' so the caller can retry once the app is ready."
   "Seek forward by `spofy-seek-seconds' seconds."
   (interactive)
   (spofy-player--ensure-device)
-  (let* ((progress (or (alist-get 'progress spofy-player--current-state) 0))
-         (new-pos (+ progress (* spofy-seek-seconds 1000))))
+  (let* ((progress (or (spofy-player-interpolated-progress) 0))
+         (duration (or (alist-get 'duration spofy-player--current-state) 0))
+         (new-pos (min duration (+ progress (* spofy-seek-seconds 1000)))))
     (spofy-api-put (format "me/player/seek?position_ms=%d" new-pos) nil
                    (lambda (_) (message "Spofy: seeked forward %ds" spofy-seek-seconds)))))
 
@@ -298,7 +301,7 @@ a `user-error' so the caller can retry once the app is ready."
   "Seek backward by `spofy-seek-seconds' seconds."
   (interactive)
   (spofy-player--ensure-device)
-  (let* ((progress (or (alist-get 'progress spofy-player--current-state) 0))
+  (let* ((progress (or (spofy-player-interpolated-progress) 0))
          (new-pos (max 0 (- progress (* spofy-seek-seconds 1000)))))
     (spofy-api-put (format "me/player/seek?position_ms=%d" new-pos) nil
                    (lambda (_) (message "Spofy: seeked backward %ds" spofy-seek-seconds)))))
