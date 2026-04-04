@@ -227,7 +227,7 @@ Any Spofy command that requires an active session will prompt for authentication
 #+findex: spofy-dashboard-refresh
 #+findex: spofy-stop
 
-The command ~spofy~ is the main entry point.  It ensures that the user is authenticated (prompting if not), starts player state polling, and opens the =*Spofy*= dashboard buffer.  The dashboard always shows a *now playing* section at the top (track name, artist, and album each on its own line, progress bar, and playback state indicators).  Below it, a configurable list of sections is displayed according to ~spofy-dashboard-sections~ ([[#h:user-options-global][Global options]]).  By default, the dashboard shows recently played tracks and user playlists.  Each section includes a "View all..." link that opens the full list in a tabulated-list buffer.
+The command ~spofy~ is the main entry point.  It ensures that the user is authenticated (prompting if not), starts player state polling, and opens the =*Spofy*= dashboard buffer.  The dashboard always shows a *now playing* section at the top (track name, artist, and album with release year each on its own line, progress bar, and playback state indicators).  Below it, a configurable list of sections is displayed according to ~spofy-dashboard-sections~ ([[#h:user-options-global][Global options]]).  By default, the dashboard shows recently played tracks and user playlists.  Each section includes a "View all..." link that opens the full list in a tabulated-list buffer.
 
 The now-playing section refreshes automatically when the player state changes.  A 1-second timer interpolates the progress bar between polls so it animates smoothly.  The command ~spofy-dashboard-refresh~ forces a full refresh of the entire dashboard.
 

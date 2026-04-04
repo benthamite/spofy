@@ -257,6 +257,7 @@ The next 1-second progress timer tick will pick up the new image."
          (track (and state (alist-get 'track state)))
          (artist (and state (alist-get 'artist state)))
          (album (and state (alist-get 'album state)))
+         (album-date (and state (alist-get 'album-date state)))
          (progress (and state (spofy-player-interpolated-progress)))
          (duration (and state (alist-get 'duration state)))
          (is-playing (and state (alist-get 'is-playing state)))
@@ -277,10 +278,16 @@ The next 1-second progress timer tick will pick up the new image."
               (spofy--dashboard-truncate
                (propertize (or artist "") 'face 'spofy-now-playing-artist))
               "\n")
-      (insert "  "
-              (spofy--dashboard-truncate
-               (propertize (or album "") 'face 'spofy-now-playing-album))
-              "\n")
+      (let ((album-str (or album "")))
+        (when album-date
+          (setq album-str (concat album-str
+                                  " ("
+                                  (substring album-date 0 (min 4 (length album-date)))
+                                  ")")))
+        (insert "  "
+                (spofy--dashboard-truncate
+                 (propertize album-str 'face 'spofy-now-playing-album))
+                "\n"))
       ;; Album art
       (let ((art-char-width nil))
         (when (and spofy-dashboard-album-art (display-graphic-p))

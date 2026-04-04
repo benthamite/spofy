@@ -100,6 +100,7 @@ IMAGES is the `images' array from a Spotify album object."
         (artist-id . ,(when (and artists (> (length artists) 0))
                        (alist-get 'id (aref artists 0))))
         (album     . ,(alist-get 'name album))
+        (album-date . ,(alist-get 'release_date album))
         (album-id  . ,(alist-get 'id album))
         (album-image-url . ,(spofy-player--best-image-url
                               (alist-get 'images album)))
