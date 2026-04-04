@@ -268,7 +268,20 @@ The next 1-second progress timer tick will pick up the new image."
           (setq spofy--album-art-current-album-id nil
                 spofy--album-art-image nil)
           (insert (propertize "  No track playing" 'face 'spofy-muted) "\n"))
-      ;; Album art (above text)
+      ;; Track info
+      (insert "  "
+              (spofy--dashboard-truncate
+               (propertize track 'face 'spofy-track-name))
+              "\n")
+      (insert "  "
+              (spofy--dashboard-truncate
+               (propertize (or artist "") 'face 'spofy-artist-name))
+              "\n")
+      (insert "  "
+              (spofy--dashboard-truncate
+               (propertize (or album "") 'face 'spofy-album-name))
+              "\n")
+      ;; Album art
       (when (and spofy-dashboard-album-art (display-graphic-p))
         (spofy--album-art-update (alist-get 'album-id state)
                                  (alist-get 'album-image-url state))
@@ -278,13 +291,6 @@ The next 1-second progress timer tick will pick up the new image."
           (insert "  ")
           (insert-image spofy--album-art-image "[album art]")
           (insert "\n")))
-      ;; Track info
-      (insert "  "
-              (propertize track 'face 'spofy-track-name)
-              " "
-              (propertize (or artist "") 'face 'spofy-artist-name)
-              "\n")
-      (insert "  " (propertize (or album "") 'face 'spofy-album-name) "\n")
       (insert "  "
               (spofy-ui-progress-bar progress (or duration 0) 20)
               "\n")
@@ -295,6 +301,23 @@ The next 1-second progress timer tick will pick up the new image."
               "  "
               (format "repeat: %s" (or repeat-state "off"))
               "\n"))))
+
+;;;;; Dashboard: text truncation
+
+(defun spofy--dashboard-truncate (text)
+  "Truncate TEXT to fit within the window, accounting for indent.
+When truncated, mark the last three characters with the
+`spofy-fade' text property for gradient fade-out rendering."
+  (let ((max-width (max 10 (- (window-width) 4))))
+    (if (<= (string-width text) max-width)
+        text
+      (let ((result (truncate-string-to-width text max-width)))
+        (let ((len (length result)))
+          (when (>= len 3)
+            (dotimes (i 3)
+              (put-text-property (+ (- len 3) i) (+ (- len 3) i 1)
+                                 'spofy-fade (1+ i) result))))
+        result))))
 
 ;;;;; Dashboard: recently played section
 
@@ -312,8 +335,9 @@ The next 1-second progress timer tick will pick up the new image."
         (when name
           (insert "  ")
           (insert-text-button
-           (concat (propertize (concat name " ") 'face 'spofy-track-name)
-                   (propertize artist-str 'face 'spofy-artist-name))
+           (spofy--dashboard-truncate
+            (concat (propertize (concat name " ") 'face 'spofy-track-name)
+                    (propertize artist-str 'face 'spofy-artist-name)))
            'action (lambda (_btn)
                      (require 'spofy-player)
                      (spofy-play-track uri))
@@ -343,8 +367,9 @@ The next 1-second progress timer tick will pick up the new image."
              (playlist-id (alist-get 'id item)))
         (insert "  ")
         (insert-text-button
-         (concat (propertize (concat name " ") 'face 'spofy-track-name)
-                 (propertize (format "(%d tracks)" total) 'face 'spofy-muted))
+         (spofy--dashboard-truncate
+          (concat (propertize (concat name " ") 'face 'spofy-track-name)
+                  (propertize (format "(%d tracks)" total) 'face 'spofy-muted)))
          'action (lambda (_btn)
                    (require 'spofy-browse)
                    (spofy-view-playlist playlist-id))
@@ -380,8 +405,9 @@ TIME-RANGE is \"short_term\", \"medium_term\", or \"long_term\"."
                (uri (alist-get 'uri item)))
           (insert "  ")
           (insert-text-button
-           (concat (propertize (concat name " ") 'face 'spofy-track-name)
-                   (propertize artist-str 'face 'spofy-artist-name))
+           (spofy--dashboard-truncate
+            (concat (propertize (concat name " ") 'face 'spofy-track-name)
+                    (propertize artist-str 'face 'spofy-artist-name)))
            'action (lambda (_btn)
                      (require 'spofy-player)
                      (spofy-play-track uri))
@@ -422,9 +448,10 @@ TIME-RANGE is \"short_term\", \"medium_term\", or \"long_term\"."
                (id (alist-get 'id item)))
           (insert "  ")
           (insert-text-button
-           (concat (propertize name 'face 'spofy-track-name)
-                   (unless (string-empty-p genre-str)
-                     (propertize (concat " " genre-str) 'face 'spofy-muted)))
+           (spofy--dashboard-truncate
+            (concat (propertize name 'face 'spofy-track-name)
+                    (unless (string-empty-p genre-str)
+                      (propertize (concat " " genre-str) 'face 'spofy-muted))))
            'action (lambda (_btn)
                      (require 'spofy-browse)
                      (spofy-view-artist id))
@@ -454,8 +481,9 @@ TIME-RANGE is \"short_term\", \"medium_term\", or \"long_term\"."
              (album-id (alist-get 'id item)))
         (insert "  ")
         (insert-text-button
-         (concat (propertize (concat name " ") 'face 'spofy-album-name)
-                 (propertize artist-str 'face 'spofy-artist-name))
+         (spofy--dashboard-truncate
+          (concat (propertize (concat name " ") 'face 'spofy-album-name)
+                  (propertize artist-str 'face 'spofy-artist-name)))
          'action (lambda (_btn)
                    (require 'spofy-browse)
                    (spofy-view-album album-id))
@@ -570,6 +598,7 @@ Called from `spofy-player-state-changed-hook' and the progress timer."
               ;; Keep first section marker in sync after re-render
               (when-let* ((first (alist-get 0 spofy--dashboard-section-markers)))
                 (set-marker first end)))
+            (spofy-ui--apply-buffer-fades)
             (goto-char (min pos (point-max)))
             (when-let* ((win (get-buffer-window buf)))
               (force-window-update win))))))))
@@ -642,7 +671,8 @@ Assumes the current buffer is in `spofy-dashboard-mode'."
                     (delete-region start-marker end-marker)
                     (goto-char start-marker)
                     (funcall inserter items)
-                    (set-marker end-marker (point)))
+                    (set-marker end-marker (point))
+                    (spofy-ui--apply-buffer-fades))
                   (goto-char (min pos (point-max)))))))))))))
 
 
