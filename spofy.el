@@ -629,17 +629,9 @@ Signals `user-error' if authentication tokens are not available."
     ("n" "Next"          spofy-next)
     ("p" "Previous"      spofy-previous)
     ("f" "Seek forward"  spofy-seek-forward :transient t)
-    ("r" "Seek backward" spofy-seek-backward :transient t)]
-   ["Search"
-    ("s t" "Tracks"    spofy-search-tracks)
-    ("s l" "Albums"    spofy-search-albums)
-    ("s a" "Artists"   spofy-search-artists)
-    ("s p" "Playlists" spofy-search-playlists)]
-   ["Browse"
-    ("l"  "Library"   spofy-library-menu)
-    ("P"  "Playlists" spofy-list-playlists)
-    ("d"  "Devices"   spofy-select-device)]
-   ["Volume"
+    ("r" "Seek backward" spofy-seek-backward :transient t)
+    ""
+    "Volume"
     ("+" "Volume up"   spofy-volume-up :transient t)
     ("-" "Volume down" spofy-volume-down :transient t)
     ("v" "Set volume"  spofy-volume-set)
@@ -657,7 +649,17 @@ Signals `user-error' if authentication tokens are not available."
                       (if (equal state "off")
                           "Repeat off"
                         (concat "Repeat " (propertize state 'face 'transient-value)))))
-     :transient t)
+     :transient t)]
+   ["Search"
+    ("s t" "Tracks"    spofy-search-tracks)
+    ("s l" "Albums"    spofy-search-albums)
+    ("s a" "Artists"   spofy-search-artists)
+    ("s p" "Playlists" spofy-search-playlists)
+    ""
+    "Browse"
+    ("l"  "Library"   spofy-library-menu)
+    ("P"  "Playlists" spofy-list-playlists)
+    ("d"  "Devices"   spofy-select-device)
     ""
     "Other"
     ("w" "Wikipedia" spofy-wikipedia)
