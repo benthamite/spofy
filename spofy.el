@@ -271,29 +271,34 @@ The next 1-second progress timer tick will pick up the new image."
       ;; Track info
       (insert "  "
               (spofy--dashboard-truncate
-               (propertize track 'face 'spofy-track-name))
+               (propertize track 'face 'spofy-now-playing-track))
               "\n")
       (insert "  "
               (spofy--dashboard-truncate
-               (propertize (or artist "") 'face 'spofy-artist-name))
+               (propertize (or artist "") 'face 'spofy-now-playing-artist))
               "\n")
       (insert "  "
               (spofy--dashboard-truncate
-               (propertize (or album "") 'face 'spofy-album-name))
+               (propertize (or album "") 'face 'spofy-now-playing-album))
               "\n")
       ;; Album art
-      (when (and spofy-dashboard-album-art (display-graphic-p))
-        (spofy--album-art-update (alist-get 'album-id state)
-                                 (alist-get 'album-image-url state))
-        (when (and spofy--album-art-image
-                   (equal (alist-get 'album-id state)
-                          spofy--album-art-current-album-id))
-          (insert "  ")
-          (insert-image spofy--album-art-image "[album art]")
-          (insert "\n")))
-      (insert "  "
-              (spofy-ui-progress-bar progress (or duration 0) 20)
-              "\n")
+      (let ((art-char-width nil))
+        (when (and spofy-dashboard-album-art (display-graphic-p))
+          (spofy--album-art-update (alist-get 'album-id state)
+                                   (alist-get 'album-image-url state))
+          (when (and spofy--album-art-image
+                     (equal (alist-get 'album-id state)
+                            spofy--album-art-current-album-id))
+            (insert "  ")
+            (insert-image spofy--album-art-image "[album art]")
+            (insert "\n")
+            (setq art-char-width (car (image-size spofy--album-art-image)))))
+        (insert "  "
+                (spofy-ui-progress-bar progress (or duration 0)
+                                       (if art-char-width
+                                           (max 10 (truncate art-char-width))
+                                         20))
+                "\n"))
       (insert "  "
               (if is-playing "⏸" "▶")
               "  "

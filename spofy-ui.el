@@ -57,6 +57,21 @@
   "Face for album names."
   :group 'spofy-faces)
 
+(defface spofy-now-playing-track
+  '((t :inherit spofy-track-name :height 1.3))
+  "Face for the track name in the now-playing dashboard section."
+  :group 'spofy-faces)
+
+(defface spofy-now-playing-artist
+  '((t :inherit spofy-artist-name :height 1.3))
+  "Face for the artist name in the now-playing dashboard section."
+  :group 'spofy-faces)
+
+(defface spofy-now-playing-album
+  '((t :inherit spofy-album-name :height 1.3))
+  "Face for the album name in the now-playing dashboard section."
+  :group 'spofy-faces)
+
 (defface spofy-playing
   '((t :inherit bold :foreground "#1DB954")) ; Spotify brand green
   "Face for the currently playing track."
