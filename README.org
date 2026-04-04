@@ -216,6 +216,8 @@ The command ~spofy-authenticate~ initiates the Spotify OAuth2 authorization flow
 
 After successful authentication, Spofy runs ~spofy-authenticated-hook~.  You only need to authenticate once; subsequent sessions reuse the stored refresh token to obtain new access tokens automatically.
 
+Any Spofy command that requires an active session will prompt for authentication if no valid tokens are found, so you do not need to call ~spofy-authenticate~ or ~spofy~ explicitly before using other entry points such as the transient menu.
+
 ** Dashboard and global control
 :PROPERTIES:
 :CUSTOM_ID: h:dashboard

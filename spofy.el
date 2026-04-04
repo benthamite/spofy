@@ -608,13 +608,17 @@ authentication, starts polling, and displays the dashboard buffer."
 (defun spofy--ensure-global-mode ()
   "Ensure `spofy-global-mode' is active.
 Loads required modules, checks authentication, and enables the mode.
-Signals `user-error' if authentication tokens are not available."
+If no tokens are available, prompts the user to authenticate."
   (require 'spofy-auth)
   (require 'spofy-api)
   (require 'spofy-player)
   (spofy-auth--load-tokens)
   (unless (spofy-auth-access-token)
-    (user-error "Spofy: not authenticated; run `spofy' to authenticate"))
+    (if (y-or-n-p "Spofy: not authenticated.  Authenticate now? ")
+        (progn
+          (spofy-authenticate)
+          (user-error "Spofy: complete authentication in your browser, then try again"))
+      (user-error "Spofy: authentication required")))
   (unless spofy-global-mode
     (spofy-global-mode 1)))
 
