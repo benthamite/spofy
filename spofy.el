@@ -178,8 +178,7 @@ Each element is a symbol naming a section.  Available sections:
 
 (define-derived-mode spofy-dashboard-mode special-mode "Spofy"
   "Major mode for the Spofy dashboard buffer."
-  :group 'spofy
-  (setq-local cursor-type nil))
+  :group 'spofy)
 
 ;;;;; Dashboard: album art
 
