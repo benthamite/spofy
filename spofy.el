@@ -111,6 +111,7 @@
 (defvar spofy-auth--access-token)
 (defvar spofy-player--current-state)
 (defvar spofy-player-state-changed-hook)
+(defvar spofy-player-track-changed-hook)
 (defvar spofy-player--timer)
 (defvar spofy-global-mode)
 
@@ -619,6 +620,44 @@ Called from `spofy-player-state-changed-hook' and the progress timer."
     (cancel-timer spofy--dashboard-progress-timer)
     (setq spofy--dashboard-progress-timer nil)))
 
+;;;;; Dashboard: section refresh
+
+(defun spofy--dashboard-refresh-section (section)
+  "Re-fetch and re-render a single dashboard SECTION by name."
+  (when-let* ((buf (get-buffer "*Spofy*")))
+    (when (buffer-live-p buf)
+      (with-current-buffer buf
+        (when-let* ((idx (cl-position section spofy-dashboard-sections))
+                    (spec (spofy--dashboard-section-spec section)))
+          (let ((sec section)
+                (i idx)
+                (endpoint (nth 0 spec))
+                (params (nth 1 spec))
+                (inserter (nth 2 spec)))
+            (spofy-api-get
+             endpoint params
+             (lambda (response)
+               (when (buffer-live-p buf)
+                 (with-current-buffer buf
+                   (let* ((inhibit-read-only t)
+                          (pos (point))
+                          (items (spofy--dashboard-section-extract-items sec response))
+                          (start-marker (alist-get i spofy--dashboard-section-markers))
+                          (end-marker (alist-get (1+ i) spofy--dashboard-section-markers)))
+                     (when (and start-marker end-marker
+                                (marker-position start-marker)
+                                (marker-position end-marker))
+                       (delete-region start-marker end-marker)
+                       (goto-char start-marker)
+                       (funcall inserter items)
+                       (set-marker end-marker (point))
+                       (spofy-ui--apply-buffer-fades))
+                     (goto-char (min pos (point-max))))))))))))))
+
+(defun spofy--dashboard-refresh-recently-played ()
+  "Refresh the recently-played dashboard section after a track change."
+  (spofy--dashboard-refresh-section 'recently-played))
+
 ;;;;; Dashboard: full render
 
 (defun spofy--dashboard-render ()
@@ -701,6 +740,8 @@ authentication, starts polling, and displays the dashboard buffer."
   (spofy--ensure-global-mode)
   ;; Hook up now-playing refresh on state changes
   (add-hook 'spofy-player-state-changed-hook #'spofy--dashboard-refresh-now-playing)
+  ;; Hook up recently-played refresh on track changes
+  (add-hook 'spofy-player-track-changed-hook #'spofy--dashboard-refresh-recently-played)
   ;; Start progress interpolation timer
   (spofy--dashboard-start-progress-timer)
   ;; Create and display the dashboard
@@ -711,7 +752,9 @@ authentication, starts polling, and displays the dashboard buffer."
                 (lambda ()
                   (spofy--dashboard-stop-progress-timer)
                   (remove-hook 'spofy-player-state-changed-hook
-                               #'spofy--dashboard-refresh-now-playing))
+                               #'spofy--dashboard-refresh-now-playing)
+                  (remove-hook 'spofy-player-track-changed-hook
+                               #'spofy--dashboard-refresh-recently-played))
                 nil t)
       (spofy--dashboard-render))
     (pop-to-buffer buf)))
@@ -821,6 +864,8 @@ showing the transient menu."
   (spofy--dashboard-stop-progress-timer)
   (remove-hook 'spofy-player-state-changed-hook
                #'spofy--dashboard-refresh-now-playing)
+  (remove-hook 'spofy-player-track-changed-hook
+               #'spofy--dashboard-refresh-recently-played)
   (when spofy-global-mode
     (spofy-global-mode -1))
   (message "Spofy: stopped."))
