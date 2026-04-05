@@ -806,36 +806,40 @@ If no tokens are available, prompts the user to authenticate."
           (format "Spofy: %s %s — %s" icon (car track-info) (cdr track-info)))
       "Spofy: no track playing")))
 
+(defun spofy--repeat-description ()
+  "Return a description string for the current repeat state."
+  (let ((state (or (alist-get 'repeat spofy-player--current-state) "off")))
+    (if (equal state "off")
+        "Repeat off"
+      (concat "Repeat " (propertize state 'face 'transient-value)))))
+
+(defun spofy--shuffle-description ()
+  "Return a description string for the current shuffle state."
+  (if (alist-get 'shuffle spofy-player--current-state)
+      (concat "Shuffle " (propertize "on" 'face 'transient-value))
+    "Shuffle off"))
+
 (transient-define-prefix spofy--menu ()
   "Spofy command popup (internal transient)."
   [:description spofy--transient-description]
   [["Playback"
-    ("SPC" "Play/Pause"  spofy-play-pause)
-    ("n" "Next"          spofy-next)
-    ("p" "Previous"      spofy-previous)
-    ("f" "Seek forward"  spofy-seek-forward :transient t)
-    ("r" "Seek backward" spofy-seek-backward :transient t)
-    ("t" "Seek to"       spofy-seek-to)
+    ("SPC" "Play/Pause"     spofy-play-pause)
+    ("n" "Next"             spofy-next)
+    ("p" "Previous"         spofy-previous)
+    ("f" "Seek forward   "  spofy-seek-forward :transient t)
+    ("r" "Seek backward  "  spofy-seek-backward :transient t)
+    ("t" "Seek to"          spofy-seek-to)
     ""
     "Volume"
-    ("+" "Volume up"   spofy-volume-up :transient t)
-    ("-" "Volume down" spofy-volume-down :transient t)
-    ("v" "Set volume"  spofy-volume-set)
+    ("+" "Volume up"        spofy-volume-up :transient t)
+    ("-" "Volume down"      spofy-volume-down :transient t)
+    ("v" "Set volume"       spofy-volume-set)
     ""
     "Mode"
-    ("R" spofy-toggle-repeat
-     :description (lambda ()
-                    (let ((state (or (alist-get 'repeat spofy-player--current-state) "off")))
-                      (if (equal state "off")
-                          "Repeat off"
-                        (concat "Repeat " (propertize state 'face 'transient-value)))))
-     :transient t)
-    ("S" spofy-toggle-shuffle
-     :description (lambda ()
-                    (if (alist-get 'shuffle spofy-player--current-state)
-                        (concat "Shuffle " (propertize "on" 'face 'transient-value))
-                      "Shuffle off"))
-     :transient t)]
+    ("R"                    spofy-toggle-repeat
+     :description spofy--repeat-description :transient t)
+    ("S"                    spofy-toggle-shuffle
+     :description spofy--shuffle-description :transient t)]
    ["Search Spotify"
     ("s t" "Tracks"         spofy-search-tracks)
     ("s l" "Albums"         spofy-search-albums)
@@ -843,21 +847,21 @@ If no tokens are available, prompts the user to authenticate."
     ("s a" "Artists"        spofy-search-artists)
     ""
     "Search Library"
-    ("l t" "Tracks"    spofy-library-search-tracks)
-    ("l a" "Albums"    spofy-library-search-albums)
-    ("l p" "Playlists" spofy-library-search-playlists)
-    ("s c" "Context"        spofy-library-search-context)
+    ("l t" "Tracks"         spofy-library-search-tracks)
+    ("l a" "Albums"         spofy-library-search-albums)
+    ("l p" "Playlists"      spofy-library-search-playlists)
+    ("l c" "Context"        spofy-library-search-context)
     ""
     "Browse Library"
-    ("b t" "Tracks"    spofy-library-browse-tracks)
-    ("b a" "Albums"    spofy-library-browse-albums)
-    ("b p" "Playlists" spofy-library-browse-playlists)
-    ("b c" "Context"   spofy-library-browse-context)]
+    ("b t" "Tracks"         spofy-library-browse-tracks)
+    ("b a" "Albums"         spofy-library-browse-albums)
+    ("b p" "Playlists"      spofy-library-browse-playlists)
+    ("b c" "Context"        spofy-library-browse-context)]
    [""
-    ("/" "Dashboard" spofy)
-    ("d" "Devices"   spofy-select-device)
-    ("w" "Wikipedia" spofy-wikipedia)
-    ("q" "Quit"      transient-quit-one)]])
+    ("/" "Dashboard"        spofy)
+    ("d" "Devices"          spofy-select-device)
+    ("w" "Wikipedia"        spofy-wikipedia)
+    ("q" "Quit"             transient-quit-one)]])
 
 ;;;###autoload (autoload 'spofy-menu "spofy" nil t)
 (defun spofy-menu ()

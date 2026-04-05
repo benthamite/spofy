@@ -253,10 +253,11 @@ The dashboard keymap provides these bindings:
 
 The command ~spofy-menu~ opens a transient popup that provides quick access to all Spofy commands from any buffer.  Before showing the popup, it ensures that ~spofy-global-mode~ is active ([[#h:global-minor-mode][Global minor mode]]), so invoking ~spofy-menu~ for the first time in a session automatically starts polling, the mode-line display, and the tab-bar display as configured.  The popup header shows the currently playing track.  When ~spofy-global-mode~ is active, this command is bound to ~spofy-global-key~ (default =C-c s=).
 
-The popup is organized into two columns:
+The popup is organized into three columns:
 
 - *Column 1 — Playback, Volume, Mode:* play/pause, next, previous, seek forward, seek backward, seek to (=t=); volume up/down and set; shuffle and repeat toggles.
-- *Column 2 — Spotify search, Browse, Library search, Other:* Spotify search for tracks (=s t=), albums (=s l=), artists (=s a=), playlists (=s p=), context tracks (=s c=); browse saved tracks (=b t=), saved albums (=b a=), playlists (=b p=), current context (=b c=); library search for saved tracks (=l t=), saved albums (=l a=), playlists (=l p=); devices (=d=), Wikipedia lookup (=w=), dashboard (=/=), quit (=q=).
+- *Column 2 — Search and Browse:* Spotify search for tracks (=s t=), albums (=s l=), playlists (=s p=), artists (=s a=); library search for saved tracks (=l t=), saved albums (=l a=), playlists (=l p=), context (=l c=); browse saved tracks (=b t=), saved albums (=b a=), playlists (=b p=), current context (=b c=).
+- *Column 3 — Other:* dashboard (=/=), devices (=d=), Wikipedia lookup (=w=), quit (=q=).
 
 Volume up/down, seek forward/backward, shuffle, and repeat all keep the menu open so they can be used repeatedly.
 
@@ -754,7 +755,7 @@ The command ~spofy-library-search-playlists~ searches the user's playlists with 
 
 The command ~consult-spofy-device~ fetches available playback devices with incremental narrowing, with Name and Type columns.  Selecting a device transfers playback to it.
 
-The command ~spofy-library-search-context~ fetches the tracklist of the currently playing album or playlist and lets you jump to any track with incremental narrowing.  It is not available for Spotify-generated contexts such as radio or daily mixes.  This command is bound to =s c= in the transient popup ([[#h:transient-popup][Transient popup]]).
+The command ~spofy-library-search-context~ fetches the tracklist of the currently playing album or playlist and lets you jump to any track with incremental narrowing.  It is not available for Spotify-generated contexts such as radio or daily mixes.  This command is bound to =l c= in the transient popup ([[#h:transient-popup][Transient popup]]).
 
 The Spotify search commands use ~consult--dynamic-collection~ for incremental search with synchronous API requests (via ~url-retrieve-synchronously~), debounced to avoid excessive API calls.  The library search commands pass a pre-fetched candidate list directly to ~consult--read~, since all items are already in memory from the library cache.  In both cases, each candidate stores the full Spotify entity in a text property; the ~:lookup~ mechanism ensures the original propertized candidate is returned on selection, so the entity data is available for the action.  This makes them compatible with the embark integration ([[#h:embark-integration][Embark integration]]).
 
