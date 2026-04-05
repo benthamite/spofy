@@ -302,16 +302,19 @@ The next 1-second progress timer tick will pick up the new image."
         (let ((bar-width (if art-char-width
                             (max 10 (truncate art-char-width))
                           20)))
-          (insert "  "
-                  (spofy-ui-progress-bar-only progress (or duration 0) bar-width)
-                  " "
-                  (spofy-ui-progress-time progress (or duration 0))
-                  "\n")))
-      (insert "  "
-              (format "shuffle: %s" (if shuffle "on" "off"))
-              "  "
-              (format "repeat: %s" (or repeat-state "off"))
-              "\n"))))
+          (let* ((time-str (spofy-ui-progress-time progress (or duration 0)))
+                 (left (format "  shuffle: %s  repeat: %s"
+                               (if shuffle "on" "off")
+                               (or repeat-state "off")))
+                 (right-col (+ 2 bar-width))
+                 (gap (max 2 (- right-col (length left) (length time-str)))))
+            (insert "  "
+                    (spofy-ui-progress-bar-only progress (or duration 0) bar-width)
+                    "\n"
+                    left
+                    (make-string gap ?\s)
+                    time-str
+                    "\n")))))))
 
 ;;;;; Dashboard: text truncation
 
