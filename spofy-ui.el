@@ -218,8 +218,9 @@ only the fade effect from `spofy-ui-truncate' indicates truncation."
 (defun spofy-ui--handle-window-resize (frame)
   "Recompute column widths in Spofy buffers displayed in FRAME."
   (dolist (window (window-list frame 'no-minibuf))
-    (with-current-buffer (window-buffer window)
-      (spofy-ui--recompute-columns))))
+    (when (buffer-local-value 'spofy-ui--format-view (window-buffer window))
+      (with-selected-window window
+        (spofy-ui--recompute-columns)))))
 
 (add-hook 'window-size-change-functions #'spofy-ui--handle-window-resize)
 
