@@ -145,7 +145,7 @@ ITEM is the wrapper alist from /me/tracks which contains a `track' key."
                next-url))))))
 
 ;;;###autoload
-(defun spofy-library-saved-tracks ()
+(defun spofy-library-browse-tracks ()
   "List the user's saved tracks from Spotify.
 Uses the library cache when available; otherwise fetches from
 the /me/tracks endpoint with pagination."
@@ -203,7 +203,7 @@ the /me/tracks endpoint with pagination."
 (defun spofy-library-tracks-refresh ()
   "Refresh the saved tracks list."
   (interactive)
-  (spofy-library-saved-tracks))
+  (spofy-library-browse-tracks))
 
 ;;; ========================================================================
 ;;;; Saved albums
@@ -273,7 +273,7 @@ ITEM is the wrapper alist from /me/albums which contains an `album' key."
                next-url))))))
 
 ;;;###autoload
-(defun spofy-library-saved-albums ()
+(defun spofy-library-browse-albums ()
   "List the user's saved albums from Spotify.
 Uses the library cache when available; otherwise fetches from
 the /me/albums endpoint with pagination."
@@ -324,7 +324,7 @@ the /me/albums endpoint with pagination."
 (defun spofy-library-albums-refresh ()
   "Refresh the saved albums list."
   (interactive)
-  (spofy-library-saved-albums))
+  (spofy-library-browse-albums))
 
 ;;; ========================================================================
 ;;;; Recently played

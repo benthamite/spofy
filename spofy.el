@@ -91,11 +91,11 @@
 (declare-function spofy-view-artist "spofy-browse" (artist-id))
 
 ;; spofy-playlist
-(declare-function spofy-list-playlists "spofy-playlist" ())
+(declare-function spofy-library-browse-playlists "spofy-playlist" ())
 
 ;; spofy-library
-(declare-function spofy-library-saved-tracks "spofy-library" ())
-(declare-function spofy-library-saved-albums "spofy-library" ())
+(declare-function spofy-library-browse-tracks "spofy-library" ())
+(declare-function spofy-library-browse-albums "spofy-library" ())
 (declare-function spofy-list-recently-played "spofy-library" ())
 (declare-function spofy-list-top-tracks "spofy-library" (&optional time-range))
 (declare-function spofy-list-top-artists "spofy-library" (&optional time-range))
@@ -401,7 +401,7 @@ When truncated, mark the last three characters with the
    (propertize "View all playlists" 'face 'spofy-muted)
    'action (lambda (_btn)
              (require 'spofy-playlist)
-             (spofy-list-playlists))
+             (spofy-library-browse-playlists))
    'follow-link t)
   (insert "\n"))
 
@@ -834,23 +834,23 @@ If no tokens are available, prompts the user to authenticate."
                         (concat "Shuffle " (propertize "on" 'face 'transient-value))
                       "Shuffle off"))
      :transient t)]
-   ["Spotify search"
+   ["Search Spotify"
     ("s t" "Tracks"         spofy-search-tracks)
     ("s l" "Albums"         spofy-search-albums)
     ("s a" "Artists"        spofy-search-artists)
     ("s p" "Playlists"      spofy-search-playlists)
-    ("s c" "Context"        consult-spofy-context-track)
+    ("s c" "Context"        spofy-search-context)
     ""
-    "Browse"
-    ("b t" "Tracks"    spofy-library-saved-tracks)
-    ("b a" "Albums"    spofy-library-saved-albums)
-    ("b p" "Playlists" spofy-list-playlists)
-    ("b c" "Context"   spofy-browse-context)
+    "Search Library"
+    ("l t" "Tracks"    spofy-library-search-tracks)
+    ("l a" "Albums"    spofy-library-search-albums)
+    ("l p" "Playlists" spofy-library-search-playlists)
     ""
-    "Library search"
-    ("l t" "Tracks"    consult-spofy-my-track)
-    ("l a" "Albums"    consult-spofy-my-album)
-    ("l p" "Playlists" consult-spofy-my-playlist)
+    "Browse Library"
+    ("b t" "Tracks"    spofy-library-browse-tracks)
+    ("b a" "Albums"    spofy-library-browse-albums)
+    ("b p" "Playlists" spofy-library-browse-playlists)
+    ("b c" "Context"   spofy-library-browse-context)
     ""
     "Other"
     ("d" "Devices"   spofy-select-device)
@@ -871,7 +871,7 @@ showing the transient menu."
 ;;;; Context browsing
 
 ;;;###autoload
-(defun spofy-browse-context ()
+(defun spofy-library-browse-context ()
   "Browse the tracks of the current playback context.
 Opens the album or playlist that is currently playing in a
 standard browse buffer.  Signals an error when the context is

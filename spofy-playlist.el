@@ -132,7 +132,7 @@ NEXT-URL is the URL for the next page of results, or nil."
       (setq spofy-ui--entity-type "playlist"))))
 
 ;;;###autoload
-(defun spofy-list-playlists ()
+(defun spofy-library-browse-playlists ()
   "List the current user's Spotify playlists.
 Uses the library cache when available; otherwise fetches from
 the /me/playlists endpoint with pagination."
@@ -173,7 +173,7 @@ the /me/playlists endpoint with pagination."
 (defun spofy-playlists-refresh ()
   "Refresh the playlists buffer."
   (interactive)
-  (spofy-list-playlists))
+  (spofy-library-browse-playlists))
 
 ;;;; Create playlist
 
@@ -193,7 +193,7 @@ playlists buffer if it exists."
       (lambda (_response)
         (message "Spofy: created playlist \"%s\"." name)
         (when (get-buffer "*Spofy Playlists*")
-          (spofy-list-playlists)))))))
+          (spofy-library-browse-playlists)))))))
 
 ;;;; Rename playlist
 
@@ -213,7 +213,7 @@ Prompts for a new name and sends a PUT request to update it."
        (lambda (_)
          (message "Spofy: renamed playlist to \"%s\"." new-name)
          (when (get-buffer "*Spofy Playlists*")
-           (spofy-list-playlists)))))))
+           (spofy-library-browse-playlists)))))))
 
 ;;;; Delete (unfollow) playlist
 
@@ -232,7 +232,7 @@ Prompts for a new name and sends a PUT request to update it."
          (lambda (_)
            (message "Spofy: unfollowed playlist \"%s\"." name)
            (when (get-buffer "*Spofy Playlists*")
-             (spofy-list-playlists))))))))
+             (spofy-library-browse-playlists))))))))
 
 ;;;; Toggle public/private
 
@@ -252,7 +252,7 @@ Prompts for a new name and sends a PUT request to update it."
          (message "Spofy: playlist is now %s."
                   (if new-public "public" "private"))
          (when (get-buffer "*Spofy Playlists*")
-           (spofy-list-playlists)))))))
+           (spofy-library-browse-playlists)))))))
 
 ;;;; Follow/unfollow
 
@@ -268,7 +268,7 @@ PLAYLIST-ID-OR-URI is the playlist ID or URI to follow."
      (lambda (_)
        (message "Spofy: now following playlist %s." playlist-id)
        (when (get-buffer "*Spofy Playlists*")
-         (spofy-list-playlists))))))
+         (spofy-library-browse-playlists))))))
 
 (defun spofy-unfollow-playlist ()
   "Unfollow the playlist at point.

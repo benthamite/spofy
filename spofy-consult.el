@@ -339,7 +339,7 @@ starts an async fetch and signals a user error asking to retry."
              collect (funcall format-fn entity))))
 
 ;;;###autoload
-(defun consult-spofy-my-track ()
+(defun spofy-library-search-tracks ()
   "Search saved tracks and play the selected one."
   (interactive)
   (spofy-consult--ensure-available)
@@ -360,7 +360,7 @@ starts an async fetch and signals a user error asking to retry."
         (spofy-play-track uri)))))
 
 ;;;###autoload
-(defun consult-spofy-my-album ()
+(defun spofy-library-search-albums ()
   "Search saved albums and open the selected one."
   (interactive)
   (spofy-consult--ensure-available)
@@ -381,7 +381,7 @@ starts an async fetch and signals a user error asking to retry."
         (spofy-view-album album-id)))))
 
 ;;;###autoload
-(defun consult-spofy-my-playlist ()
+(defun spofy-library-search-playlists ()
   "Pick from the user's Spotify playlists and open the selected one."
   (interactive)
   (spofy-consult--ensure-available)
@@ -445,7 +445,7 @@ Results are fetched once and cached for subsequent calls."
 ;;;; Context track source (jump to track in current playback)
 
 ;;;###autoload
-(defun consult-spofy-context-track ()
+(defun spofy-search-context ()
   "Pick a track from the current playback context and play it.
 Fetches the tracklist of the currently playing album or playlist
 and presents all tracks for selection with narrowing.  Signals an

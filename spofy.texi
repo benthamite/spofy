@@ -616,7 +616,7 @@ The command @code{spofy-view-playlist} displays the tracks of a playlist in a @s
 @node Playlist management
 @section Playlist management
 
-@findex spofy-list-playlists
+@findex spofy-library-browse-playlists
 @findex spofy-create-playlist
 @findex spofy-rename-playlist
 @findex spofy-delete-playlist
@@ -627,7 +627,7 @@ The command @code{spofy-view-playlist} displays the tracks of a playlist in a @s
 @findex spofy-follow-playlist
 @findex spofy-unfollow-playlist
 
-The command @code{spofy-list-playlists} displays all of the user's playlists in a @samp{*Spofy Playlists*} buffer.  Each row shows the playlist name, owner, track count, and public/private status.
+The command @code{spofy-library-browse-playlists} displays all of the user's playlists in a @samp{*Spofy Playlists*} buffer.  Each row shows the playlist name, owner, track count, and public/private status.
 
 @multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
 @headitem Key
@@ -680,12 +680,12 @@ The command @code{spofy-follow-playlist} prompts for a playlist ID or URI and fo
 @node Library management
 @section Library management
 
-@findex spofy-library-saved-tracks
-@findex spofy-library-saved-albums
+@findex spofy-library-browse-tracks
+@findex spofy-library-browse-albums
 @findex spofy-library-save
 @findex spofy-library-unsave
 
-The command @code{spofy-library-saved-tracks} displays the user's saved tracks in a @samp{*Spofy Saved Tracks*} buffer.  Columns include a play indicator, track name, artist(s), album, and duration.  The currently playing track is highlighted, just like in search results.
+The command @code{spofy-library-browse-tracks} displays the user's saved tracks in a @samp{*Spofy Saved Tracks*} buffer.  Columns include a play indicator, track name, artist(s), album, and duration.  The currently playing track is highlighted, just like in search results.
 
 @multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaaaa}
 @headitem Key
@@ -717,7 +717,7 @@ The command @code{spofy-library-saved-tracks} displays the user's saved tracks i
 @tab Close
 @end multitable
 
-The command @code{spofy-library-saved-albums} displays saved albums in a @samp{*Spofy Saved Albums*} buffer with columns for name, artist(s), year, and track count.
+The command @code{spofy-library-browse-albums} displays saved albums in a @samp{*Spofy Saved Albums*} buffer with columns for name, artist(s), year, and track count.
 
 @multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaaaa}
 @headitem Key
@@ -846,7 +846,7 @@ The function @code{spofy-ui-truncate} truncates a string to a given maximum disp
 @findex consult-spofy-album
 @findex consult-spofy-artist
 @findex consult-spofy-playlist
-@findex consult-spofy-my-playlist
+@findex spofy-library-search-playlists
 @findex consult-spofy-device
 
 The file @samp{spofy-consult.el} provides six @code{consult} completion sources for searching and selecting Spotify entities from the minibuffer.  These require the @samp{consult} package.
@@ -861,7 +861,7 @@ The command @code{consult-spofy-artist} searches artists, with Name, Genres, and
 
 The command @code{consult-spofy-playlist} searches all Spotify playlists with live narrowing, with Name, Owner, and track count columns.  Selecting a playlist opens the playlist detail view (@ref{Playlist detail view}).
 
-The command @code{consult-spofy-my-playlist} fetches the user's own playlists with incremental narrowing, with Name, Owner, and track count columns.  The full list is fetched once from the API and filtered client-side as you type.  Selecting a playlist opens the playlist detail view.
+The command @code{spofy-library-search-playlists} fetches the user's own playlists with incremental narrowing, with Name, Owner, and track count columns.  The full list is fetched once from the API and filtered client-side as you type.  Selecting a playlist opens the playlist detail view.
 
 The command @code{consult-spofy-device} fetches available playback devices with incremental narrowing, with Name and Type columns.  Selecting a device transfers playback to it.
 

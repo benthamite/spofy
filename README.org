@@ -256,7 +256,7 @@ The command ~spofy-menu~ opens a transient popup that provides quick access to a
 The popup is organized into two columns:
 
 - *Column 1 — Playback, Volume, Mode:* play/pause, next, previous, seek forward, seek backward, seek to (=t=); volume up/down and set; shuffle and repeat toggles.
-- *Column 2 — Search, Browse, Library search, Other:* search tracks (=s t=), albums (=s l=), artists (=s a=), playlists (=s p=), current tracks (=s c=); browse saved tracks (=b t=), saved albums (=b a=), playlists (=b p=); library search for saved tracks (=l t=), saved albums (=l a=), playlists (=l p=); devices (=d=), Wikipedia lookup (=w=), dashboard (=/=), quit (=q=).
+- *Column 2 — Spotify search, Browse, Library search, Other:* Spotify search for tracks (=s t=), albums (=s l=), artists (=s a=), playlists (=s p=), context tracks (=s c=); browse saved tracks (=b t=), saved albums (=b a=), playlists (=b p=), current context (=b c=); library search for saved tracks (=l t=), saved albums (=l a=), playlists (=l p=); devices (=d=), Wikipedia lookup (=w=), dashboard (=/=), quit (=q=).
 
 Volume up/down, seek forward/backward, shuffle, and repeat all keep the menu open so they can be used repeatedly.
 
@@ -455,7 +455,7 @@ The command ~spofy-view-playlist~ displays the tracks of a playlist in a =*Spofy
 :CUSTOM_ID: h:playlist-management
 :END:
 
-#+findex: spofy-list-playlists
+#+findex: spofy-library-browse-playlists
 #+findex: spofy-create-playlist
 #+findex: spofy-rename-playlist
 #+findex: spofy-delete-playlist
@@ -466,7 +466,7 @@ The command ~spofy-view-playlist~ displays the tracks of a playlist in a =*Spofy
 #+findex: spofy-follow-playlist
 #+findex: spofy-unfollow-playlist
 
-The command ~spofy-list-playlists~ displays all of the user's playlists in a =*Spofy Playlists*= buffer.  Each row shows the playlist name, owner, track count, and public/private status.
+The command ~spofy-library-browse-playlists~ displays all of the user's playlists in a =*Spofy Playlists*= buffer.  Each row shows the playlist name, owner, track count, and public/private status.
 
 | Key   | Command                      | Action                            |
 |-------+------------------------------+-----------------------------------|
@@ -497,8 +497,9 @@ The command ~spofy-follow-playlist~ prompts for a playlist ID or URI and follows
 :CUSTOM_ID: h:library-management
 :END:
 
-#+findex: spofy-library-saved-tracks
-#+findex: spofy-library-saved-albums
+#+findex: spofy-library-browse-tracks
+#+findex: spofy-library-browse-albums
+#+findex: spofy-library-browse-context
 #+findex: spofy-list-recently-played
 #+findex: spofy-list-top-tracks
 #+findex: spofy-list-top-artists
@@ -506,7 +507,7 @@ The command ~spofy-follow-playlist~ prompts for a playlist ID or URI and follows
 #+findex: spofy-library-save
 #+findex: spofy-library-unsave
 
-The command ~spofy-library-saved-tracks~ displays the user's saved tracks in a =*Spofy Saved Tracks*= buffer.  Columns include a play indicator, track name, artist(s), album, and duration.  The currently playing track is highlighted, just like in search results.  All paginated buffers (library, search, browse, and playlist) automatically show a =[m] Load more= footer when additional pages are available from the API.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
+The command ~spofy-library-browse-tracks~ displays the user's saved tracks in a =*Spofy Saved Tracks*= buffer.  Columns include a play indicator, track name, artist(s), album, and duration.  The currently playing track is highlighted, just like in search results.  All paginated buffers (library, search, browse, and playlist) automatically show a =[m] Load more= footer when additional pages are available from the API.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
 
 | Key   | Command                               | Action                    |
 |-------+---------------------------------------+---------------------------|
@@ -518,7 +519,7 @@ The command ~spofy-library-saved-tracks~ displays the user's saved tracks in a =
 | =g=   | ~spofy-library-tracks-refresh~        | Refresh                   |
 | =q=   | ~quit-window~                         | Close                     |
 
-The command ~spofy-library-saved-albums~ displays saved albums in a =*Spofy Saved Albums*= buffer with columns for name, artist(s), year, and track count.
+The command ~spofy-library-browse-albums~ displays saved albums in a =*Spofy Saved Albums*= buffer with columns for name, artist(s), year, and track count.
 
 | Key   | Command                               | Action                    |
 |-------+---------------------------------------+---------------------------|
@@ -528,6 +529,8 @@ The command ~spofy-library-saved-albums~ displays saved albums in a =*Spofy Save
 | =S=   | ~spofy-library-albums-unsave~         | Remove from library       |
 | =g=   | ~spofy-library-albums-refresh~        | Refresh                   |
 | =q=   | ~quit-window~                         | Close                     |
+
+The command ~spofy-library-browse-context~ opens the currently playing album or playlist in a standard browse buffer.  For album contexts it opens the album view ([[#h:album-view][Album view]]); for playlist contexts it opens the playlist detail view ([[#h:playlist-detail-view][Playlist detail view]]).  It signals an error when the context is unsupported (e.g., Spotify-generated radio or daily mixes).
 
 The command ~spofy-list-recently-played~ displays the last 50 recently played tracks in a =*Spofy Recently Played*= buffer.  The columns are the same as saved tracks.
 
@@ -712,11 +715,11 @@ The function ~spofy-ui-render-list~ provides the standard recipe for setting up 
 #+findex: consult-spofy-album
 #+findex: consult-spofy-artist
 #+findex: consult-spofy-playlist
-#+findex: consult-spofy-my-track
-#+findex: consult-spofy-my-album
-#+findex: consult-spofy-my-playlist
+#+findex: spofy-library-search-tracks
+#+findex: spofy-library-search-albums
+#+findex: spofy-library-search-playlists
 #+findex: consult-spofy-device
-#+findex: consult-spofy-context-track
+#+findex: spofy-search-context
 
 The file =spofy-consult.el= provides ~consult~ completion sources for searching and selecting Spotify entities from the minibuffer.  These require the =consult= package.  The dependency is soft-loaded so that byte-compilation of the main Spofy package succeeds even when =consult= is not in the load path; at runtime, =consult= must be installed for these commands to work.
 
@@ -734,15 +737,15 @@ The command ~consult-spofy-playlist~ searches all Spotify playlists with live na
 
 The following three commands search within the user's own library rather than the full Spotify catalog.  They fetch all pages of the relevant endpoint on first use (paginating synchronously through the API), cache the results in memory, and filter client-side as you type.  The cache is invalidated automatically when items are saved or unsaved.  These are bound under the =l= prefix in the transient popup ([[#h:transient-popup][Transient popup]]).
 
-The command ~consult-spofy-my-track~ searches the user's saved tracks with incremental narrowing.  Candidates show Name, Artist(s), Album, and Duration columns.  Selecting a track plays it immediately.
+The command ~spofy-library-search-tracks~ searches the user's saved tracks with incremental narrowing.  Candidates show Name, Artist(s), Album, and Duration columns.  Selecting a track plays it immediately.
 
-The command ~consult-spofy-my-album~ searches saved albums with incremental narrowing, with Name, Year, Artist(s), and number of tracks columns.  Selecting an album opens the album view ([[#h:album-view][Album view]]).
+The command ~spofy-library-search-albums~ searches saved albums with incremental narrowing, with Name, Year, Artist(s), and number of tracks columns.  Selecting an album opens the album view ([[#h:album-view][Album view]]).
 
-The command ~consult-spofy-my-playlist~ searches the user's playlists with incremental narrowing, with Name, Owner, and number of tracks columns.  Selecting a playlist opens the playlist detail view ([[#h:playlist-detail-view][Playlist detail view]]).
+The command ~spofy-library-search-playlists~ searches the user's playlists with incremental narrowing, with Name, Owner, and number of tracks columns.  Selecting a playlist opens the playlist detail view ([[#h:playlist-detail-view][Playlist detail view]]).
 
 The command ~consult-spofy-device~ fetches available playback devices with incremental narrowing, with Name and Type columns.  Selecting a device transfers playback to it.
 
-The command ~consult-spofy-context-track~ fetches the tracklist of the currently playing album or playlist and lets you jump to any track with incremental narrowing.  It is not available for Spotify-generated contexts such as radio or daily mixes.  This command is bound to =s c= in the transient popup ([[#h:transient-popup][Transient popup]]).
+The command ~spofy-search-context~ fetches the tracklist of the currently playing album or playlist and lets you jump to any track with incremental narrowing.  It is not available for Spotify-generated contexts such as radio or daily mixes.  This command is bound to =s c= in the transient popup ([[#h:transient-popup][Transient popup]]).
 
 All commands use ~consult--dynamic-collection~ for incremental search with synchronous API requests (via ~url-retrieve-synchronously~), as required by consult's dynamic collection contract.  Each candidate stores the full Spotify entity in a text property; the ~:lookup~ mechanism ensures the original propertized candidate is returned on selection, so the entity data is available for the action.  This makes them compatible with the embark integration ([[#h:embark-integration][Embark integration]]).
 
@@ -765,7 +768,7 @@ The *spofy-playlist* category provides actions to play the playlist, view its tr
 
 The command ~spofy-embark-copy-uri~ copies the Spotify URI of the target entity to the kill ring.  This is available in all four category keymaps and is useful for sharing links or constructing org-mode links manually.
 
-In addition to single-target actions, =spofy-embark.el= registers exporters for the =spofy-track=, =spofy-album=, and =spofy-playlist= categories.  When using a consult library search command (e.g., ~consult-spofy-my-track~), you can narrow the candidates, then call ~embark-export~ to export the matching candidates into a standard Spofy browse buffer with all the usual keybindings (play, view album, view artist, unsave, add to playlist, etc.).  This is useful when you want to filter your library and then explore or act on the results interactively rather than selecting a single item.
+In addition to single-target actions, =spofy-embark.el= registers exporters for the =spofy-track=, =spofy-album=, and =spofy-playlist= categories.  When using a consult library search command (e.g., ~spofy-library-search-tracks~), you can narrow the candidates, then call ~embark-export~ to export the matching candidates into a standard Spofy browse buffer with all the usual keybindings (play, view album, view artist, unsave, add to playlist, etc.).  This is useful when you want to filter your library and then explore or act on the results interactively rather than selecting a single item.
 
 * Org-mode integration
 :PROPERTIES:
