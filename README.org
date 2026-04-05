@@ -765,6 +765,8 @@ The *spofy-playlist* category provides actions to play the playlist, view its tr
 
 The command ~spofy-embark-copy-uri~ copies the Spotify URI of the target entity to the kill ring.  This is available in all four category keymaps and is useful for sharing links or constructing org-mode links manually.
 
+In addition to single-target actions, =spofy-embark.el= registers exporters for the =spofy-track=, =spofy-album=, and =spofy-playlist= categories.  When using a consult library search command (e.g., ~consult-spofy-my-track~), you can narrow the candidates, then call ~embark-export~ to export the matching candidates into a standard Spofy browse buffer with all the usual keybindings (play, view album, view artist, unsave, add to playlist, etc.).  This is useful when you want to filter your library and then explore or act on the results interactively rather than selecting a single item.
+
 * Org-mode integration
 :PROPERTIES:
 :CUSTOM_ID: h:org-integration

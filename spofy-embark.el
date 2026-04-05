@@ -242,12 +242,47 @@ treating TARGET as a URI directly."
   "u"   #'spofy-embark-unfollow-playlist
   "w"   #'spofy-embark-copy-uri)
 
+;;;; Exporters
+
+(declare-function spofy-library--render-tracks-from-cache "spofy-library" (items))
+(declare-function spofy-library--render-albums-from-cache "spofy-library" (items))
+(declare-function spofy-playlist--display-from-cache "spofy-playlist" (items))
+
+(defun spofy-embark-export-tracks (candidates)
+  "Export track CANDIDATES to a *Spofy Saved Tracks* buffer."
+  (let ((items (cl-loop for c in candidates
+                        for entity = (spofy-embark--get-entity c)
+                        when entity collect `((track . ,entity)))))
+    (require 'spofy-library)
+    (spofy-library--render-tracks-from-cache items)))
+
+(defun spofy-embark-export-albums (candidates)
+  "Export album CANDIDATES to a *Spofy Saved Albums* buffer."
+  (let ((items (cl-loop for c in candidates
+                        for entity = (spofy-embark--get-entity c)
+                        when entity collect `((album . ,entity)))))
+    (require 'spofy-library)
+    (spofy-library--render-albums-from-cache items)))
+
+(defun spofy-embark-export-playlists (candidates)
+  "Export playlist CANDIDATES to a *Spofy Playlists* buffer."
+  (let ((items (cl-loop for c in candidates
+                        for entity = (spofy-embark--get-entity c)
+                        when entity collect entity)))
+    (require 'spofy-playlist)
+    (spofy-playlist--display-from-cache items)))
+
 ;;;; Registration
 
 (add-to-list 'embark-keymap-alist '(spofy-track . spofy-embark-track-map))
 (add-to-list 'embark-keymap-alist '(spofy-album . spofy-embark-album-map))
 (add-to-list 'embark-keymap-alist '(spofy-artist . spofy-embark-artist-map))
 (add-to-list 'embark-keymap-alist '(spofy-playlist . spofy-embark-playlist-map))
+
+(defvar embark-exporters-alist)
+(add-to-list 'embark-exporters-alist '(spofy-track . spofy-embark-export-tracks))
+(add-to-list 'embark-exporters-alist '(spofy-album . spofy-embark-export-albums))
+(add-to-list 'embark-exporters-alist '(spofy-playlist . spofy-embark-export-playlists))
 
 (provide 'spofy-embark)
 ;;; spofy-embark.el ends here
