@@ -445,7 +445,7 @@ Results are fetched once and cached for subsequent calls."
 ;;;; Context track source (jump to track in current playback)
 
 ;;;###autoload
-(defun spofy-search-context ()
+(defun spofy-library-search-context ()
   "Pick a track from the current playback context and play it.
 Fetches the tracklist of the currently playing album or playlist
 and presents all tracks for selection with narrowing.  Signals an

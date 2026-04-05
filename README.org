@@ -728,7 +728,7 @@ The function ~spofy-ui-render-list~ provides the standard recipe for setting up 
 #+findex: spofy-library-search-albums
 #+findex: spofy-library-search-playlists
 #+findex: consult-spofy-device
-#+findex: spofy-search-context
+#+findex: spofy-library-search-context
 
 The file =spofy-consult.el= provides ~consult~ completion sources for searching and selecting Spotify entities from the minibuffer.  These require the =consult= package.  The dependency is soft-loaded so that byte-compilation of the main Spofy package succeeds even when =consult= is not in the load path; at runtime, =consult= must be installed for these commands to work.
 
@@ -754,7 +754,7 @@ The command ~spofy-library-search-playlists~ searches the user's playlists with 
 
 The command ~consult-spofy-device~ fetches available playback devices with incremental narrowing, with Name and Type columns.  Selecting a device transfers playback to it.
 
-The command ~spofy-search-context~ fetches the tracklist of the currently playing album or playlist and lets you jump to any track with incremental narrowing.  It is not available for Spotify-generated contexts such as radio or daily mixes.  This command is bound to =s c= in the transient popup ([[#h:transient-popup][Transient popup]]).
+The command ~spofy-library-search-context~ fetches the tracklist of the currently playing album or playlist and lets you jump to any track with incremental narrowing.  It is not available for Spotify-generated contexts such as radio or daily mixes.  This command is bound to =s c= in the transient popup ([[#h:transient-popup][Transient popup]]).
 
 The Spotify search commands use ~consult--dynamic-collection~ for incremental search with synchronous API requests (via ~url-retrieve-synchronously~), debounced to avoid excessive API calls.  The library search commands pass a pre-fetched candidate list directly to ~consult--read~, since all items are already in memory from the library cache.  In both cases, each candidate stores the full Spotify entity in a text property; the ~:lookup~ mechanism ensures the original propertized candidate is returned on selection, so the entity data is available for the action.  This makes them compatible with the embark integration ([[#h:embark-integration][Embark integration]]).
 

@@ -837,25 +837,24 @@ If no tokens are available, prompts the user to authenticate."
    ["Search Spotify"
     ("s t" "Tracks"         spofy-search-tracks)
     ("s l" "Albums"         spofy-search-albums)
-    ("s a" "Artists"        spofy-search-artists)
     ("s p" "Playlists"      spofy-search-playlists)
-    ("s c" "Context"        spofy-search-context)
+    ("s a" "Artists"        spofy-search-artists)
     ""
     "Search Library"
     ("l t" "Tracks"    spofy-library-search-tracks)
     ("l a" "Albums"    spofy-library-search-albums)
     ("l p" "Playlists" spofy-library-search-playlists)
+    ("s c" "Context"        spofy-library-search-context)
     ""
     "Browse Library"
     ("b t" "Tracks"    spofy-library-browse-tracks)
     ("b a" "Albums"    spofy-library-browse-albums)
     ("b p" "Playlists" spofy-library-browse-playlists)
-    ("b c" "Context"   spofy-library-browse-context)
-    ""
-    "Other"
+    ("b c" "Context"   spofy-library-browse-context)]
+   [""
+    ("/" "Dashboard" spofy)
     ("d" "Devices"   spofy-select-device)
     ("w" "Wikipedia" spofy-wikipedia)
-    ("/" "Dashboard" spofy)
     ("q" "Quit"      transient-quit-one)]])
 
 ;;;###autoload (autoload 'spofy-menu "spofy" nil t)
