@@ -68,16 +68,22 @@
      ("Duration"  6 nil :right-align t)))
   (tabulated-list-init-header))
 
-(defun spofy-album--format-track (track album-uri)
+(defun spofy-album--format-track (track album-uri multi-disc-p)
   "Format TRACK alist as a tabulated-list entry.
-ALBUM-URI is the album context URI for playback."
+ALBUM-URI is the album context URI for playback.
+When MULTI-DISC-P is non-nil, show disc.track numbering."
   (let* ((uri (alist-get 'uri track))
          (name (or (alist-get 'name track) ""))
          (track-number (alist-get 'track_number track))
+         (disc-number (alist-get 'disc_number track))
          (artists (alist-get 'artists track))
          (duration (alist-get 'duration_ms track))
          (playing (spofy-ui-playing-indicator uri))
-         (num-str (if track-number (number-to-string track-number) ""))
+         (num-str (cond
+                   ((not track-number) "")
+                   (multi-disc-p
+                    (format "%d.%d" (or disc-number 1) track-number))
+                   (t (number-to-string track-number))))
          (artists-str (if artists (spofy-ui-format-artists artists) ""))
          (dur-str (if duration (spofy-ui-format-duration-ms duration) "")))
     (spofy-ui-store-entity uri track)
@@ -90,6 +96,12 @@ ALBUM-URI is the album context URI for playback."
                                      (if (string-empty-p playing) 'spofy-artist-name 'spofy-playing))
                   (propertize dur-str 'face 'spofy-muted)))))
 
+(defun spofy-album--multi-disc-p (tracks)
+  "Return non-nil if TRACKS (a vector) span more than one disc."
+  (cl-loop for track across tracks
+           for disc = (alist-get 'disc_number track)
+           thereis (and disc (> disc 1))))
+
 (defun spofy-album--render (album)
   "Render ALBUM data into the current buffer."
   (let* ((name (or (alist-get 'name album) "Unknown Album"))
@@ -100,6 +112,7 @@ ALBUM-URI is the album context URI for playback."
          (tracks (alist-get 'items tracks-obj))
          (next-url (alist-get 'next tracks-obj))
          (uri (alist-get 'uri album))
+         (multi-disc (spofy-album--multi-disc-p tracks))
          (artist-str (if artists (spofy-ui-format-artists artists) "Unknown"))
          (buf-name (format "*Spofy Album: %s*" name)))
     (with-current-buffer (get-buffer-create buf-name)
@@ -113,12 +126,18 @@ ALBUM-URI is the album context URI for playback."
       (setq-local spofy-ui--next-page-url next-url)
       (setq-local spofy-ui--entity-type 'track)
       (setq-local spofy-ui--load-more-handler
-                  (let ((album-uri uri))
+                  (let ((album-uri uri)
+                        (multi-disc-p multi-disc))
                     (lambda (response)
                       (let ((tracks (alist-get 'items response))
                             (next-url (alist-get 'next response)))
+                        ;; If we haven't seen multiple discs yet, check the new batch.
+                        (unless multi-disc-p
+                          (when (spofy-album--multi-disc-p tracks)
+                            (setq multi-disc-p t)))
                         (cons (cl-loop for track across tracks
-                                       collect (spofy-album--format-track track album-uri))
+                                       collect (spofy-album--format-track
+                                                track album-uri multi-disc-p))
                               next-url)))))
       (spofy-ui-insert-header
        (list (format "Album: %s" name)
@@ -127,7 +146,7 @@ ALBUM-URI is the album context URI for playback."
              (format "Tracks: %s" (or total "?"))))
       (setq tabulated-list-entries
             (cl-loop for track across tracks
-                     collect (spofy-album--format-track track uri)))
+                     collect (spofy-album--format-track track uri multi-disc)))
       (tabulated-list-print t)
       (goto-char (point-min))
       (switch-to-buffer (current-buffer)))))

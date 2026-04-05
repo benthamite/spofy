@@ -399,7 +399,7 @@ The Spotify API returns results in pages.  Results load automatically as the use
 
 #+findex: spofy-view-album
 
-The command ~spofy-view-album~ displays the tracks of a Spotify album in a =*Spofy Album: NAME*= buffer.  The buffer has a header showing the album name, artist, year, and total track count.  Tracks are listed with their track number, name, artist(s), and duration.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
+The command ~spofy-view-album~ displays the tracks of a Spotify album in a =*Spofy Album: NAME*= buffer.  The buffer has a header showing the album name, artist, year, and total track count.  Tracks are listed with their track number, name, artist(s), and duration.  For multi-disc albums, the track number column uses =disc.track= notation (e.g. =1.1=, =2.1=, =2.12=); single-disc albums show just the track number.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
 
 | Key   | Command                    | Action                         |
 |-------+----------------------------+--------------------------------|
