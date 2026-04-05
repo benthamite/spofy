@@ -507,7 +507,7 @@ The command ~spofy-follow-playlist~ prompts for a playlist ID or URI and follows
 #+findex: spofy-library-save
 #+findex: spofy-library-unsave
 
-The command ~spofy-library-browse-tracks~ displays the user's saved tracks in a =*Spofy Saved Tracks*= buffer.  Columns include a play indicator, track name, artist(s), album, and duration.  The currently playing track is highlighted, just like in search results.  All paginated buffers (library, search, browse, and playlist) automatically show a =[m] Load more= footer when additional pages are available from the API.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
+The command ~spofy-library-browse-tracks~ displays the user's saved tracks in a =*Spofy Saved Tracks*= buffer.  Columns include a play indicator, track name, artist(s), album, and duration.  The currently playing track is highlighted, just like in search results.  When the library cache is warm ([[#h:cache-management][Cache management]]), all items render instantly; otherwise the command falls back to paginated API requests.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
 
 | Key   | Command                               | Action                    |
 |-------+---------------------------------------+---------------------------|
@@ -519,7 +519,7 @@ The command ~spofy-library-browse-tracks~ displays the user's saved tracks in a 
 | =g=   | ~spofy-library-tracks-refresh~        | Refresh                   |
 | =q=   | ~quit-window~                         | Close                     |
 
-The command ~spofy-library-browse-albums~ displays saved albums in a =*Spofy Saved Albums*= buffer with columns for name, artist(s), year, and track count.
+The command ~spofy-library-browse-albums~ displays saved albums in a =*Spofy Saved Albums*= buffer with columns for name, artist(s), year, and track count.  Like ~spofy-library-browse-tracks~, it uses the library cache when available for instant rendering.
 
 | Key   | Command                               | Action                    |
 |-------+---------------------------------------+---------------------------|
@@ -581,6 +581,15 @@ The command ~spofy-library-save~ saves a Spotify entity (track or album) to the 
 Spofy caches API responses in memory to reduce network requests and improve responsiveness.  Each endpoint type has its own time-to-live, chosen to balance freshness against API rate limits: search results are cached for 5 minutes (results change slowly), user playlists for 1 minute (users edit playlists often), playlist tracks for 2 minutes (tracks change less frequently than list metadata), and album/artist details for 10 minutes (essentially static data).  The player state endpoint is never cached.
 
 The command ~spofy-clear-cache~ flushes the entire in-memory cache.  Use it when you suspect stale data, for example after making changes to a playlist in the Spotify app.  The cache is also cleared automatically when Emacs restarts.
+
+#+findex: spofy-library-warm-cache
+#+findex: spofy-library-invalidate-cache
+
+In addition to the API response cache, Spofy maintains a separate *library cache* that stores the complete contents of the user's saved tracks, saved albums, and playlists.  This cache is populated asynchronously in the background when Spofy initializes (via ~spofy-library-warm-cache~, called from ~spofy--ensure-global-mode~).  The background fetch does not block Emacs, even for large libraries with thousands of tracks.
+
+The library cache serves two purposes: it provides instant results for library search commands (~spofy-library-search-tracks~, ~spofy-library-search-albums~, ~spofy-library-search-playlists~), and it allows library browse commands (~spofy-library-browse-tracks~, ~spofy-library-browse-albums~, ~spofy-library-browse-playlists~) to render all items immediately without pagination.  When the cache is empty (e.g., at the start of a session before the background fetch completes), library search commands display a message asking the user to try again shortly, and browse commands fall back to the standard paginated API flow.
+
+The library cache is invalidated automatically when items are saved or unsaved via ~spofy-library-save~ and ~spofy-library-unsave~.  The command ~spofy-library-invalidate-cache~ can also be called manually.  The cache is not persisted to disk; a new Emacs session starts fresh.
 
 * Functions
 :PROPERTIES:
@@ -735,7 +744,7 @@ The command ~consult-spofy-artist~ searches artists, with Name, Genres, and Foll
 
 The command ~consult-spofy-playlist~ searches all Spotify playlists with live narrowing, with Name, Owner, and number of tracks columns.  Selecting a playlist opens the playlist detail view ([[#h:playlist-detail-view][Playlist detail view]]).
 
-The following three commands search within the user's own library rather than the full Spotify catalog.  They fetch all pages of the relevant endpoint on first use (paginating synchronously through the API), cache the results in memory, and filter client-side as you type.  The cache is invalidated automatically when items are saved or unsaved.  These are bound under the =l= prefix in the transient popup ([[#h:transient-popup][Transient popup]]).
+The following three commands search within the user's own library rather than the full Spotify catalog.  They rely on the library cache ([[#h:cache-management][Cache management]]), which is populated asynchronously in the background when Spofy starts.  All saved items are available for instant client-side filtering as you type.  If the cache is not yet ready (e.g., at the start of a session), the command displays a message and starts the background fetch.  These are bound under the =l= prefix in the transient popup ([[#h:transient-popup][Transient popup]]).
 
 The command ~spofy-library-search-tracks~ searches the user's saved tracks with incremental narrowing.  Candidates show Name, Artist(s), Album, and Duration columns.  Selecting a track plays it immediately.
 
@@ -747,7 +756,7 @@ The command ~consult-spofy-device~ fetches available playback devices with incre
 
 The command ~spofy-search-context~ fetches the tracklist of the currently playing album or playlist and lets you jump to any track with incremental narrowing.  It is not available for Spotify-generated contexts such as radio or daily mixes.  This command is bound to =s c= in the transient popup ([[#h:transient-popup][Transient popup]]).
 
-All commands use ~consult--dynamic-collection~ for incremental search with synchronous API requests (via ~url-retrieve-synchronously~), as required by consult's dynamic collection contract.  Each candidate stores the full Spotify entity in a text property; the ~:lookup~ mechanism ensures the original propertized candidate is returned on selection, so the entity data is available for the action.  This makes them compatible with the embark integration ([[#h:embark-integration][Embark integration]]).
+The Spotify search commands use ~consult--dynamic-collection~ for incremental search with synchronous API requests (via ~url-retrieve-synchronously~), debounced to avoid excessive API calls.  The library search commands pass a pre-fetched candidate list directly to ~consult--read~, since all items are already in memory from the library cache.  In both cases, each candidate stores the full Spotify entity in a text property; the ~:lookup~ mechanism ensures the original propertized candidate is returned on selection, so the entity data is available for the action.  This makes them compatible with the embark integration ([[#h:embark-integration][Embark integration]]).
 
 * Embark integration
 :PROPERTIES:
