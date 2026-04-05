@@ -806,6 +806,7 @@ If no tokens are available, prompts the user to authenticate."
     ("p" "Previous"      spofy-previous)
     ("f" "Seek forward"  spofy-seek-forward :transient t)
     ("r" "Seek backward" spofy-seek-backward :transient t)
+    ("t" "Seek to"       spofy-seek-to)
     ""
     "Volume"
     ("+" "Volume up"   spofy-volume-up :transient t)
@@ -827,10 +828,11 @@ If no tokens are available, prompts the user to authenticate."
                       "Shuffle off"))
      :transient t)]
    ["Search"
-    ("s t" "Tracks"    spofy-search-tracks)
-    ("s l" "Albums"    spofy-search-albums)
-    ("s a" "Artists"   spofy-search-artists)
-    ("s p" "Playlists" spofy-search-playlists)
+    ("s t" "Tracks"         spofy-search-tracks)
+    ("s l" "Albums"         spofy-search-albums)
+    ("s a" "Artists"        spofy-search-artists)
+    ("s p" "Playlists"      spofy-search-playlists)
+    ("s c" "Current tracks" consult-spofy-context-track)
     ""
     "Browse"
     ("b t" "Tracks"    spofy-library-saved-tracks)

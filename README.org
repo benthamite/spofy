@@ -255,8 +255,8 @@ The command ~spofy-menu~ opens a transient popup that provides quick access to a
 
 The popup is organized into two columns:
 
-- *Column 1 — Playback, Volume, Mode:* play/pause, next, previous, seek forward, seek backward; volume up/down and set; shuffle and repeat toggles.
-- *Column 2 — Search, Browse, Other:* search tracks (=s t=), albums (=s l=), artists (=s a=), playlists (=s p=); browse saved tracks (=b t=), saved albums (=b a=), playlists (=b p=); devices (=d=), Wikipedia lookup (=w=), dashboard (=/=), quit (=q=).
+- *Column 1 — Playback, Volume, Mode:* play/pause, next, previous, seek forward, seek backward, seek to (=t=); volume up/down and set; shuffle and repeat toggles.
+- *Column 2 — Search, Browse, Other:* search tracks (=s t=), albums (=s l=), artists (=s a=), playlists (=s p=), current tracks (=s c=); browse saved tracks (=b t=), saved albums (=b a=), playlists (=b p=); devices (=d=), Wikipedia lookup (=w=), dashboard (=/=), quit (=q=).
 
 Volume up/down, seek forward/backward, shuffle, and repeat all keep the menu open so they can be used repeatedly.
 
@@ -292,6 +292,7 @@ In addition, Spofy auto-enables the mode at package load time when a display fea
 #+findex: spofy-volume-set
 #+findex: spofy-toggle-shuffle
 #+findex: spofy-toggle-repeat
+#+findex: spofy-seek-to
 #+findex: spofy-play-track
 #+findex: spofy-play-context
 
@@ -299,7 +300,7 @@ The command ~spofy-play-pause~ toggles playback between playing and paused.  It 
 
 The commands ~spofy-next~ and ~spofy-previous~ skip to the next or previous track, respectively.  Both commands re-poll after a short delay on success so the UI reflects the new track without waiting for the next poll cycle.  If the user was playing when they skipped, the playing state is preserved through Spotify's brief transitional pause.
 
-The commands ~spofy-seek-forward~ and ~spofy-seek-backward~ move the playback position by ~spofy-seek-seconds~ seconds ([[#h:user-options-playback][Playback options]]).
+The commands ~spofy-seek-forward~ and ~spofy-seek-backward~ move the playback position by ~spofy-seek-seconds~ seconds ([[#h:user-options-playback][Playback options]]).  The command ~spofy-seek-to~ prompts for an arbitrary timestamp and jumps to that position.  It accepts plain seconds (="90"=), =M:SS= (="1:30"=), or =H:MM:SS= (="1:05:30"=) format.  The prompt shows the track duration as a guide; the value is clamped to the range [0, duration].
 
 The commands ~spofy-volume-up~ and ~spofy-volume-down~ adjust the volume by ~spofy-volume-step~ percent.  The command ~spofy-volume-set~ prompts for an exact volume level between 0 and 100.  All three commands update the local player state optimistically so that repeated keypresses accumulate without waiting for the API response.  The optimistic value is protected from being overwritten by the next poll cycle, so there is no regression even if Spotify has not yet processed the change.
 
@@ -713,8 +714,9 @@ The function ~spofy-ui-render-list~ provides the standard recipe for setting up 
 #+findex: consult-spofy-playlist
 #+findex: consult-spofy-my-playlist
 #+findex: consult-spofy-device
+#+findex: consult-spofy-context-track
 
-The file =spofy-consult.el= provides six ~consult~ completion sources for searching and selecting Spotify entities from the minibuffer.  These require the =consult= package.  The dependency is soft-loaded so that byte-compilation of the main Spofy package succeeds even when =consult= is not in the load path; at runtime, =consult= must be installed for these commands to work.
+The file =spofy-consult.el= provides seven ~consult~ completion sources for searching and selecting Spotify entities from the minibuffer.  These require the =consult= package.  The dependency is soft-loaded so that byte-compilation of the main Spofy package succeeds even when =consult= is not in the load path; at runtime, =consult= must be installed for these commands to work.
 
 #+vindex: spofy-consult-columns
 
@@ -732,7 +734,9 @@ The command ~consult-spofy-my-playlist~ fetches the user's own playlists with in
 
 The command ~consult-spofy-device~ fetches available playback devices with incremental narrowing, with Name and Type columns.  Selecting a device transfers playback to it.
 
-All six commands use ~consult--dynamic-collection~ for incremental search with synchronous API requests (via ~url-retrieve-synchronously~), as required by consult's dynamic collection contract.  Each candidate stores the full Spotify entity in a text property; the ~:lookup~ mechanism ensures the original propertized candidate is returned on selection, so the entity data is available for the action.  This makes them compatible with the embark integration ([[#h:embark-integration][Embark integration]]).
+The command ~consult-spofy-context-track~ fetches the tracklist of the currently playing album or playlist and lets you jump to any track with incremental narrowing.  It is not available for Spotify-generated contexts such as radio or daily mixes.  This command is bound to =s c= in the transient popup ([[#h:transient-popup][Transient popup]]).
+
+All seven commands use ~consult--dynamic-collection~ for incremental search with synchronous API requests (via ~url-retrieve-synchronously~), as required by consult's dynamic collection contract.  Each candidate stores the full Spotify entity in a text property; the ~:lookup~ mechanism ensures the original propertized candidate is returned on selection, so the entity data is available for the action.  This makes them compatible with the embark integration ([[#h:embark-integration][Embark integration]]).
 
 * Embark integration
 :PROPERTIES:

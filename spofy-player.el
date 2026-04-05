@@ -64,7 +64,7 @@
 (defvar spofy-player--current-state nil
   "Alist holding the last polled player state.
 Keys: track, artist, album, progress, is-playing, shuffle, repeat,
-device, volume, track-id.")
+device, volume, track-id, context-uri, context-type.")
 
 (defvar spofy-player--timer nil
   "Timer object for player state polling.")
@@ -93,7 +93,8 @@ IMAGES is the `images' array from a Spotify album object."
     (let* ((item (alist-get 'item data))
            (artists (alist-get 'artists item))
            (album (alist-get 'album item))
-           (device (alist-get 'device data)))
+           (device (alist-get 'device data))
+           (context (alist-get 'context data)))
       `((track     . ,(alist-get 'name item))
         (artist    . ,(when (and artists (> (length artists) 0))
                        (spofy-ui-format-artists artists)))
@@ -111,7 +112,9 @@ IMAGES is the `images' array from a Spotify album object."
         (repeat    . ,(alist-get 'repeat_state data))
         (device    . ,(alist-get 'name device))
         (volume    . ,(alist-get 'volume_percent device))
-        (track-id  . ,(alist-get 'id item))))))
+        (track-id  . ,(alist-get 'id item))
+        (context-uri  . ,(alist-get 'uri context))
+        (context-type . ,(alist-get 'type context))))))
 
 (defun spofy-player--update-state (key value)
   "Set KEY to VALUE in the current player state and run hooks."
@@ -416,6 +419,64 @@ etc.) starting at the given track."
   (spofy-api-put "me/player/play"
                  `((context_uri . ,context-uri))
                  (lambda (_) (message "Spofy: playing context"))))
+
+;;;; Seek to timestamp
+
+(defun spofy-player--parse-timestamp (input)
+  "Parse INPUT as a timestamp and return milliseconds.
+Accepts seconds (\"90\"), M:SS (\"1:30\"), or H:MM:SS (\"1:30:00\")."
+  (let ((parts (split-string (string-trim input) ":")))
+    (pcase (length parts)
+      (1 (* (truncate (string-to-number (nth 0 parts))) 1000))
+      (2 (* (+ (* (string-to-number (nth 0 parts)) 60)
+               (string-to-number (nth 1 parts)))
+            1000))
+      (3 (* (+ (* (string-to-number (nth 0 parts)) 3600)
+               (* (string-to-number (nth 1 parts)) 60)
+               (string-to-number (nth 2 parts)))
+            1000))
+      (_ (user-error "Spofy: invalid timestamp format: %s" input)))))
+
+;;;###autoload
+(defun spofy-seek-to (timestamp)
+  "Seek to TIMESTAMP in the current track.
+TIMESTAMP is a string in M:SS, H:MM:SS, or plain seconds format."
+  (interactive
+   (list (let ((duration (or (alist-get 'duration spofy-player--current-state) 0)))
+           (read-string (format "Seek to (max %s): "
+                                (spofy-ui-format-duration-ms duration))))))
+  (spofy-player--ensure-device)
+  (let* ((pos-ms (spofy-player--parse-timestamp timestamp))
+         (duration (or (alist-get 'duration spofy-player--current-state) 0))
+         (clamped (max 0 (min duration pos-ms))))
+    (spofy-player--update-state 'progress clamped)
+    (setf (alist-get 'poll-time spofy-player--current-state) (float-time))
+    (spofy-api-put (format "me/player/seek?position_ms=%d" clamped) nil
+                   (lambda (_)
+                     (message "Spofy: seeked to %s"
+                              (spofy-ui-format-duration-ms clamped))))))
+
+;;;; Jump to track
+
+(defun spofy-player--fetch-context-tracks (context-type context-id)
+  "Fetch all tracks for CONTEXT-TYPE (\"album\" or \"playlist\") with CONTEXT-ID.
+Return a vector of track items, or nil if the endpoint is inaccessible."
+  (let* ((endpoint (pcase context-type
+                     ("album" (format "albums/%s/tracks" context-id))
+                     ("playlist" (format "playlists/%s/tracks" context-id))))
+         (all-items nil)
+         (response (spofy-api-get-sync endpoint '(("limit" . "50"))))
+         (next (and response (let ((n (alist-get 'next response)))
+                               (and (stringp n) n)))))
+    (when response
+      (setq all-items (append (alist-get 'items response) nil))
+      (while next
+        (let* ((resp (spofy-api-get-sync next))
+               (n (alist-get 'next resp)))
+          (setq all-items (append all-items (append (alist-get 'items resp) nil)))
+          (setq next (and (stringp n) n))))
+      (vconcat all-items))))
+
 
 (provide 'spofy-player)
 ;;; spofy-player.el ends here

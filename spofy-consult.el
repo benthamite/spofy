@@ -23,9 +23,10 @@
 
 ;;; Commentary:
 
-;; Consult completion sources for the Spofy Spotify client.  Provides five
+;; Consult completion sources for the Spofy Spotify client.  Provides seven
 ;; interactive commands for searching tracks, albums, artists, playlists,
-;; and devices using the Consult async narrowing framework.
+;; devices, and current context tracks using the Consult async narrowing
+;; framework.
 
 ;;; Code:
 
@@ -39,10 +40,15 @@
 
 (declare-function spofy-play-track "spofy-player" (uri &optional context-uri))
 (declare-function spofy-play-context "spofy-player" (context-uri))
+(declare-function spofy-player--ensure-device "spofy-player" ())
+(declare-function spofy-player--poll-sync "spofy-player" ())
+(declare-function spofy-player--fetch-context-tracks "spofy-player" (context-type context-id))
 (declare-function spofy-view-album "spofy-browse" (album-id))
 (declare-function spofy-view-artist "spofy-browse" (artist-id))
 (declare-function spofy-view-playlist "spofy-browse" (playlist-id))
 (declare-function spofy-ui-format-artists "spofy-ui" (artists))
+
+(defvar spofy-player--current-state)
 
 ;;;; Customization
 
@@ -385,6 +391,47 @@ Results are fetched once and cached for subsequent calls."
                      (lambda (_)
                        (message "Spofy: transferred playback to %s"
                                 device-name))))))
+
+;;;; Context track source (jump to track in current playback)
+
+;;;###autoload
+(defun consult-spofy-context-track ()
+  "Pick a track from the current playback context and play it.
+Fetches the tracklist of the currently playing album or playlist
+and presents all tracks for selection with narrowing.  Signals an
+error when the context is unsupported (e.g. Spotify-generated
+radio or daily mixes)."
+  (interactive)
+  (spofy-consult--ensure-available)
+  (require 'spofy-player)
+  (spofy-player--ensure-device)
+  (unless spofy-player--current-state
+    (spofy-player--poll-sync))
+  (let* ((context-uri (alist-get 'context-uri spofy-player--current-state))
+         (context-type (alist-get 'context-type spofy-player--current-state))
+         (context-id (and context-uri
+                          (car (last (split-string context-uri ":"))))))
+    (unless (and context-id (member context-type '("album" "playlist")))
+      (user-error "Spofy: current tracks not available for this context"))
+    (let* ((raw-items (spofy-player--fetch-context-tracks context-type context-id))
+           (playlist-p (equal context-type "playlist"))
+           (candidates
+            (when raw-items
+              (cl-loop for item across raw-items
+                       for track = (if playlist-p (alist-get 'track item) item)
+                       when track collect (spofy-consult--format-track track)))))
+      (unless candidates
+        (user-error "Spofy: current tracks not available for this context"))
+      (let ((selected
+             (consult--read candidates
+              :prompt "Jump to track: "
+              :category 'spofy-track
+              :sort nil
+              :require-match t
+              :lookup #'consult--lookup-member)))
+        (when-let* ((entity (spofy-consult--get-entity selected))
+                    (uri (alist-get 'uri entity)))
+          (spofy-play-track uri context-uri))))))
 
 (provide 'spofy-consult)
 ;;; spofy-consult.el ends here
