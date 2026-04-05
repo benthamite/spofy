@@ -115,9 +115,7 @@ Return a list of (ID [COLUMNS...])."
 (defun spofy-playlist--display (items next-url)
   "Display playlist ITEMS in the *Spofy Playlists* buffer.
 NEXT-URL is the URL for the next page of results, or nil."
-  (let ((entries (cl-loop for item across items
-                         collect (spofy-playlist--format-entry item)))
-        (load-more-handler
+  (let ((load-more-handler
          (lambda (response)
            (let ((items (alist-get 'items response))
                  (next-url (alist-get 'next response)))
@@ -125,7 +123,10 @@ NEXT-URL is the URL for the next page of results, or nil."
                             collect (spofy-playlist--format-entry item))
                    next-url)))))
     (spofy-ui-render-list "*Spofy Playlists*" #'spofy-playlists-mode
-                          entries next-url load-more-handler)
+                          (lambda ()
+                            (cl-loop for item across items
+                                     collect (spofy-playlist--format-entry item)))
+                          next-url load-more-handler)
     (with-current-buffer "*Spofy Playlists*"
       (setq spofy-ui--entity-type "playlist"))))
 

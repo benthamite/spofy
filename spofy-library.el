@@ -133,8 +133,9 @@ ITEM is the wrapper alist from /me/tracks which contains a `track' key."
          (buf-name "*Spofy Saved Tracks*"))
     (spofy-ui-render-list
      buf-name #'spofy-library-tracks-mode
-     (cl-loop for item across items
-              collect (spofy-library--format-saved-track item))
+     (lambda ()
+       (cl-loop for item across items
+                collect (spofy-library--format-saved-track item)))
      next-url
      (lambda (response)
        (let ((items (alist-get 'items response))
@@ -249,8 +250,9 @@ ITEM is the wrapper alist from /me/albums which contains an `album' key."
          (buf-name "*Spofy Saved Albums*"))
     (spofy-ui-render-list
      buf-name #'spofy-library-albums-mode
-     (cl-loop for item across items
-              collect (spofy-library--format-saved-album item))
+     (lambda ()
+       (cl-loop for item across items
+                collect (spofy-library--format-saved-album item)))
      next-url
      (lambda (response)
        (let ((items (alist-get 'items response))
@@ -339,8 +341,9 @@ in a tabulated-list buffer."
          (buf-name "*Spofy Recently Played*"))
     (spofy-ui-render-list
      buf-name #'spofy-recently-played-mode
-     (cl-loop for item across items
-              collect (spofy-library--format-saved-track item))
+     (lambda ()
+       (cl-loop for item across items
+                collect (spofy-library--format-saved-track item)))
      next-url
      (lambda (response)
        (let ((items (alist-get 'items response))
@@ -496,8 +499,9 @@ TIME-RANGE is the time range string used for the query."
          (buf-name (format "*Spofy Top Tracks (%s)*" label)))
     (spofy-ui-render-list
      buf-name #'spofy-top-tracks-mode
-     (cl-loop for item across items
-              collect (spofy-top-tracks--format item))
+     (lambda ()
+       (cl-loop for item across items
+                collect (spofy-top-tracks--format item)))
      next-url
      (lambda (response)
        (let ((items (alist-get 'items response))
@@ -605,8 +609,9 @@ TIME-RANGE is the time range string used for the query."
          (buf-name (format "*Spofy Top Artists (%s)*" label)))
     (spofy-ui-render-list
      buf-name #'spofy-top-artists-mode
-     (cl-loop for item across items
-              collect (spofy-top-artists--format item))
+     (lambda ()
+       (cl-loop for item across items
+                collect (spofy-top-artists--format item)))
      next-url
      (lambda (response)
        (let ((items (alist-get 'items response))
@@ -692,8 +697,9 @@ Defaults to \"medium_term\"."
          (buf-name "*Spofy New Releases*"))
     (spofy-ui-render-list
      buf-name #'spofy-new-releases-mode
-     (cl-loop for item across items
-              collect (spofy-new-releases--format item))
+     (lambda ()
+       (cl-loop for item across items
+                collect (spofy-new-releases--format item)))
      next-url
      (lambda (response)
        (let* ((albums (alist-get 'albums response))

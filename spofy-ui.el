@@ -505,6 +505,10 @@ Shows a play icon if TRACK-URI matches the currently playing track."
 (defun spofy-ui-render-list (buf-name mode-fn entries next-url
                                       &optional load-more-handler display-fn)
   "Render ENTRIES in BUF-NAME using MODE-FN with pagination.
+ENTRIES may be a list of `tabulated-list-entries' items, or a
+function of no arguments that returns such a list.  When a
+function, it is called after the mode has been initialized so
+that `spofy-ui-col' can access dynamically computed column widths.
 NEXT-URL is the URL for the next page of results, or nil.
 LOAD-MORE-HANDLER, when non-nil, is set as `spofy-ui--load-more-handler'.
 DISPLAY-FN controls how the buffer is displayed: defaults to `pop-to-buffer';
@@ -517,7 +521,8 @@ pass `switch-to-buffer' for browse views."
       (setq-local spofy-ui--next-page-url next-url)
       (when load-more-handler
         (setq-local spofy-ui--load-more-handler load-more-handler))
-      (setq tabulated-list-entries entries)
+      (setq tabulated-list-entries
+            (if (functionp entries) (funcall entries) entries))
       (tabulated-list-print t)
       (goto-char (point-min)))
     (funcall (or display-fn #'pop-to-buffer) buf)))
