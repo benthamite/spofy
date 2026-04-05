@@ -123,7 +123,14 @@ ITEM is the wrapper alist from /me/tracks which contains a `track' key."
                                      (if (string-empty-p playing) 'spofy-artist-name 'spofy-playing))
                   (spofy-ui-truncate album-name (spofy-ui-col 'library-track 2)
                                      (if (string-empty-p playing) 'spofy-album-name 'spofy-playing))
-                  (propertize duration-str 'face 'spofy-muted)))))
+                  (propertize duration-str 'face
+                              (if (string-empty-p playing) 'spofy-muted 'spofy-playing))))))
+
+(defun spofy-library--reformat-saved-track (entity _idx)
+  "Re-format ENTITY as a saved-track entry for highlight refresh.
+ENTITY is the inner track alist stored by `spofy-ui-store-entity'.
+_IDX is the entry position (unused)."
+  (spofy-library--format-saved-track `((track . ,entity))))
 
 (defun spofy-library--render-tracks (response)
   "Render saved tracks RESPONSE into the *Spofy Saved Tracks* buffer."
@@ -142,7 +149,10 @@ ITEM is the wrapper alist from /me/tracks which contains a `track' key."
              (next-url (alist-get 'next response)))
          (cons (cl-loop for item across items
                         collect (spofy-library--format-saved-track item))
-               next-url))))))
+               next-url))))
+    (with-current-buffer buf-name
+      (setq-local spofy-ui--entry-formatter
+                  #'spofy-library--reformat-saved-track))))
 
 ;;;###autoload
 (defun spofy-library-browse-tracks ()
@@ -162,7 +172,10 @@ the /me/tracks endpoint with pagination."
    (lambda ()
      (cl-loop for item in items
               collect (spofy-library--format-saved-track item)))
-   nil))
+   nil)
+  (with-current-buffer "*Spofy Saved Tracks*"
+    (setq-local spofy-ui--entry-formatter
+                #'spofy-library--reformat-saved-track)))
 
 (defun spofy-library-tracks-play ()
   "Play the track at point."
@@ -372,7 +385,10 @@ the /me/albums endpoint with pagination."
              (next-url (alist-get 'next response)))
          (cons (cl-loop for item across items
                         collect (spofy-library--format-saved-track item))
-               next-url))))))
+               next-url))))
+    (with-current-buffer buf-name
+      (setq-local spofy-ui--entry-formatter
+                  #'spofy-library--reformat-saved-track))))
 
 ;;;###autoload
 (defun spofy-list-recently-played ()
@@ -573,7 +589,8 @@ type string/symbol plus ID supplied separately."
                                      (if (string-empty-p playing) 'spofy-artist-name 'spofy-playing))
                   (spofy-ui-truncate album-name (spofy-ui-col 'library-track 2)
                                      (if (string-empty-p playing) 'spofy-album-name 'spofy-playing))
-                  (propertize duration-str 'face 'spofy-muted)))))
+                  (propertize duration-str 'face
+                              (if (string-empty-p playing) 'spofy-muted 'spofy-playing))))))
 
 (defun spofy-top-tracks--render (response time-range)
   "Render top tracks RESPONSE into a buffer.
@@ -598,7 +615,10 @@ TIME-RANGE is the time range string used for the query."
                         collect (spofy-top-tracks--format item))
                next-url))))
     (with-current-buffer (get-buffer buf-name)
-      (setq-local spofy-top-tracks--time-range time-range))))
+      (setq-local spofy-top-tracks--time-range time-range)
+      (setq-local spofy-ui--entry-formatter
+                  (lambda (entity _idx)
+                    (spofy-top-tracks--format entity))))))
 
 ;;;###autoload
 (defun spofy-list-top-tracks (&optional time-range)

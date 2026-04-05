@@ -359,7 +359,7 @@ Each command creates a =*Spofy Search: TYPE*= buffer using ~tabulated-list-mode~
 | Artists   | Name, Genres, Followers                   |
 | Playlists | Name, Owner, Tracks, Public               |
 
-If the currently playing track appears in the search results, it is highlighted with the ~spofy-playing~ face and prefixed with a ▶ icon.
+If the currently playing track appears in the search results, it is highlighted with the ~spofy-playing~ face across all columns and prefixed with a ▶ icon.  The highlight updates automatically when the track changes, so there is no need to press =g= to see which track is now playing.
 
 *** Navigating search results
 :PROPERTIES:
@@ -400,7 +400,7 @@ The Spotify API returns results in pages.  Results load automatically as the use
 
 #+findex: spofy-view-album
 
-The command ~spofy-view-album~ displays the tracks of a Spotify album in a =*Spofy Album: NAME*= buffer.  The buffer has a header showing the album name, artist, year, and total track count.  Tracks are listed with their track number, name, artist(s), and duration.  For multi-disc albums, the track number column uses =disc.track= notation (e.g. =1.1=, =2.1=, =2.12=); single-disc albums show just the track number.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
+The command ~spofy-view-album~ displays the tracks of a Spotify album in a =*Spofy Album: NAME*= buffer.  The buffer has a header showing the album name, artist, year, and total track count.  Tracks are listed with their track number, name, artist(s), and duration.  For multi-disc albums, the track number column uses =disc.track= notation (e.g. =1.1=, =2.1=, =2.12=); single-disc albums show just the track number.  The currently playing track is highlighted with the ~spofy-playing~ face and the highlight updates automatically when the track changes.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
 
 | Key   | Command                    | Action                         |
 |-------+----------------------------+--------------------------------|
@@ -429,7 +429,7 @@ The command ~spofy-view-artist~ displays an artist's albums in a =*Spofy Artist:
 | =g=   | ~spofy-artist-refresh~        | Refresh                     |
 | =q=   | ~quit-window~                 | Close                       |
 
-The function ~spofy-view-artist-top-tracks~ fetches the artist's top tracks (as determined by Spotify's algorithm) and displays them in a =*Spofy Top Tracks: ARTIST*= buffer.  Tracks are listed with their name, album, and duration.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
+The function ~spofy-view-artist-top-tracks~ fetches the artist's top tracks (as determined by Spotify's algorithm) and displays them in a =*Spofy Top Tracks: ARTIST*= buffer.  Tracks are listed with their name, album, and duration.  The currently playing track is highlighted and the highlight updates automatically when the track changes.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
 
 *** Playlist detail view
 :PROPERTIES:
@@ -438,7 +438,7 @@ The function ~spofy-view-artist-top-tracks~ fetches the artist's top tracks (as 
 
 #+findex: spofy-view-playlist
 
-The command ~spofy-view-playlist~ displays the tracks of a playlist in a =*Spofy Playlist: NAME*= buffer.  The header shows the playlist name, owner, description, and total track count.  Columns include the track number (1-based position in the playlist), track name, artist(s), album, and duration.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
+The command ~spofy-view-playlist~ displays the tracks of a playlist in a =*Spofy Playlist: NAME*= buffer.  The header shows the playlist name, owner, description, and total track count.  Columns include the track number (1-based position in the playlist), track name, artist(s), album, and duration.  The currently playing track is highlighted with the ~spofy-playing~ face and the highlight updates automatically when the track changes.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
 
 | Key   | Command                            | Action                         |
 |-------+------------------------------------+--------------------------------|
@@ -507,7 +507,7 @@ The command ~spofy-follow-playlist~ prompts for a playlist ID or URI and follows
 #+findex: spofy-library-save
 #+findex: spofy-library-unsave
 
-The command ~spofy-library-browse-tracks~ displays the user's saved tracks in a =*Spofy Saved Tracks*= buffer.  Columns include a play indicator, track name, artist(s), album, and duration.  The currently playing track is highlighted, just like in search results.  When the library cache is warm ([[#h:cache-management][Cache management]]), all items render instantly; otherwise the command falls back to paginated API requests.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
+The command ~spofy-library-browse-tracks~ displays the user's saved tracks in a =*Spofy Saved Tracks*= buffer.  Columns include a play indicator, track name, artist(s), album, and duration.  The currently playing track is highlighted with the ~spofy-playing~ face across all columns, and the highlight updates automatically when the track changes.  When the library cache is warm ([[#h:cache-management][Cache management]]), all items render instantly; otherwise the command falls back to paginated API requests.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
 
 | Key   | Command                               | Action                    |
 |-------+---------------------------------------+---------------------------|
@@ -532,7 +532,7 @@ The command ~spofy-library-browse-albums~ displays saved albums in a =*Spofy Sav
 
 The command ~spofy-library-browse-context~ opens the currently playing album or playlist in a standard browse buffer.  For album contexts it opens the album view ([[#h:album-view][Album view]]); for playlist contexts it opens the playlist detail view ([[#h:playlist-detail-view][Playlist detail view]]).  It signals an error when the context is unsupported (e.g., Spotify-generated radio or daily mixes).
 
-The command ~spofy-list-recently-played~ displays the last 50 recently played tracks in a =*Spofy Recently Played*= buffer.  The columns are the same as saved tracks.
+The command ~spofy-list-recently-played~ displays the last 50 recently played tracks in a =*Spofy Recently Played*= buffer.  The columns are the same as saved tracks, and the playing highlight updates automatically when the track changes.
 
 | Key   | Command                                | Action                    |
 |-------+----------------------------------------+---------------------------|
@@ -542,7 +542,7 @@ The command ~spofy-list-recently-played~ displays the last 50 recently played tr
 | =g=   | ~spofy-recently-played-refresh~        | Refresh                   |
 | =q=   | ~quit-window~                          | Close                     |
 
-The command ~spofy-list-top-tracks~ displays the user's top tracks in a =*Spofy Top Tracks*= buffer.  It accepts an optional TIME-RANGE argument: ~"short_term"~ (4 weeks), ~"medium_term"~ (6 months, the default), or ~"long_term"~ (1 year).  The columns are the same as saved tracks.
+The command ~spofy-list-top-tracks~ displays the user's top tracks in a =*Spofy Top Tracks*= buffer.  It accepts an optional TIME-RANGE argument: ~"short_term"~ (4 weeks), ~"medium_term"~ (6 months, the default), or ~"long_term"~ (1 year).  The columns are the same as saved tracks, and the playing highlight updates automatically when the track changes.
 
 | Key   | Command                          | Action                    |
 |-------+----------------------------------+---------------------------|
@@ -867,7 +867,7 @@ Spofy defines a set of faces in the ~spofy-faces~ customization group for contro
 - ~spofy-artist-name~ is used for artist names.  It inherits from ~font-lock-function-name-face~.
 - ~spofy-album-name~ is used for album names.  It inherits from ~font-lock-type-face~.
 - ~spofy-now-playing-track~, ~spofy-now-playing-artist~, and ~spofy-now-playing-album~ are used in the dashboard now-playing section.  They inherit from the corresponding base faces with a larger height (1.15×).
-- ~spofy-playing~ marks the currently playing track in any listing.  It uses bold weight and the Spotify green color (=#1DB954=).
+- ~spofy-playing~ marks the currently playing track in any listing.  It uses bold weight and the Spotify green color (=#1DB954=).  All columns of the playing row use this face, including the duration column.
 - ~spofy-playing-icon~ is used for the ▶ icon on the currently playing track.  It inherits from ~spofy-playing~.
 - ~spofy-header~ is used for the header area in album, artist, and playlist detail views.  It inherits from ~header-line~.
 - ~spofy-progress-filled~ is used for the filled portion of the progress bar.  It inherits from ~success~.
@@ -887,7 +887,7 @@ All faces can be customized with =M-x customize-group RET spofy-faces RET=.
 
 The hook ~spofy-player-state-changed-hook~ runs whenever any aspect of the player state changes: track, play/pause state, shuffle, repeat, volume, or device.  The mode-line display and dashboard now-playing section both use this hook to stay up to date.  Add your own functions to this hook if you want to react to any state change.
 
-The hook ~spofy-player-track-changed-hook~ runs only when the current track changes.  This is a subset of state changes and is useful for notifications or logging.  The dashboard recently-played section hooks into this to refresh automatically when the track changes ([[#h:dashboard][Dashboard and global control]]).
+The hook ~spofy-player-track-changed-hook~ runs only when the current track changes.  This is a subset of state changes and is useful for notifications or logging.  The dashboard recently-played section hooks into this to refresh automatically when the track changes ([[#h:dashboard][Dashboard and global control]]).  All Spofy list buffers (album, playlist, library tracks, search results, top tracks, recently played, and artist top tracks) also hook into this to re-render their entries so the green playing indicator moves to the new track without a manual refresh.
 
 The hook ~spofy-authenticated-hook~ runs once after a successful OAuth2 authentication.  Use it to perform setup that depends on having a valid token, such as pre-fetching the user's playlists.
 

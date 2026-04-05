@@ -790,6 +790,8 @@ If no tokens are available, prompts the user to authenticate."
       (user-error "Spofy: authentication required")))
   (unless spofy-global-mode
     (spofy-global-mode 1))
+  (add-hook 'spofy-player-track-changed-hook
+            #'spofy-ui--refresh-track-highlights)
   (require 'spofy-library)
   (spofy-library-warm-cache))
 
@@ -902,6 +904,8 @@ unsupported (e.g., Spotify-generated radio or daily mixes)."
                #'spofy--dashboard-refresh-now-playing)
   (remove-hook 'spofy-player-track-changed-hook
                #'spofy--dashboard-refresh-recently-played)
+  (remove-hook 'spofy-player-track-changed-hook
+               #'spofy-ui--refresh-track-highlights)
   (when spofy-global-mode
     (spofy-global-mode -1))
   (message "Spofy: stopped."))

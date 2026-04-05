@@ -94,7 +94,8 @@ When MULTI-DISC-P is non-nil, show disc.track numbering."
                                      (if (string-empty-p playing) 'spofy-track-name 'spofy-playing))
                   (spofy-ui-truncate artists-str (spofy-ui-col 'album-track 1)
                                      (if (string-empty-p playing) 'spofy-artist-name 'spofy-playing))
-                  (propertize dur-str 'face 'spofy-muted)))))
+                  (propertize dur-str 'face
+                              (if (string-empty-p playing) 'spofy-muted 'spofy-playing))))))
 
 (defun spofy-album--multi-disc-p (tracks)
   "Return non-nil if TRACKS (a vector) span more than one disc."
@@ -139,6 +140,11 @@ When MULTI-DISC-P is non-nil, show disc.track numbering."
                                        collect (spofy-album--format-track
                                                 track album-uri multi-disc-p))
                               next-url)))))
+      (setq-local spofy-ui--entry-formatter
+                  (let ((album-uri uri)
+                        (multi-disc-p multi-disc))
+                    (lambda (entity _idx)
+                      (spofy-album--format-track entity album-uri multi-disc-p))))
       (spofy-ui-insert-header
        (list (format "Album: %s" name)
              (format "Artist(s): %s" artist-str)
@@ -375,7 +381,8 @@ Fetches artist info and albums, then displays in a tabulated-list buffer."
                                      (if (string-empty-p playing) 'spofy-track-name 'spofy-playing))
                   (spofy-ui-truncate album-name (spofy-ui-col 'artist-top-track 1)
                                      (if (string-empty-p playing) 'spofy-album-name 'spofy-playing))
-                  (propertize dur-str 'face 'spofy-muted)))))
+                  (propertize dur-str 'face
+                              (if (string-empty-p playing) 'spofy-muted 'spofy-playing))))))
 
 (defun spofy-top-tracks--render (artist-id artist-name tracks)
   "Render top TRACKS for artist ARTIST-NAME in a buffer.
@@ -389,6 +396,9 @@ ARTIST-ID is kept for refresh."
                   `((artist-id . ,artist-id)
                     (artist-name . ,artist-name)))
       (setq-local spofy-ui--entity-type 'track)
+      (setq-local spofy-ui--entry-formatter
+                  (lambda (entity _idx)
+                    (spofy-top-tracks--format-track entity)))
       (spofy-ui-insert-header
        (list (format "Top tracks: %s" artist-name)))
       (setq tabulated-list-entries
@@ -493,7 +503,8 @@ TRACK-NUMBER is the 1-based position in the playlist."
                                          (if (string-empty-p playing) 'spofy-artist-name 'spofy-playing))
                       (spofy-ui-truncate album-name (spofy-ui-col 'playlist-track 2)
                                          (if (string-empty-p playing) 'spofy-album-name 'spofy-playing))
-                      (propertize dur-str 'face 'spofy-muted)))))))
+                      (propertize dur-str 'face
+                                  (if (string-empty-p playing) 'spofy-muted 'spofy-playing))))))))
 
 (defun spofy-playlist--render (playlist)
   "Render PLAYLIST data into a buffer."
@@ -533,6 +544,11 @@ TRACK-NUMBER is the 1-based position in the playlist."
                                                     item playlist-uri idx)
                                        when entry collect entry)
                               next-url)))))
+      (setq-local spofy-ui--entry-formatter
+                  (let ((playlist-uri uri))
+                    (lambda (entity idx)
+                      (spofy-playlist--format-track-item
+                       entity playlist-uri (1+ idx)))))
       (spofy-ui-insert-header
        (list (format "Playlist: %s" name)
              (format "Owner: %s" owner)

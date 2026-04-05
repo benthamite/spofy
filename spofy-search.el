@@ -94,9 +94,12 @@ Return a list of (ID [COLUMNS...])."
           (vector play-icon
                   (spofy-ui-truncate name (spofy-ui-col 'search-track 0)
                                      (if playing-p 'spofy-playing 'spofy-track-name))
-                  (spofy-ui-truncate artist-str (spofy-ui-col 'search-track 1) 'spofy-artist-name)
-                  (spofy-ui-truncate album-name (spofy-ui-col 'search-track 2) 'spofy-album-name)
-                  (propertize duration-str 'face 'spofy-muted)))))
+                  (spofy-ui-truncate artist-str (spofy-ui-col 'search-track 1)
+                                     (if playing-p 'spofy-playing 'spofy-artist-name))
+                  (spofy-ui-truncate album-name (spofy-ui-col 'search-track 2)
+                                     (if playing-p 'spofy-playing 'spofy-album-name))
+                  (propertize duration-str 'face
+                              (if playing-p 'spofy-playing 'spofy-muted))))))
 
 (defun spofy-search--format-album-entry (album)
   "Format ALBUM alist as a `tabulated-list-entries' entry.
@@ -242,6 +245,10 @@ NEXT-URL is the URL for the next page of results, or nil."
                              (append items nil))))
         (spofy-search--store-entities items type)
         (setq tabulated-list-entries entries))
+      (when (string= type "track")
+        (setq-local spofy-ui--entry-formatter
+                    (lambda (entity _idx)
+                      (spofy-search--format-track-entry entity))))
       (tabulated-list-init-header)
       (tabulated-list-print t)
       (goto-char (point-min))

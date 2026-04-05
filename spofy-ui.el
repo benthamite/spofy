@@ -366,6 +366,12 @@ for the following page, or nil.")
 (defvar-local spofy-ui--buffer-context nil
   "Alist of context data for the current Spofy buffer.")
 
+(defvar-local spofy-ui--entry-formatter nil
+  "Function to re-format entries when the current track changes.
+Called with (ENTITY INDEX) for each entry whose URI maps to an
+entity in `spofy-ui--entities'.  Must return a
+`tabulated-list-entries' item (URI VECTOR).")
+
 (defun spofy-ui-insert-header (lines)
   "Insert header LINES at the top of the current buffer.
 LINES is a list of strings, each displayed on its own line with the
@@ -526,6 +532,33 @@ pass `switch-to-buffer' for browse views."
       (tabulated-list-print t)
       (goto-char (point-min)))
     (funcall (or display-fn #'pop-to-buffer) buf)))
+
+;;;; Track highlight auto-refresh
+
+(defun spofy-ui--refresh-track-highlights ()
+  "Re-render playing indicators in all Spofy list buffers.
+Intended for `spofy-player-track-changed-hook'."
+  (dolist (buf (buffer-list))
+    (when (buffer-live-p buf)
+      (with-current-buffer buf
+        (when (and spofy-ui--entry-formatter
+                   spofy-ui--entities
+                   tabulated-list-entries)
+          (spofy-ui--reformat-entries)
+          (tabulated-list-print t))))))
+
+(defun spofy-ui--reformat-entries ()
+  "Regenerate `tabulated-list-entries' using `spofy-ui--entry-formatter'."
+  (let ((new-entries nil)
+        (idx 0))
+    (dolist (entry tabulated-list-entries)
+      (let ((entity (gethash (car entry) spofy-ui--entities)))
+        (push (if entity
+                  (funcall spofy-ui--entry-formatter entity idx)
+                entry)
+              new-entries))
+      (setq idx (1+ idx)))
+    (setq tabulated-list-entries (nreverse new-entries))))
 
 (provide 'spofy-ui)
 ;;; spofy-ui.el ends here
