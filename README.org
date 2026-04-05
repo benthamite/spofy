@@ -437,7 +437,7 @@ The function ~spofy-view-artist-top-tracks~ fetches the artist's top tracks (as 
 
 #+findex: spofy-view-playlist
 
-The command ~spofy-view-playlist~ displays the tracks of a playlist in a =*Spofy Playlist: NAME*= buffer.  The header shows the playlist name, owner, description, and total track count.  Columns include the track name, artist(s), album, duration, who added the track, and the date it was added.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
+The command ~spofy-view-playlist~ displays the tracks of a playlist in a =*Spofy Playlist: NAME*= buffer.  The header shows the playlist name, owner, description, and total track count.  Columns include the track number (1-based position in the playlist), track name, artist(s), album, and duration.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
 
 | Key   | Command                            | Action                         |
 |-------+------------------------------------+--------------------------------|

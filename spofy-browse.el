@@ -437,16 +437,17 @@ ARTIST-ID is kept for refresh."
   (setq tabulated-list-padding 2)
   (spofy-ui-set-format
    'playlist-track
-   '((" "          2 nil)
+   '(("#"          4 nil :right-align t)
      ("Name"       :flex t)
      ("Artist(s)"  :flex t)
      ("Album"      :flex t)
      ("Duration"    6 nil :right-align t)))
   (tabulated-list-init-header))
 
-(defun spofy-playlist--format-track-item (item playlist-uri)
+(defun spofy-playlist--format-track-item (item playlist-uri track-number)
   "Format a playlist track ITEM (wrapper with `track' and `added_by').
-PLAYLIST-URI is the playlist context URI for playback."
+PLAYLIST-URI is the playlist context URI for playback.
+TRACK-NUMBER is the 1-based position in the playlist."
   (let* ((track (alist-get 'track item))
          (uri (if track (alist-get 'uri track) nil)))
     ;; Protect against nil tracks (local files, etc.)
@@ -457,6 +458,7 @@ PLAYLIST-URI is the playlist context URI for playback."
              (album-name (if album (or (alist-get 'name album) "") ""))
              (duration (alist-get 'duration_ms track))
              (playing (spofy-ui-playing-indicator uri))
+             (num-str (number-to-string track-number))
              (artists-str (if artists (spofy-ui-format-artists artists) ""))
              (dur-str (if duration (spofy-ui-format-duration-ms duration) "")))
         ;; Store the full wrapper so we have added_by and track data.
@@ -464,7 +466,8 @@ PLAYLIST-URI is the playlist context URI for playback."
         ;; Store playlist-uri for playback context.
         (ignore playlist-uri)
         (list uri
-              (vector playing
+              (vector (if (string-empty-p playing) num-str
+                        (propertize num-str 'face 'spofy-playing))
                       (spofy-ui-truncate name (spofy-ui-col 'playlist-track 0)
                                          (if (string-empty-p playing) 'spofy-track-name 'spofy-playing))
                       (spofy-ui-truncate artists-str (spofy-ui-col 'playlist-track 1)
@@ -503,10 +506,12 @@ PLAYLIST-URI is the playlist context URI for playback."
                   (let ((playlist-uri uri))
                     (lambda (response)
                       (let ((items (alist-get 'items response))
-                            (next-url (alist-get 'next response)))
+                            (next-url (alist-get 'next response))
+                            (offset (length tabulated-list-entries)))
                         (cons (cl-loop for item across items
+                                       for idx from (1+ offset)
                                        for entry = (spofy-playlist--format-track-item
-                                                    item playlist-uri)
+                                                    item playlist-uri idx)
                                        when entry collect entry)
                               next-url)))))
       (spofy-ui-insert-header
@@ -516,7 +521,8 @@ PLAYLIST-URI is the playlist context URI for playback."
              (format "Tracks: %s" (or total "?"))))
       (setq tabulated-list-entries
             (cl-loop for item across items
-                     for entry = (spofy-playlist--format-track-item item uri)
+                     for idx from 1
+                     for entry = (spofy-playlist--format-track-item item uri idx)
                      when entry collect entry))
       (tabulated-list-print t)
       (goto-char (point-min))
