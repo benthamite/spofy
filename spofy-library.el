@@ -147,11 +147,22 @@ ITEM is the wrapper alist from /me/tracks which contains a `track' key."
 ;;;###autoload
 (defun spofy-library-saved-tracks ()
   "List the user's saved tracks from Spotify.
-Fetches tracks from the /me/tracks endpoint and displays them
-in a tabulated-list buffer."
+Uses the library cache when available; otherwise fetches from
+the /me/tracks endpoint with pagination."
   (interactive)
-  (spofy-api-get "me/tracks" '(("limit" . "50"))
-                 #'spofy-library--render-tracks))
+  (if-let* ((items (spofy-library-cache-get 'track)))
+      (spofy-library--render-tracks-from-cache items)
+    (spofy-api-get "me/tracks" '(("limit" . "50"))
+                   #'spofy-library--render-tracks)))
+
+(defun spofy-library--render-tracks-from-cache (items)
+  "Render cached saved track ITEMS into the *Spofy Saved Tracks* buffer."
+  (spofy-ui-render-list
+   "*Spofy Saved Tracks*" #'spofy-library-tracks-mode
+   (lambda ()
+     (cl-loop for item in items
+              collect (spofy-library--format-saved-track item)))
+   nil))
 
 (defun spofy-library-tracks-play ()
   "Play the track at point."
@@ -264,11 +275,22 @@ ITEM is the wrapper alist from /me/albums which contains an `album' key."
 ;;;###autoload
 (defun spofy-library-saved-albums ()
   "List the user's saved albums from Spotify.
-Fetches albums from the /me/albums endpoint and displays them
-in a tabulated-list buffer."
+Uses the library cache when available; otherwise fetches from
+the /me/albums endpoint with pagination."
   (interactive)
-  (spofy-api-get "me/albums" '(("limit" . "50"))
-                 #'spofy-library--render-albums))
+  (if-let* ((items (spofy-library-cache-get 'album)))
+      (spofy-library--render-albums-from-cache items)
+    (spofy-api-get "me/albums" '(("limit" . "50"))
+                   #'spofy-library--render-albums)))
+
+(defun spofy-library--render-albums-from-cache (items)
+  "Render cached saved album ITEMS into the *Spofy Saved Albums* buffer."
+  (spofy-ui-render-list
+   "*Spofy Saved Albums*" #'spofy-library-albums-mode
+   (lambda ()
+     (cl-loop for item in items
+              collect (spofy-library--format-saved-album item)))
+   nil))
 
 (defun spofy-library-albums-view ()
   "View the album at point."

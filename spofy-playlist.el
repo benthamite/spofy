@@ -35,6 +35,7 @@
 
 (declare-function spofy-view-playlist "spofy-browse" (playlist-id))
 (declare-function spofy-play-context "spofy-player" (context-uri))
+(declare-function spofy-library-cache-get "spofy-library" (type))
 
 ;;;; User ID cache
 
@@ -132,13 +133,28 @@ NEXT-URL is the URL for the next page of results, or nil."
 
 ;;;###autoload
 (defun spofy-list-playlists ()
-  "List the current user's Spotify playlists."
+  "List the current user's Spotify playlists.
+Uses the library cache when available; otherwise fetches from
+the /me/playlists endpoint with pagination."
   (interactive)
-  (spofy-api-get "me/playlists" '(("limit" . "50"))
-                 (lambda (response)
-                   (let ((items (alist-get 'items response))
-                         (next-url (alist-get 'next response)))
-                     (spofy-playlist--display items next-url)))))
+  (if-let* ((items (spofy-library-cache-get 'playlist)))
+      (spofy-playlist--display-from-cache items)
+    (spofy-api-get "me/playlists" '(("limit" . "50"))
+                   (lambda (response)
+                     (let ((items (alist-get 'items response))
+                           (next-url (alist-get 'next response)))
+                       (spofy-playlist--display items next-url))))))
+
+(defun spofy-playlist--display-from-cache (items)
+  "Display cached playlist ITEMS in the *Spofy Playlists* buffer."
+  (spofy-ui-render-list
+   "*Spofy Playlists*" #'spofy-playlists-mode
+   (lambda ()
+     (cl-loop for item in items
+              collect (spofy-playlist--format-entry item)))
+   nil)
+  (with-current-buffer "*Spofy Playlists*"
+    (setq spofy-ui--entity-type "playlist")))
 
 ;;;; Buffer actions
 
