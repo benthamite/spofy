@@ -389,6 +389,70 @@ in a tabulated-list buffer."
   (spofy-list-recently-played))
 
 ;;; ========================================================================
+;;;; Library cache
+;;; ========================================================================
+
+(defvar spofy-library--cache nil
+  "Alist mapping entity type symbols to cached library items.
+Each entry is (TYPE . ITEMS) where ITEMS is a list of API alists.
+Populated by `spofy-library--fetch-all-async', invalidated by
+save/unsave.")
+
+(defvar spofy-library--fetching nil
+  "List of TYPE symbols currently being fetched asynchronously.")
+
+(defun spofy-library--fetch-all-async (endpoint type &optional callback)
+  "Fetch all items from ENDPOINT asynchronously, paginating until exhausted.
+TYPE is a symbol (track, album, playlist) used as cache key.
+CALLBACK, if non-nil, is called with the complete item list when done.
+Does nothing if TYPE is already cached or being fetched."
+  (when (and (not (alist-get type spofy-library--cache))
+             (not (memq type spofy-library--fetching)))
+    (push type spofy-library--fetching)
+    (message "Spofy: fetching %ss..." type)
+    (let ((all-items nil))
+      (cl-labels
+          ((fetch-page (url)
+             (spofy-api--request
+              "GET" url nil nil
+              (lambda (response)
+                (let* ((items (alist-get 'items response))
+                       (next (let ((n (alist-get 'next response)))
+                               (and (stringp n) n))))
+                  (setq all-items (append all-items (append items nil)))
+                  (if next
+                      (fetch-page next)
+                    (setq spofy-library--fetching
+                          (delq type spofy-library--fetching))
+                    (setf (alist-get type spofy-library--cache) all-items)
+                    (message "Spofy: fetched %d %ss" (length all-items) type)
+                    (when callback
+                      (funcall callback all-items))))))))
+        (fetch-page (spofy-api--build-url endpoint '(("limit" . "50"))))))))
+
+(defun spofy-library-cache-ready-p (type)
+  "Return non-nil if the cache for TYPE is populated."
+  (and (alist-get type spofy-library--cache) t))
+
+(defun spofy-library-cache-get (type)
+  "Return cached items for TYPE, or nil if not yet cached."
+  (alist-get type spofy-library--cache))
+
+(defun spofy-library-invalidate-cache (&optional type)
+  "Invalidate the library cache for TYPE, or all types if nil."
+  (if type
+      (setf (alist-get type spofy-library--cache nil 'remove) nil)
+    (setq spofy-library--cache nil)))
+
+(defun spofy-library-warm-cache ()
+  "Start fetching all library data in the background.
+Call this early (e.g., when spofy initializes) so that library
+search commands have data ready when the user invokes them."
+  (spofy-library--fetch-all-async "me/tracks" 'track)
+  (spofy-library--fetch-all-async "me/albums" 'album)
+  (spofy-library--fetch-all-async "me/playlists" 'playlist))
+
+;;; ========================================================================
 ;;;; Save / unsave commands
 ;;; ========================================================================
 
@@ -410,6 +474,7 @@ type string/symbol plus ID supplied separately."
         (message "Spofy: cannot save entity of type \"%s\"." (or type "unknown"))
       (spofy-api-put endpoint `((ids . [,entity-id]))
                      (lambda (_response)
+                       (spofy-library-invalidate-cache (intern type))
                        (message "Spofy: saved %s to library." type))))))
 
 ;;;###autoload
@@ -430,6 +495,7 @@ type string/symbol plus ID supplied separately."
         (message "Spofy: cannot unsave entity of type \"%s\"." (or type "unknown"))
       (spofy-api-delete endpoint `((ids . [,entity-id]))
                         (lambda (_response)
+                          (spofy-library-invalidate-cache (intern type))
                           (message "Spofy: removed %s from library." type))))))
 
 ;;; ========================================================================

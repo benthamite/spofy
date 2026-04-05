@@ -256,7 +256,7 @@ The command ~spofy-menu~ opens a transient popup that provides quick access to a
 The popup is organized into two columns:
 
 - *Column 1 — Playback, Volume, Mode:* play/pause, next, previous, seek forward, seek backward, seek to (=t=); volume up/down and set; shuffle and repeat toggles.
-- *Column 2 — Search, Browse, Other:* search tracks (=s t=), albums (=s l=), artists (=s a=), playlists (=s p=), current tracks (=s c=); browse saved tracks (=b t=), saved albums (=b a=), playlists (=b p=); devices (=d=), Wikipedia lookup (=w=), dashboard (=/=), quit (=q=).
+- *Column 2 — Search, Browse, Library search, Other:* search tracks (=s t=), albums (=s l=), artists (=s a=), playlists (=s p=), current tracks (=s c=); browse saved tracks (=b t=), saved albums (=b a=), playlists (=b p=); library search for saved tracks (=l t=), saved albums (=l a=), playlists (=l p=); devices (=d=), Wikipedia lookup (=w=), dashboard (=/=), quit (=q=).
 
 Volume up/down, seek forward/backward, shuffle, and repeat all keep the menu open so they can be used repeatedly.
 
@@ -712,11 +712,13 @@ The function ~spofy-ui-render-list~ provides the standard recipe for setting up 
 #+findex: consult-spofy-album
 #+findex: consult-spofy-artist
 #+findex: consult-spofy-playlist
+#+findex: consult-spofy-my-track
+#+findex: consult-spofy-my-album
 #+findex: consult-spofy-my-playlist
 #+findex: consult-spofy-device
 #+findex: consult-spofy-context-track
 
-The file =spofy-consult.el= provides seven ~consult~ completion sources for searching and selecting Spotify entities from the minibuffer.  These require the =consult= package.  The dependency is soft-loaded so that byte-compilation of the main Spofy package succeeds even when =consult= is not in the load path; at runtime, =consult= must be installed for these commands to work.
+The file =spofy-consult.el= provides ~consult~ completion sources for searching and selecting Spotify entities from the minibuffer.  These require the =consult= package.  The dependency is soft-loaded so that byte-compilation of the main Spofy package succeeds even when =consult= is not in the load path; at runtime, =consult= must be installed for these commands to work.
 
 #+vindex: spofy-consult-columns
 
@@ -730,13 +732,19 @@ The command ~consult-spofy-artist~ searches artists, with Name, Genres, and Foll
 
 The command ~consult-spofy-playlist~ searches all Spotify playlists with live narrowing, with Name, Owner, and number of tracks columns.  Selecting a playlist opens the playlist detail view ([[#h:playlist-detail-view][Playlist detail view]]).
 
-The command ~consult-spofy-my-playlist~ fetches the user's own playlists with incremental narrowing, with Name, Owner, and number of tracks columns.  The full list is fetched once from the API and filtered client-side as you type.  Selecting a playlist opens the playlist detail view.
+The following three commands search within the user's own library rather than the full Spotify catalog.  They fetch all pages of the relevant endpoint on first use (paginating synchronously through the API), cache the results in memory, and filter client-side as you type.  The cache is invalidated automatically when items are saved or unsaved.  These are bound under the =l= prefix in the transient popup ([[#h:transient-popup][Transient popup]]).
+
+The command ~consult-spofy-my-track~ searches the user's saved tracks with incremental narrowing.  Candidates show Name, Artist(s), Album, and Duration columns.  Selecting a track plays it immediately.
+
+The command ~consult-spofy-my-album~ searches saved albums with incremental narrowing, with Name, Year, Artist(s), and number of tracks columns.  Selecting an album opens the album view ([[#h:album-view][Album view]]).
+
+The command ~consult-spofy-my-playlist~ searches the user's playlists with incremental narrowing, with Name, Owner, and number of tracks columns.  Selecting a playlist opens the playlist detail view ([[#h:playlist-detail-view][Playlist detail view]]).
 
 The command ~consult-spofy-device~ fetches available playback devices with incremental narrowing, with Name and Type columns.  Selecting a device transfers playback to it.
 
 The command ~consult-spofy-context-track~ fetches the tracklist of the currently playing album or playlist and lets you jump to any track with incremental narrowing.  It is not available for Spotify-generated contexts such as radio or daily mixes.  This command is bound to =s c= in the transient popup ([[#h:transient-popup][Transient popup]]).
 
-All seven commands use ~consult--dynamic-collection~ for incremental search with synchronous API requests (via ~url-retrieve-synchronously~), as required by consult's dynamic collection contract.  Each candidate stores the full Spotify entity in a text property; the ~:lookup~ mechanism ensures the original propertized candidate is returned on selection, so the entity data is available for the action.  This makes them compatible with the embark integration ([[#h:embark-integration][Embark integration]]).
+All commands use ~consult--dynamic-collection~ for incremental search with synchronous API requests (via ~url-retrieve-synchronously~), as required by consult's dynamic collection contract.  Each candidate stores the full Spotify entity in a text property; the ~:lookup~ mechanism ensures the original propertized candidate is returned on selection, so the entity data is available for the action.  This makes them compatible with the embark integration ([[#h:embark-integration][Embark integration]]).
 
 * Embark integration
 :PROPERTIES:

@@ -317,39 +317,89 @@ FORMAT-FN is called on each result item to produce a candidate string."
                 (playlist-id (alist-get 'id entity)))
       (spofy-view-playlist playlist-id))))
 
-(defun spofy-consult--my-playlist-collection ()
-  "Return a synchronous dynamic collection for the user's playlists.
-Results are fetched once and cached for subsequent calls."
-  (let ((cache nil))
-    (lambda (_input)
-      (or cache
-          (setq cache
-                (let* ((response (spofy-api-get-sync
-                                  "me/playlists" '(("limit" . "50"))))
-                       (items (alist-get 'items response)))
-                  (when items
-                    (mapcar #'spofy-consult--format-playlist
-                            (seq-remove #'spofy-consult--null-p
-                                        (append items nil))))))))))
+;;;; Library sources (saved tracks, albums, playlists -- fetches all pages)
+
+(declare-function spofy-library--fetch-all "spofy-library" (endpoint type))
+
+(defun spofy-consult--fetch-library-candidates (endpoint type format-fn &optional item-key)
+  "Return formatted candidates for a library endpoint.
+TYPE is the cache key symbol, FORMAT-FN formats each item.
+When ITEM-KEY is non-nil, extract that key from each wrapper
+alist before formatting (e.g., \\='track for /me/tracks).
+Returns candidates from cache if available.  If not cached,
+starts an async fetch and signals a user error asking to retry."
+  (require 'spofy-library)
+  (let ((items (spofy-library-cache-get type)))
+    (unless items
+      (spofy-library--fetch-all-async endpoint type)
+      (user-error "Spofy: fetching %ss in the background, please try again shortly" type))
+    (cl-loop for item in items
+             for entity = (if item-key (alist-get item-key item) item)
+             unless (spofy-consult--null-p entity)
+             collect (funcall format-fn entity))))
+
+;;;###autoload
+(defun consult-spofy-my-track ()
+  "Search saved tracks and play the selected one."
+  (interactive)
+  (spofy-consult--ensure-available)
+  (let ((candidates (spofy-consult--fetch-library-candidates
+                     "me/tracks" 'track
+                     #'spofy-consult--format-track 'track)))
+    (unless candidates
+      (user-error "Spofy: no saved tracks found"))
+    (let ((selected
+           (consult--read candidates
+            :prompt "Spofy saved track: "
+            :category 'spofy-track
+            :sort nil
+            :require-match t
+            :lookup #'consult--lookup-member)))
+      (when-let* ((entity (spofy-consult--get-entity selected))
+                  (uri (alist-get 'uri entity)))
+        (spofy-play-track uri)))))
+
+;;;###autoload
+(defun consult-spofy-my-album ()
+  "Search saved albums and open the selected one."
+  (interactive)
+  (spofy-consult--ensure-available)
+  (let ((candidates (spofy-consult--fetch-library-candidates
+                     "me/albums" 'album
+                     #'spofy-consult--format-album 'album)))
+    (unless candidates
+      (user-error "Spofy: no saved albums found"))
+    (let ((selected
+           (consult--read candidates
+            :prompt "Spofy saved album: "
+            :category 'spofy-album
+            :sort nil
+            :require-match t
+            :lookup #'consult--lookup-member)))
+      (when-let* ((entity (spofy-consult--get-entity selected))
+                  (album-id (alist-get 'id entity)))
+        (spofy-view-album album-id)))))
 
 ;;;###autoload
 (defun consult-spofy-my-playlist ()
   "Pick from the user's Spotify playlists and open the selected one."
   (interactive)
   (spofy-consult--ensure-available)
-  (let* ((selected
-          (consult--read
-           (consult--dynamic-collection
-            (spofy-consult--my-playlist-collection)
-            :min-input 0)
-           :prompt "Spofy my playlist: "
-           :category 'spofy-playlist
-           :sort nil
-           :require-match t
-           :lookup #'consult--lookup-member)))
-    (when-let* ((entity (spofy-consult--get-entity selected))
-                (playlist-id (alist-get 'id entity)))
-      (spofy-view-playlist playlist-id))))
+  (let ((candidates (spofy-consult--fetch-library-candidates
+                     "me/playlists" 'playlist
+                     #'spofy-consult--format-playlist)))
+    (unless candidates
+      (user-error "Spofy: no playlists found"))
+    (let ((selected
+           (consult--read candidates
+            :prompt "Spofy my playlist: "
+            :category 'spofy-playlist
+            :sort nil
+            :require-match t
+            :lookup #'consult--lookup-member)))
+      (when-let* ((entity (spofy-consult--get-entity selected))
+                  (playlist-id (alist-get 'id entity)))
+        (spofy-view-playlist playlist-id)))))
 
 ;;;; Device source (synchronous -- fetches available devices)
 

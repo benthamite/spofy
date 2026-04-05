@@ -96,6 +96,7 @@
 (declare-function spofy-list-top-tracks "spofy-library" (&optional time-range))
 (declare-function spofy-list-top-artists "spofy-library" (&optional time-range))
 (declare-function spofy-list-new-releases "spofy-library" ())
+(declare-function spofy-library-warm-cache "spofy-library" ())
 
 ;; spofy-mode-line
 (declare-function spofy-mode-line-mode "spofy-mode-line" (&optional arg))
@@ -784,7 +785,9 @@ If no tokens are available, prompts the user to authenticate."
           (user-error "Spofy: complete authentication in your browser, then try again"))
       (user-error "Spofy: authentication required")))
   (unless spofy-global-mode
-    (spofy-global-mode 1)))
+    (spofy-global-mode 1))
+  (require 'spofy-library)
+  (spofy-library-warm-cache))
 
 ;;;; Transient popup
 
@@ -827,12 +830,17 @@ If no tokens are available, prompts the user to authenticate."
                         (concat "Shuffle " (propertize "on" 'face 'transient-value))
                       "Shuffle off"))
      :transient t)]
-   ["Search"
+   ["Spotify search"
     ("s t" "Tracks"         spofy-search-tracks)
     ("s l" "Albums"         spofy-search-albums)
     ("s a" "Artists"        spofy-search-artists)
     ("s p" "Playlists"      spofy-search-playlists)
     ("s c" "Current tracks" consult-spofy-context-track)
+    ""
+    "Library search"
+    ("l t" "Tracks"    consult-spofy-my-track)
+    ("l a" "Albums"    consult-spofy-my-album)
+    ("l p" "Playlists" consult-spofy-my-playlist)
     ""
     "Browse"
     ("b t" "Tracks"    spofy-library-saved-tracks)
