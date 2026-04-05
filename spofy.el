@@ -74,6 +74,10 @@
 (declare-function spofy-play-track "spofy-player" (uri &optional context-uri))
 (declare-function spofy-play-context "spofy-player" (context-uri))
 (declare-function spofy-select-device "spofy-player" ())
+(declare-function spofy-player--ensure-device "spofy-player" ())
+(declare-function spofy-player--poll-sync "spofy-player" ())
+(declare-function spofy-seek-to "spofy-player" ())
+(declare-function spofy-jump-to-track "spofy-player" ())
 
 ;; spofy-search
 (declare-function spofy-search-tracks "spofy-search" (query))
@@ -835,17 +839,18 @@ If no tokens are available, prompts the user to authenticate."
     ("s l" "Albums"         spofy-search-albums)
     ("s a" "Artists"        spofy-search-artists)
     ("s p" "Playlists"      spofy-search-playlists)
-    ("s c" "Current tracks" consult-spofy-context-track)
-    ""
-    "Library search"
-    ("l t" "Tracks"    consult-spofy-my-track)
-    ("l a" "Albums"    consult-spofy-my-album)
-    ("l p" "Playlists" consult-spofy-my-playlist)
+    ("s c" "Context"        consult-spofy-context-track)
     ""
     "Browse"
     ("b t" "Tracks"    spofy-library-saved-tracks)
     ("b a" "Albums"    spofy-library-saved-albums)
     ("b p" "Playlists" spofy-list-playlists)
+    ("b c" "Context"   spofy-browse-context)
+    ""
+    "Library search"
+    ("l t" "Tracks"    consult-spofy-my-track)
+    ("l a" "Albums"    consult-spofy-my-album)
+    ("l p" "Playlists" consult-spofy-my-playlist)
     ""
     "Other"
     ("d" "Devices"   spofy-select-device)
@@ -862,6 +867,28 @@ showing the transient menu."
   (spofy--ensure-global-mode)
   (call-interactively #'spofy--menu))
 
+
+;;;; Context browsing
+
+;;;###autoload
+(defun spofy-browse-context ()
+  "Browse the tracks of the current playback context.
+Opens the album or playlist that is currently playing in a
+standard browse buffer.  Signals an error when the context is
+unsupported (e.g., Spotify-generated radio or daily mixes)."
+  (interactive)
+  (require 'spofy-player)
+  (spofy-player--ensure-device)
+  (unless spofy-player--current-state
+    (spofy-player--poll-sync))
+  (let ((context-uri (alist-get 'context-uri spofy-player--current-state))
+        (context-type (alist-get 'context-type spofy-player--current-state)))
+    (unless (and context-uri (member context-type '("album" "playlist")))
+      (user-error "Spofy: cannot browse this context"))
+    (let ((context-id (car (last (split-string context-uri ":")))))
+      (pcase context-type
+        ("album" (spofy-view-album context-id))
+        ("playlist" (spofy-view-playlist context-id))))))
 
 ;;;; Convenience commands
 
