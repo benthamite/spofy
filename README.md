@@ -24,21 +24,22 @@ Optional integrations extend `spofy` into the broader Emacs ecosystem:
 ### package-vc (built-in since Emacs 30)
 
 ```emacs-lisp
-(package-vc-install "https://github.com/benthamite/spofy")
+(use-package spofy
+  :vc (:url "https://github.com/benthamite/spofy"))
 ```
 
 ### Elpaca
 
 ```emacs-lisp
 (use-package spofy
-  :ensure (spofy :host github :repo "benthamite/spofy"))
+  :ensure (:host github :repo "benthamite/spofy"))
 ```
 
 ### straight.el
 
 ```emacs-lisp
-(straight-use-package
- '(spofy :type git :host github :repo "benthamite/spofy"))
+(use-package spofy
+  :straight (:host github :repo "benthamite/spofy"))
 ```
 
 ### Optional dependencies
