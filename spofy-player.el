@@ -90,7 +90,8 @@ IMAGES is the `images' array from a Spotify album object."
 (defun spofy-player--extract-state (data)
   "Extract a normalized state alist from the Spotify player DATA response."
   (when data
-    (let* ((item (alist-get 'item data))
+    (let* ((item (let ((i (alist-get 'item data)))
+                   (and (listp i) i)))
            (artists (alist-get 'artists item))
            (album (alist-get 'album item))
            (device (alist-get 'device data))
