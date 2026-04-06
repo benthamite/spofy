@@ -842,9 +842,9 @@ If no tokens are available, prompts the user to authenticate."
      :description spofy--shuffle-description :transient t)]
    ["Search Spotify"
     ("s t" "Tracks"         spofy-search-tracks)
-    ("s l" "Albums"         spofy-search-albums)
+    ("s a" "Albums"         spofy-search-albums)
     ("s p" "Playlists"      spofy-search-playlists)
-    ("s a" "Artists"        spofy-search-artists)
+    ("s r" "Artists"        spofy-search-artists)
     ""
     "Search Library"
     ("l t" "Tracks"         spofy-library-search-tracks)

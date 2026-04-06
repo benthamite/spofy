@@ -1524,9 +1524,14 @@ for controlling the appearance of its buffers:
      section.  They inherit from the corresponding base faces with a
      larger height (1.15×).
    • ‘spofy-playing’ marks the currently playing track in any listing.
-     It uses bold weight and the Spotify green color (‘#1DB954’).  All
-     columns of the playing row use this face, including the duration
-     column.
+     It uses ultra-bold weight, layered on top of each column's own face
+     so that the original colors are preserved.  All columns of the
+     playing row use this face, including the duration column.  The
+     cursor is hidden in all table buffers.  A box border is drawn
+     around the entire playing line using the default foreground color.
+     Due to an Emacs display limitation, the border's vertical lines may
+     not render after a theme change until the buffer is refreshed with
+     ‘g’.
    • ‘spofy-playing-icon’ is used for the ▶ icon on the currently
      playing track.  It inherits from ‘spofy-playing’.
    • ‘spofy-header’ is used for the header area in album, artist, and
@@ -1875,12 +1880,12 @@ Node: Org-mode integration62481
 Node: Wikipedia integration63657
 Node: Wikipedia user options67305
 Node: Faces68984
-Node: Hooks70756
-Node: Mode-line display71967
-Node: Tab-bar display72895
-Node: Indices74145
-Node: Function index74286
-Node: Variable index84244
+Node: Hooks71105
+Node: Mode-line display72316
+Node: Tab-bar display73244
+Node: Indices74494
+Node: Function index74635
+Node: Variable index84593
 
 End Tag Table
 

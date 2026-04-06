@@ -88,15 +88,17 @@ When MULTI-DISC-P is non-nil, show disc.track numbering."
          (artists-str (if artists (spofy-ui-format-artists artists) ""))
          (dur-str (if duration (spofy-ui-format-duration-ms duration) "")))
     (spofy-ui-store-entity uri track)
-    (list uri
-          (vector (if (string-empty-p playing) num-str
-                    (propertize num-str 'face 'spofy-playing))
-                  (spofy-ui-truncate name (spofy-ui-col 'album-track 0)
-                                     (if (string-empty-p playing) 'spofy-track-name 'spofy-playing))
-                  (spofy-ui-truncate artists-str (spofy-ui-col 'album-track 1)
-                                     (if (string-empty-p playing) 'spofy-artist-name 'spofy-playing))
-                  (propertize dur-str 'face
-                              (if (string-empty-p playing) 'spofy-muted 'spofy-playing))))))
+    (let ((playing-p (not (string-empty-p playing))))
+      (list uri
+            (vector (if playing-p
+                        (propertize num-str 'face 'spofy-playing)
+                      num-str)
+                    (spofy-ui-truncate name (spofy-ui-col 'album-track 0)
+                                       (spofy-ui-playing-face 'spofy-track-name playing-p))
+                    (spofy-ui-truncate artists-str (spofy-ui-col 'album-track 1)
+                                       (spofy-ui-playing-face 'spofy-artist-name playing-p))
+                    (propertize dur-str 'face
+                                (spofy-ui-playing-face 'spofy-muted playing-p)))))))
 
 (defun spofy-album--multi-disc-p (tracks)
   "Return non-nil if TRACKS (a vector) span more than one disc."
@@ -389,14 +391,15 @@ Fetches artist info and albums, then displays in a tabulated-list buffer."
          (playing (spofy-ui-playing-indicator uri))
          (dur-str (if duration (spofy-ui-format-duration-ms duration) "")))
     (spofy-ui-store-entity uri track)
-    (list uri
-          (vector playing
-                  (spofy-ui-truncate name (spofy-ui-col 'artist-top-track 0)
-                                     (if (string-empty-p playing) 'spofy-track-name 'spofy-playing))
-                  (spofy-ui-truncate album-name (spofy-ui-col 'artist-top-track 1)
-                                     (if (string-empty-p playing) 'spofy-album-name 'spofy-playing))
-                  (propertize dur-str 'face
-                              (if (string-empty-p playing) 'spofy-muted 'spofy-playing))))))
+    (let ((playing-p (not (string-empty-p playing))))
+      (list uri
+            (vector playing
+                    (spofy-ui-truncate name (spofy-ui-col 'artist-top-track 0)
+                                       (spofy-ui-playing-face 'spofy-track-name playing-p))
+                    (spofy-ui-truncate album-name (spofy-ui-col 'artist-top-track 1)
+                                       (spofy-ui-playing-face 'spofy-album-name playing-p))
+                    (propertize dur-str 'face
+                                (spofy-ui-playing-face 'spofy-muted playing-p)))))))
 
 (defun spofy-top-tracks--render (artist-id artist-name tracks)
   "Render top TRACKS for artist ARTIST-NAME in a buffer.
@@ -509,17 +512,19 @@ TRACK-NUMBER is the 1-based position in the playlist."
         (spofy-ui-store-entity uri item)
         ;; Store playlist-uri for playback context.
         (ignore playlist-uri)
-        (list uri
-              (vector (if (string-empty-p playing) num-str
-                        (propertize num-str 'face 'spofy-playing))
-                      (spofy-ui-truncate name (spofy-ui-col 'playlist-track 0)
-                                         (if (string-empty-p playing) 'spofy-track-name 'spofy-playing))
-                      (spofy-ui-truncate artists-str (spofy-ui-col 'playlist-track 1)
-                                         (if (string-empty-p playing) 'spofy-artist-name 'spofy-playing))
-                      (spofy-ui-truncate album-name (spofy-ui-col 'playlist-track 2)
-                                         (if (string-empty-p playing) 'spofy-album-name 'spofy-playing))
-                      (propertize dur-str 'face
-                                  (if (string-empty-p playing) 'spofy-muted 'spofy-playing))))))))
+        (let ((playing-p (not (string-empty-p playing))))
+          (list uri
+                (vector (if playing-p
+                            (propertize num-str 'face 'spofy-playing)
+                          num-str)
+                        (spofy-ui-truncate name (spofy-ui-col 'playlist-track 0)
+                                           (spofy-ui-playing-face 'spofy-track-name playing-p))
+                        (spofy-ui-truncate artists-str (spofy-ui-col 'playlist-track 1)
+                                           (spofy-ui-playing-face 'spofy-artist-name playing-p))
+                        (spofy-ui-truncate album-name (spofy-ui-col 'playlist-track 2)
+                                           (spofy-ui-playing-face 'spofy-album-name playing-p))
+                        (propertize dur-str 'face
+                                    (spofy-ui-playing-face 'spofy-muted playing-p)))))))))
 
 (defun spofy-playlist--render (playlist)
   "Render PLAYLIST data into a buffer."

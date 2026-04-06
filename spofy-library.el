@@ -116,16 +116,17 @@ ITEM is the wrapper alist from /me/tracks which contains a `track' key."
          (duration-str (spofy-ui-format-duration-ms duration-ms))
          (playing (spofy-ui-playing-indicator uri)))
     (spofy-ui-store-entity uri track)
-    (list uri
-          (vector playing
-                  (spofy-ui-truncate name (spofy-ui-col 'library-track 0)
-                                     (if (string-empty-p playing) 'spofy-track-name 'spofy-playing))
-                  (spofy-ui-truncate artist-str (spofy-ui-col 'library-track 1)
-                                     (if (string-empty-p playing) 'spofy-artist-name 'spofy-playing))
-                  (spofy-ui-truncate album-name (spofy-ui-col 'library-track 2)
-                                     (if (string-empty-p playing) 'spofy-album-name 'spofy-playing))
-                  (propertize duration-str 'face
-                              (if (string-empty-p playing) 'spofy-muted 'spofy-playing))))))
+    (let ((playing-p (not (string-empty-p playing))))
+      (list uri
+            (vector playing
+                    (spofy-ui-truncate name (spofy-ui-col 'library-track 0)
+                                       (spofy-ui-playing-face 'spofy-track-name playing-p))
+                    (spofy-ui-truncate artist-str (spofy-ui-col 'library-track 1)
+                                       (spofy-ui-playing-face 'spofy-artist-name playing-p))
+                    (spofy-ui-truncate album-name (spofy-ui-col 'library-track 2)
+                                       (spofy-ui-playing-face 'spofy-album-name playing-p))
+                    (propertize duration-str 'face
+                                (spofy-ui-playing-face 'spofy-muted playing-p)))))))
 
 (defun spofy-library--reformat-saved-track (entity _idx)
   "Re-format ENTITY as a saved-track entry for highlight refresh.
@@ -585,16 +586,17 @@ type string/symbol plus ID supplied separately."
          (duration-str (spofy-ui-format-duration-ms duration-ms))
          (playing (spofy-ui-playing-indicator uri)))
     (spofy-ui-store-entity uri item)
-    (list uri
-          (vector playing
-                  (spofy-ui-truncate name (spofy-ui-col 'library-track 0)
-                                     (if (string-empty-p playing) 'spofy-track-name 'spofy-playing))
-                  (spofy-ui-truncate artist-str (spofy-ui-col 'library-track 1)
-                                     (if (string-empty-p playing) 'spofy-artist-name 'spofy-playing))
-                  (spofy-ui-truncate album-name (spofy-ui-col 'library-track 2)
-                                     (if (string-empty-p playing) 'spofy-album-name 'spofy-playing))
-                  (propertize duration-str 'face
-                              (if (string-empty-p playing) 'spofy-muted 'spofy-playing))))))
+    (let ((playing-p (not (string-empty-p playing))))
+      (list uri
+            (vector playing
+                    (spofy-ui-truncate name (spofy-ui-col 'library-track 0)
+                                       (spofy-ui-playing-face 'spofy-track-name playing-p))
+                    (spofy-ui-truncate artist-str (spofy-ui-col 'library-track 1)
+                                       (spofy-ui-playing-face 'spofy-artist-name playing-p))
+                    (spofy-ui-truncate album-name (spofy-ui-col 'library-track 2)
+                                       (spofy-ui-playing-face 'spofy-album-name playing-p))
+                    (propertize duration-str 'face
+                                (spofy-ui-playing-face 'spofy-muted playing-p)))))))
 
 (defun spofy-top-tracks--render (response time-range)
   "Render top tracks RESPONSE into a buffer.

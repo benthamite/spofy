@@ -1190,7 +1190,7 @@ Spofy defines a set of faces in the @code{spofy-faces} customization group for c
 @item
 @code{spofy-now-playing-track}, @code{spofy-now-playing-artist}, and @code{spofy-now-playing-album} are used in the dashboard now-playing section.  They inherit from the corresponding base faces with a larger height (1.15×). @*
 @item
-@code{spofy-playing} marks the currently playing track in any listing.  It uses bold weight and the Spotify green color (@samp{#1DB954}).  All columns of the playing row use this face, including the duration column. @*
+@code{spofy-playing} marks the currently playing track in any listing.  It uses ultra-bold weight, layered on top of each column's own face so that the original colors are preserved.  All columns of the playing row use this face, including the duration column.  The cursor is hidden in all table buffers.  A box border is drawn around the entire playing line using the default foreground color.  Due to an Emacs display limitation, the border's vertical lines may not render after a theme change until the buffer is refreshed with @kbd{g}. @*
 @item
 @code{spofy-playing-icon} is used for the ▶ icon on the currently playing track.  It inherits from @code{spofy-playing}. @*
 @item

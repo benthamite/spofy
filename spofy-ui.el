@@ -73,7 +73,7 @@
   :group 'spofy-faces)
 
 (defface spofy-playing
-  '((t :inherit bold :foreground "#1DB954")) ; Spotify brand green
+  '((t :weight ultra-bold))
   "Face for the currently playing track."
   :group 'spofy-faces)
 
@@ -203,6 +203,7 @@ only the fade effect from `spofy-ui-truncate' indicates truncation."
   (setq-local spofy-ui--format-view view)
   (setq-local spofy-ui--format-columns columns)
   (setq-local truncate-string-ellipsis "")
+  (setq-local cursor-type nil)
   (setq tabulated-list-format (spofy-ui-compute-format view columns)))
 
 (defun spofy-ui--recompute-columns ()
@@ -275,6 +276,17 @@ text property for post-rendering color blending."
                                  'spofy-fade (1+ i) result))))))
     result))
 
+(defun spofy-ui--resolve-foreground (face-val)
+  "Resolve the effective foreground color from FACE-VAL.
+FACE-VAL may be a symbol or a list of face symbols."
+  (cond
+   ((symbolp face-val)
+    (face-foreground face-val nil t))
+   ((consp face-val)
+    (cl-some (lambda (f)
+               (and (facep f) (face-foreground f nil t)))
+             face-val))))
+
 (defvar-local spofy-ui--fade-overlays nil
   "Overlays for the truncation fade effect in the current buffer.")
 
@@ -300,12 +312,7 @@ without an abrupt ellipsis."
                                  pos 'spofy-fade nil (point-max))
                                 (point-max)))
                 (let* ((face-val (get-text-property pos 'face))
-                       (base-face (cond
-                                   ((symbolp face-val) face-val)
-                                   ((consp face-val)
-                                    (seq-find #'symbolp face-val))
-                                   (t 'default)))
-                       (fg (or (face-foreground base-face nil t)
+                       (fg (or (spofy-ui--resolve-foreground face-val)
                                (face-foreground 'default nil t)))
                        (ratio (* 0.25 level))
                        (blended (when fg
@@ -319,14 +326,58 @@ without an abrupt ellipsis."
 
 (defun spofy-ui--refresh-fades (&rest _)
   "Recompute fade overlays in all Spofy buffers.
-Intended for `enable-theme-functions'."
+Intended for `enable-theme-functions'.  The playing-line border
+also updates its color, though vertical borders may not render
+correctly until the buffer is refreshed with `g'."
+  (spofy-ui--refresh-track-highlights)
   (dolist (buf (buffer-list))
     (with-current-buffer buf
-      (when (string-prefix-p "*Spofy" (buffer-name))
+      (when (and (string-prefix-p "*Spofy" (buffer-name))
+                 (not tabulated-list-entries))
         (spofy-ui--apply-buffer-fades)))))
 
 (add-hook 'enable-theme-functions #'spofy-ui--refresh-fades)
 
+;;;; Playing-line border overlay
+
+(defun spofy-ui--remove-playing-line-padding ()
+  "Remove any padding spaces inserted by the playing-line overlay."
+  (with-silent-modifications
+    (let ((pos (point-min)))
+      (while (setq pos (text-property-any pos (point-max) 'spofy-padding t))
+        (delete-region pos (or (next-single-property-change pos 'spofy-padding)
+                               (point-max)))))))
+
+(defvar-local spofy-ui--playing-line-overlay nil
+  "Overlay highlighting the full line of the currently playing track.")
+
+(defun spofy-ui--apply-playing-line-overlay ()
+  "Place a border overlay on the line of the currently playing track."
+  (when spofy-ui--playing-line-overlay
+    (delete-overlay spofy-ui--playing-line-overlay)
+    (setq spofy-ui--playing-line-overlay nil))
+  (spofy-ui--remove-playing-line-padding)
+  (let ((current-id (and (fboundp 'spofy-player-current-track-id)
+                         (spofy-player-current-track-id))))
+    (when current-id
+      (save-excursion
+        (goto-char (point-min))
+        (while (not (eobp))
+          (let ((entry-id (tabulated-list-get-id)))
+            (when (and entry-id (string-match-p (regexp-quote current-id) entry-id))
+              (let* ((color (face-foreground 'default nil t))
+                     (end-col (save-excursion (end-of-line) (current-column)))
+                     (padding (max 0 (- (window-body-width) end-col -2))))
+                (with-silent-modifications
+                  (save-excursion
+                    (end-of-line)
+                    (insert (propertize (make-string padding ?\s) 'spofy-padding t))))
+                (let ((ov (make-overlay (line-beginning-position) (line-end-position))))
+                  (overlay-put ov 'face
+                               `(:box (:line-width (-1 . -1) :color ,color)))
+                  (setq spofy-ui--playing-line-overlay ov))
+                (goto-char (point-max))))
+            (forward-line 1)))))))
 
 (defun spofy-ui-progress-bar-only (progress-ms duration-ms width)
   "Build a text progress bar for PROGRESS-MS out of DURATION-MS.
@@ -435,10 +486,11 @@ events under `pixel-scroll-precision-mode'."
 
 (defun spofy-ui--after-tabulated-list-print (&rest _)
   "Post-process Spofy tabulated-list buffers after printing.
-Apply truncation fade overlays.
+Apply truncation fade overlays and playing-line border.
 Added as :after advice on `tabulated-list-print'."
   (when (string-prefix-p "*Spofy" (buffer-name))
-    (spofy-ui--apply-buffer-fades)))
+    (spofy-ui--apply-buffer-fades)
+    (spofy-ui--apply-playing-line-overlay)))
 
 (advice-add 'tabulated-list-print :after #'spofy-ui--after-tabulated-list-print)
 
@@ -488,6 +540,10 @@ Shows a play icon if TRACK-URI matches the currently playing track."
     (if playing-p
         (propertize "\u25B6" 'face 'spofy-playing-icon)
       "")))
+
+(defun spofy-ui-playing-face (base-face playing-p)
+  "Return BASE-FACE with bold added when PLAYING-P is non-nil."
+  (if playing-p (list 'spofy-playing base-face) base-face))
 
 ;;;; Player state indicators
 

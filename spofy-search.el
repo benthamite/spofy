@@ -94,13 +94,13 @@ Return a list of (ID [COLUMNS...])."
     (list uri
           (vector play-icon
                   (spofy-ui-truncate name (spofy-ui-col 'search-track 0)
-                                     (if playing-p 'spofy-playing 'spofy-track-name))
+                                     (spofy-ui-playing-face 'spofy-track-name playing-p))
                   (spofy-ui-truncate artist-str (spofy-ui-col 'search-track 1)
-                                     (if playing-p 'spofy-playing 'spofy-artist-name))
+                                     (spofy-ui-playing-face 'spofy-artist-name playing-p))
                   (spofy-ui-truncate album-name (spofy-ui-col 'search-track 2)
-                                     (if playing-p 'spofy-playing 'spofy-album-name))
+                                     (spofy-ui-playing-face 'spofy-album-name playing-p))
                   (propertize duration-str 'face
-                              (if playing-p 'spofy-playing 'spofy-muted))))))
+                              (spofy-ui-playing-face 'spofy-muted playing-p))))))
 
 (defun spofy-search--format-album-entry (album)
   "Format ALBUM alist as a `tabulated-list-entries' entry.
