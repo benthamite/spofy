@@ -121,6 +121,8 @@ When MULTI-DISC-P is non-nil, show disc.track numbering."
       (let ((inhibit-read-only t))
         (erase-buffer))
       (spofy-album-mode)
+      (when multi-disc
+        (spofy-album--left-align-number-column))
       (setq-local spofy-ui--buffer-context
                   `((album-id . ,(alist-get 'id album))
                     (album-uri . ,uri)
@@ -133,10 +135,10 @@ When MULTI-DISC-P is non-nil, show disc.track numbering."
                     (lambda (response)
                       (let ((tracks (alist-get 'items response))
                             (next-url (alist-get 'next response)))
-                        ;; If we haven't seen multiple discs yet, check the new batch.
                         (unless multi-disc-p
                           (when (spofy-album--multi-disc-p tracks)
-                            (setq multi-disc-p t)))
+                            (setq multi-disc-p t)
+                            (spofy-album--left-align-number-column)))
                         (cons (cl-loop for track across tracks
                                        collect (spofy-album--format-track
                                                 track album-uri multi-disc-p))
@@ -157,6 +159,15 @@ When MULTI-DISC-P is non-nil, show disc.track numbering."
       (tabulated-list-print t)
       (goto-char (point-min))
       (switch-to-buffer (current-buffer)))))
+
+(defun spofy-album--left-align-number-column ()
+  "Remove right-alignment from the track number column.
+Multi-disc albums use left-aligned =disc.track= notation so that
+the period stays in a fixed position."
+  (setq spofy-ui--format-columns
+        (cons '("#" 4 nil)
+              (cdr spofy-ui--format-columns)))
+  (spofy-ui-set-format 'album-track spofy-ui--format-columns))
 
 ;;;###autoload
 (defun spofy-view-album (album-id)
