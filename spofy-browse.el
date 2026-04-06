@@ -50,6 +50,7 @@
     (define-key map (kbd "a")   #'spofy-album-play)
     (define-key map (kbd "s")   #'spofy-album-save)
     (define-key map (kbd "A")   #'spofy-album-view-artist)
+    (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "g")   #'spofy-album-refresh)
     (define-key map (kbd "q")   #'quit-window)
 
@@ -212,6 +213,7 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
     (define-key map (kbd "RET") #'spofy-artist-view-album)
     (define-key map (kbd "t")   #'spofy-artist-top-tracks)
     (define-key map (kbd "a")   #'spofy-artist-play-album)
+    (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "g")   #'spofy-artist-refresh)
     (define-key map (kbd "q")   #'quit-window)
 
@@ -347,6 +349,7 @@ Fetches artist info and albums, then displays in a tabulated-list buffer."
     (define-key map (kbd "RET") #'spofy-artist-top-tracks-play)
     (define-key map (kbd "a")   #'spofy-artist-top-tracks-view-album)
     (define-key map (kbd "s")   #'spofy-artist-top-tracks-save)
+    (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "g")   #'spofy-artist-top-tracks-refresh)
     (define-key map (kbd "q")   #'quit-window)
     map)
@@ -453,6 +456,7 @@ ARTIST-ID is kept for refresh."
     (define-key map (kbd "A")   #'spofy-playlist-view-artist)
     (define-key map (kbd "d")   #'spofy-playlist-view-remove-track)
     (define-key map (kbd "s")   #'spofy-playlist-view-save-track)
+    (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "g")   #'spofy-playlist-view-refresh)
     (define-key map (kbd "q")   #'quit-window)
 

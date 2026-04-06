@@ -384,6 +384,7 @@ All search result buffers share the ~spofy-search-mode~ keymap:
 | =p=   | ~spofy-search-add-to-playlist~| Add track to a playlist             |
 | =s=   | ~spofy-search-save~           | Save item to library                |
 | =S=   | ~spofy-search-unsave~         | Remove item from library            |
+| =SPC= | ~spofy-play-pause~            | Toggle play/pause                   |
 | =g=   | ~spofy-search-refresh~        | Re-run the search                   |
 | =q=   | ~quit-window~                 | Close the buffer                    |
 
@@ -409,6 +410,7 @@ The command ~spofy-view-album~ displays the tracks of a Spotify album in a =*Spo
 | =a=   | ~spofy-album-play~         | Play the entire album          |
 | =A=   | ~spofy-album-view-artist~  | View the artist                |
 | =s=   | ~spofy-album-save~         | Save album to library          |
+| =SPC= | ~spofy-play-pause~         | Toggle play/pause              |
 | =g=   | ~spofy-album-refresh~      | Refresh                        |
 | =q=   | ~quit-window~              | Close                          |
 
@@ -427,10 +429,20 @@ The command ~spofy-view-artist~ displays an artist's albums in a =*Spofy Artist:
 | =RET= | ~spofy-artist-view-album~     | View album ([[#h:album-view][Album view]])     |
 | =t=   | ~spofy-artist-top-tracks~     | View top tracks             |
 | =a=   | ~spofy-artist-play-album~     | Play the album at point     |
+| =SPC= | ~spofy-play-pause~            | Toggle play/pause           |
 | =g=   | ~spofy-artist-refresh~        | Refresh                     |
 | =q=   | ~quit-window~                 | Close                       |
 
 The function ~spofy-view-artist-top-tracks~ fetches the artist's top tracks (as determined by Spotify's algorithm) and displays them in a =*Spofy Top Tracks: ARTIST*= buffer.  Tracks are listed with their name, album, and duration.  The currently playing track is highlighted and the highlight updates automatically when the track changes.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
+
+| Key   | Command                              | Action                      |
+|-------+--------------------------------------+-----------------------------|
+| =RET= | ~spofy-artist-top-tracks-play~       | Play the track              |
+| =a=   | ~spofy-artist-top-tracks-view-album~ | View album                  |
+| =s=   | ~spofy-artist-top-tracks-save~       | Save track to library       |
+| =SPC= | ~spofy-play-pause~                   | Toggle play/pause           |
+| =g=   | ~spofy-artist-top-tracks-refresh~    | Refresh                     |
+| =q=   | ~quit-window~                        | Close                       |
 
 *** Playlist detail view
 :PROPERTIES:
@@ -448,6 +460,7 @@ The command ~spofy-view-playlist~ displays the tracks of a playlist in a =*Spofy
 | =A=   | ~spofy-playlist-view-artist~       | View artist                    |
 | =d=   | ~spofy-playlist-view-remove-track~ | Remove track from playlist     |
 | =s=   | ~spofy-playlist-view-save-track~   | Save track to library          |
+| =SPC= | ~spofy-play-pause~                 | Toggle play/pause              |
 | =g=   | ~spofy-playlist-view-refresh~      | Refresh                        |
 | =q=   | ~quit-window~                      | Close                          |
 
@@ -478,6 +491,7 @@ The command ~spofy-library-browse-playlists~ displays all of the user's playlist
 | =d=   | ~spofy-delete-playlist~      | Delete (unfollow) the playlist    |
 | =f=   | ~spofy-follow-playlist~      | Follow a playlist by ID or URI    |
 | =v=   | ~spofy-playlist-set-public~  | Toggle public/private             |
+| =SPC= | ~spofy-play-pause~           | Toggle play/pause                 |
 | =g=   | ~spofy-playlists-refresh~    | Refresh                           |
 | =q=   | ~quit-window~                | Close                             |
 
@@ -517,6 +531,7 @@ The command ~spofy-library-browse-tracks~ displays the user's saved tracks in a 
 | =A=   | ~spofy-library-tracks-view-artist~    | View artist               |
 | =S=   | ~spofy-library-tracks-unsave~         | Remove from library       |
 | =p=   | ~spofy-library-tracks-add-to-playlist~| Add to a playlist         |
+| =SPC= | ~spofy-play-pause~                    | Toggle play/pause         |
 | =g=   | ~spofy-library-tracks-refresh~        | Refresh                   |
 | =q=   | ~quit-window~                         | Close                     |
 
@@ -528,6 +543,7 @@ The command ~spofy-library-browse-albums~ displays saved albums in a =*Spofy Sav
 | =p=   | ~spofy-library-albums-play~           | Play the album            |
 | =A=   | ~spofy-library-albums-view-artist~    | View artist               |
 | =S=   | ~spofy-library-albums-unsave~         | Remove from library       |
+| =SPC= | ~spofy-play-pause~                    | Toggle play/pause         |
 | =g=   | ~spofy-library-albums-refresh~        | Refresh                   |
 | =q=   | ~quit-window~                         | Close                     |
 
@@ -540,6 +556,7 @@ The command ~spofy-list-recently-played~ displays the last 50 recently played tr
 | =RET= | ~spofy-recently-played-play~           | Play the track            |
 | =a=   | ~spofy-recently-played-view-album~     | View album                |
 | =A=   | ~spofy-recently-played-view-artist~    | View artist               |
+| =SPC= | ~spofy-play-pause~                     | Toggle play/pause         |
 | =g=   | ~spofy-recently-played-refresh~        | Refresh                   |
 | =q=   | ~quit-window~                          | Close                     |
 
@@ -550,6 +567,7 @@ The command ~spofy-list-top-tracks~ displays the user's top tracks in a =*Spofy 
 | =RET= | ~spofy-top-tracks-play~          | Play the track            |
 | =a=   | ~spofy-top-tracks-view-album~    | View album                |
 | =A=   | ~spofy-top-tracks-view-artist~   | View artist               |
+| =SPC= | ~spofy-play-pause~               | Toggle play/pause         |
 | =g=   | ~spofy-top-tracks-refresh~       | Refresh                   |
 | =q=   | ~quit-window~                    | Close                     |
 
@@ -558,6 +576,7 @@ The command ~spofy-list-top-artists~ displays the user's top artists in a =*Spof
 | Key   | Command                           | Action                    |
 |-------+-----------------------------------+---------------------------|
 | =RET= | ~spofy-top-artists-view~          | View artist               |
+| =SPC= | ~spofy-play-pause~                | Toggle play/pause         |
 | =g=   | ~spofy-top-artists-refresh~       | Refresh                   |
 | =q=   | ~quit-window~                     | Close                     |
 
@@ -567,6 +586,7 @@ The command ~spofy-list-new-releases~ displays new album releases in a =*Spofy N
 |-------+------------------------------------+---------------------------|
 | =RET= | ~spofy-new-releases-view~          | View album                |
 | =A=   | ~spofy-new-releases-view-artist~   | View artist               |
+| =SPC= | ~spofy-play-pause~                 | Toggle play/pause         |
 | =g=   | ~spofy-new-releases-refresh~       | Refresh                   |
 | =q=   | ~quit-window~                      | Close                     |
 

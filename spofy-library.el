@@ -80,6 +80,7 @@ Returns \"track\" or \"album\"."
     (define-key map (kbd "A")   #'spofy-library-tracks-view-artist)
     (define-key map (kbd "S")   #'spofy-library-tracks-unsave)
     (define-key map (kbd "p")   #'spofy-library-tracks-add-to-playlist)
+    (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "g")   #'spofy-library-tracks-refresh)
 
     (define-key map (kbd "q")   #'quit-window)
@@ -228,6 +229,7 @@ the /me/tracks endpoint with pagination."
     (define-key map (kbd "p")   #'spofy-library-albums-play)
     (define-key map (kbd "A")   #'spofy-library-albums-view-artist)
     (define-key map (kbd "S")   #'spofy-library-albums-unsave)
+    (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "g")   #'spofy-library-albums-refresh)
 
     (define-key map (kbd "q")   #'quit-window)
@@ -348,6 +350,7 @@ the /me/albums endpoint with pagination."
     (define-key map (kbd "RET") #'spofy-recently-played-play)
     (define-key map (kbd "a")   #'spofy-recently-played-view-album)
     (define-key map (kbd "A")   #'spofy-recently-played-view-artist)
+    (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "g")   #'spofy-recently-played-refresh)
 
     (define-key map (kbd "q")   #'quit-window)
@@ -545,6 +548,7 @@ type string/symbol plus ID supplied separately."
     (define-key map (kbd "RET") #'spofy-top-tracks-play)
     (define-key map (kbd "a")   #'spofy-top-tracks-view-album)
     (define-key map (kbd "A")   #'spofy-top-tracks-view-artist)
+    (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "g")   #'spofy-top-tracks-refresh)
 
     (define-key map (kbd "q")   #'quit-window)
@@ -668,6 +672,7 @@ Defaults to \"medium_term\"."
 (defvar spofy-top-artists-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") #'spofy-top-artists-view)
+    (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "g")   #'spofy-top-artists-refresh)
 
     (define-key map (kbd "q")   #'quit-window)
@@ -762,6 +767,7 @@ Defaults to \"medium_term\"."
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") #'spofy-new-releases-view)
     (define-key map (kbd "A")   #'spofy-new-releases-view-artist)
+    (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "g")   #'spofy-new-releases-refresh)
 
     (define-key map (kbd "q")   #'quit-window)

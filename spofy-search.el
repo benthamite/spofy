@@ -62,6 +62,7 @@
     (define-key map (kbd "p")   #'spofy-search-add-to-playlist)
     (define-key map (kbd "s")   #'spofy-search-save)
     (define-key map (kbd "S")   #'spofy-search-unsave)
+    (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "g")   #'spofy-search-refresh)
 
     (define-key map (kbd "q")   #'quit-window)
