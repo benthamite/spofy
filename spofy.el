@@ -946,7 +946,8 @@ polling, and optionally enables the mode-line display."
           (spofy-tab-bar-mode 1))
          (spofy-enable-mode-line
           (require 'spofy-mode-line)
-          (spofy-mode-line-mode 1))))
+          (spofy-mode-line-mode 1)))
+        (require 'spofy-org))
     ;; Disable
     (define-key spofy-global-mode-map (kbd spofy-global-key) nil)
     (require 'spofy-player)

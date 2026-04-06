@@ -809,7 +809,7 @@ In addition to single-target actions, =spofy-embark.el= registers exporters for 
 #+findex: spofy-org-store
 #+findex: spofy-org-export
 
-The file =spofy-org.el= registers a =spotify:= link type with Org mode, supporting three operations.
+The file =spofy-org.el= registers a =spotify:= link type with Org mode, supporting three operations.  It is loaded automatically when ~spofy-global-mode~ is enabled.
 
 The function ~spofy-org-follow~ handles opening ~spotify:~ links.  It parses the link path to determine the entity type and ID, then dispatches to the appropriate Spofy command: tracks are played, while albums, artists, and playlists open their respective browse views ([[#h:browsing][Browsing]]).  This means you can write =[[spotify:track:4uLU6hMCjMI75M1A2tKUQC][Never Gonna Give You Up]]= in an Org file and open it to play the track.
 
