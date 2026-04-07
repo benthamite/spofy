@@ -518,18 +518,18 @@ display as configured.  The popup header shows the currently playing
 track.  When ‘spofy-global-mode’ is active, this command is bound to
 ‘spofy-global-key’ (default ‘C-c s’).
 
-   The popup is organized into two columns:
+   The popup is organized into three columns:
 
    • *Column 1 — Playback, Volume, Mode:* play/pause, next, previous,
      seek forward, seek backward, seek to (‘t’); volume up/down and set;
      shuffle and repeat toggles.
-   • *Column 2 — Spotify search, Browse, Library search, Other:* Spotify
-     search for tracks (‘s t’), albums (‘s l’), artists (‘s a’),
-     playlists (‘s p’), context tracks (‘s c’); browse saved tracks (‘b
-     t’), saved albums (‘b a’), playlists (‘b p’), current context (‘b
-     c’); library search for saved tracks (‘l t’), saved albums (‘l a’),
-     playlists (‘l p’); devices (‘d’), Wikipedia lookup (‘w’), dashboard
-     (‘/’), quit (‘q’).
+   • *Column 2 — Search and Browse:* Spotify search for tracks (‘s t’),
+     albums (‘s l’), playlists (‘s p’), artists (‘s a’); library search
+     for saved tracks (‘l t’), saved albums (‘l a’), playlists (‘l p’),
+     context (‘l c’); browse saved tracks (‘b t’), saved albums (‘b a’),
+     playlists (‘b p’), current context (‘b c’).
+   • *Column 3 — Other:* dashboard (‘/’), devices (‘d’), Wikipedia
+     lookup (‘w’), quit (‘q’).
 
    Volume up/down, seek forward/backward, shuffle, and repeat all keep
 the menu open so they can be used repeatedly.
@@ -632,10 +632,12 @@ notifications.  When the player state changes, Spofy runs
 ‘spofy-player-state-changed-hook’.  When the track changes specifically,
 it also runs ‘spofy-player-track-changed-hook’.  When the API reports no
 active player session (e.g.  playback ended or the device went idle),
-Spofy clears the player state and runs ‘spofy-player-state-changed-hook’
-so that the mode line and tab bar reflect that nothing is playing.
-Polling errors are caught unconditionally (even when ‘debug-on-error’ is
-non-nil) to prevent them from stalling the repeat timer.
+the response may contain null fields such as ‘item’; Spofy normalizes
+these to ‘nil’, clears the player state, and runs
+‘spofy-player-state-changed-hook’ so that the mode line and tab bar
+reflect that nothing is playing.  Polling errors are caught
+unconditionally (even when ‘debug-on-error’ is non-nil) to prevent them
+from stalling the repeat timer.
 
    The command ‘spofy-player-stop-polling’ cancels the polling timer.
 Polling is started automatically by the ‘spofy’ command and
@@ -713,6 +715,7 @@ Key     Command                          Action
 ‘p’     ‘spofy-search-add-to-playlist’   Add track to a playlist
 ‘s’     ‘spofy-search-save’              Save item to library
 ‘S’     ‘spofy-search-unsave’            Remove item from library
+‘SPC’   ‘spofy-play-pause’               Toggle play/pause
 ‘g’     ‘spofy-search-refresh’           Re-run the search
 ‘q’     ‘quit-window’                    Close the buffer
 
@@ -741,10 +744,11 @@ The command ‘spofy-view-album’ displays the tracks of a Spotify album in
 a ‘*Spofy Album: NAME*’ buffer.  The buffer has a header showing the
 album name, artist, year, and total track count.  Tracks are listed with
 their track number, name, artist(s), and duration.  For multi-disc
-albums, the track number column uses ‘disc.track’ notation (e.g.  ‘1.1’,
-‘2.1’, ‘2.12’); single-disc albums show just the track number.  The
-currently playing track is highlighted with the ‘spofy-playing’ face and
-the highlight updates automatically when the track changes.  Column
+albums, the track number column switches to left-aligned ‘disc.track’
+notation (e.g.  ‘1.1’, ‘1.10’, ‘2.1’) so that the period stays in a
+fixed position; single-disc albums show a right-aligned track number.
+The currently playing track is highlighted with the ‘spofy-playing’ face
+and the highlight updates automatically when the track changes.  Column
 widths are controlled by the ‘spofy-columns’ user option (*note Column
 widths::).
 
@@ -754,6 +758,7 @@ Key     Command                     Action
 ‘a’     ‘spofy-album-play’          Play the entire album
 ‘A’     ‘spofy-album-view-artist’   View the artist
 ‘s’     ‘spofy-album-save’          Save album to library
+‘SPC’   ‘spofy-play-pause’          Toggle play/pause
 ‘g’     ‘spofy-album-refresh’       Refresh
 ‘q’     ‘quit-window’               Close
 
@@ -774,6 +779,7 @@ Key     Command                     Action
 ‘RET’   ‘spofy-artist-view-album’   View album (*note Album view::)
 ‘t’     ‘spofy-artist-top-tracks’   View top tracks
 ‘a’     ‘spofy-artist-play-album’   Play the album at point
+‘SPC’   ‘spofy-play-pause’          Toggle play/pause
 ‘g’     ‘spofy-artist-refresh’      Refresh
 ‘q’     ‘quit-window’               Close
 
@@ -784,6 +790,15 @@ album, and duration.  The currently playing track is highlighted and the
 highlight updates automatically when the track changes.  Column widths
 are controlled by the ‘spofy-columns’ user option (*note Column
 widths::).
+
+Key     Command                                Action
+-----------------------------------------------------------------------
+‘RET’   ‘spofy-artist-top-tracks-play’         Play the track
+‘a’     ‘spofy-artist-top-tracks-view-album’   View album
+‘s’     ‘spofy-artist-top-tracks-save’         Save track to library
+‘SPC’   ‘spofy-play-pause’                     Toggle play/pause
+‘g’     ‘spofy-artist-top-tracks-refresh’      Refresh
+‘q’     ‘quit-window’                          Close
 
 
 File: spofy.info,  Node: Playlist detail view,  Prev: Artist view,  Up: Browsing
@@ -807,6 +822,8 @@ Key     Command                              Action
 ‘A’     ‘spofy-playlist-view-artist’         View artist
 ‘d’     ‘spofy-playlist-view-remove-track’   Remove track from playlist
 ‘s’     ‘spofy-playlist-view-save-track’     Save track to library
+‘f’     ‘spofy-playlist-view-follow’         Follow playlist
+‘SPC’   ‘spofy-play-pause’                   Toggle play/pause
 ‘g’     ‘spofy-playlist-view-refresh’        Refresh
 ‘q’     ‘quit-window’                        Close
 
@@ -829,6 +846,7 @@ Key     Command                       Action
 ‘d’     ‘spofy-delete-playlist’       Delete (unfollow) the playlist
 ‘f’     ‘spofy-follow-playlist’       Follow a playlist by ID or URI
 ‘v’     ‘spofy-playlist-set-public’   Toggle public/private
+‘SPC’   ‘spofy-play-pause’            Toggle play/pause
 ‘g’     ‘spofy-playlists-refresh’     Refresh
 ‘q’     ‘quit-window’                 Close
 
@@ -885,6 +903,7 @@ Key     Command                                  Action
 ‘A’     ‘spofy-library-tracks-view-artist’       View artist
 ‘S’     ‘spofy-library-tracks-unsave’            Remove from library
 ‘p’     ‘spofy-library-tracks-add-to-playlist’   Add to a playlist
+‘SPC’   ‘spofy-play-pause’                       Toggle play/pause
 ‘g’     ‘spofy-library-tracks-refresh’           Refresh
 ‘q’     ‘quit-window’                            Close
 
@@ -899,6 +918,7 @@ Key     Command                              Action
 ‘p’     ‘spofy-library-albums-play’          Play the album
 ‘A’     ‘spofy-library-albums-view-artist’   View artist
 ‘S’     ‘spofy-library-albums-unsave’        Remove from library
+‘SPC’   ‘spofy-play-pause’                   Toggle play/pause
 ‘g’     ‘spofy-library-albums-refresh’       Refresh
 ‘q’     ‘quit-window’                        Close
 
@@ -915,10 +935,11 @@ columns are the same as saved tracks, and the playing highlight updates
 automatically when the track changes.
 
 Key     Command                               Action
----------------------------------------------------------------
+------------------------------------------------------------------
 ‘RET’   ‘spofy-recently-played-play’          Play the track
 ‘a’     ‘spofy-recently-played-view-album’    View album
 ‘A’     ‘spofy-recently-played-view-artist’   View artist
+‘SPC’   ‘spofy-play-pause’                    Toggle play/pause
 ‘g’     ‘spofy-recently-played-refresh’       Refresh
 ‘q’     ‘quit-window’                         Close
 
@@ -930,10 +951,11 @@ tracks, and the playing highlight updates automatically when the track
 changes.
 
 Key     Command                          Action
-----------------------------------------------------------
+-------------------------------------------------------------
 ‘RET’   ‘spofy-top-tracks-play’          Play the track
 ‘a’     ‘spofy-top-tracks-view-album’    View album
 ‘A’     ‘spofy-top-tracks-view-artist’   View artist
+‘SPC’   ‘spofy-play-pause’               Toggle play/pause
 ‘g’     ‘spofy-top-tracks-refresh’       Refresh
 ‘q’     ‘quit-window’                    Close
 
@@ -942,8 +964,9 @@ in a ‘*Spofy Top Artists*’ buffer with columns for name and genres.  It
 accepts the same TIME-RANGE argument as ‘spofy-list-top-tracks’.
 
 Key     Command                       Action
-----------------------------------------------------
+----------------------------------------------------------
 ‘RET’   ‘spofy-top-artists-view’      View artist
+‘SPC’   ‘spofy-play-pause’            Toggle play/pause
 ‘g’     ‘spofy-top-artists-refresh’   Refresh
 ‘q’     ‘quit-window’                 Close
 
@@ -952,9 +975,10 @@ a ‘*Spofy New Releases*’ buffer with columns for album name, artist(s),
 year, and track count.  This data is not personalized.
 
 Key     Command                            Action
----------------------------------------------------------
+---------------------------------------------------------------
 ‘RET’   ‘spofy-new-releases-view’          View album
 ‘A’     ‘spofy-new-releases-view-artist’   View artist
+‘SPC’   ‘spofy-play-pause’                 Toggle play/pause
 ‘g’     ‘spofy-new-releases-refresh’       Refresh
 ‘q’     ‘quit-window’                      Close
 
@@ -1318,7 +1342,7 @@ device transfers playback to it.
    The command ‘spofy-library-search-context’ fetches the tracklist of
 the currently playing album or playlist and lets you jump to any track
 with incremental narrowing.  It is not available for Spotify-generated
-contexts such as radio or daily mixes.  This command is bound to ‘s c’
+contexts such as radio or daily mixes.  This command is bound to ‘l c’
 in the transient popup (*note Transient popup::).
 
    The Spotify search commands use ‘consult--dynamic-collection’ for
@@ -1382,7 +1406,8 @@ File: spofy.info,  Node: Org-mode integration,  Next: Wikipedia integration,  Pr
 **********************
 
 The file ‘spofy-org.el’ registers a ‘spotify:’ link type with Org mode,
-supporting three operations.
+supporting three operations.  It is loaded automatically when
+‘spofy-global-mode’ is enabled.
 
    The function ‘spofy-org-follow’ handles opening ‘spotify:’ links.  It
 parses the link path to determine the entity type and ID, then
@@ -1703,6 +1728,7 @@ File: spofy.info,  Node: Function index,  Next: Variable index,  Up: Indices
 * spofy-playlist-remove-track:           Playlist management.  (line  6)
 * spofy-playlist-reorder:                Playlist management.  (line  6)
 * spofy-playlist-set-public:             Playlist management.  (line  6)
+* spofy-playlist-view-follow:            Playlist detail view. (line  6)
 * spofy-previous:                        Playback control.     (line  6)
 * spofy-rename-playlist:                 Playlist management.  (line  6)
 * spofy-search-add-to-playlist:          Navigating search results.
@@ -1853,39 +1879,39 @@ Node: Commands15805
 Node: Authentication16165
 Node: Dashboard and global control17390
 Node: Transient popup19351
-Node: Global minor mode20925
-Node: Playback control22379
-Node: Polling25494
-Node: Device management26594
-Node: Search27257
-Node: Navigating search results28756
-Node: Browsing29798
-Node: Album view29986
-Node: Artist view31251
-Node: Playlist detail view32614
-Node: Playlist management33918
-Node: Library management36573
-Node: Cache management41982
-Node: Functions44243
-Node: Player state accessors44494
-Node: Entity access in buffers45606
-Node: API client46204
-Node: Authentication helpers47781
-Node: Formatting utilities48900
-Node: Pagination52430
-Node: Entity storage and list rendering53800
-Node: Consult integration56360
-Node: Embark integration60424
-Node: Org-mode integration62481
-Node: Wikipedia integration63657
-Node: Wikipedia user options67305
-Node: Faces68984
-Node: Hooks71105
-Node: Mode-line display72316
-Node: Tab-bar display73244
-Node: Indices74494
-Node: Function index74635
-Node: Variable index84593
+Node: Global minor mode20916
+Node: Playback control22370
+Node: Polling25485
+Node: Device management26675
+Node: Search27338
+Node: Navigating search results28837
+Node: Browsing29946
+Node: Album view30134
+Node: Artist view31532
+Node: Playlist detail view33494
+Node: Playlist management34938
+Node: Library management37657
+Node: Cache management43502
+Node: Functions45763
+Node: Player state accessors46014
+Node: Entity access in buffers47126
+Node: API client47724
+Node: Authentication helpers49301
+Node: Formatting utilities50420
+Node: Pagination53950
+Node: Entity storage and list rendering55320
+Node: Consult integration57880
+Node: Embark integration61944
+Node: Org-mode integration64001
+Node: Wikipedia integration65246
+Node: Wikipedia user options68894
+Node: Faces70573
+Node: Hooks72694
+Node: Mode-line display73905
+Node: Tab-bar display74833
+Node: Indices76083
+Node: Function index76224
+Node: Variable index86255
 
 End Tag Table
 

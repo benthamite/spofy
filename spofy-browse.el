@@ -39,6 +39,7 @@
 (declare-function spofy-playlist-remove-track "spofy-playlist" (&optional playlist-id track-uri))
 (declare-function spofy-library-save "spofy-library" (uri-or-type &optional id))
 (declare-function spofy-library-unsave "spofy-library" (uri-or-type &optional id))
+(declare-function spofy-follow-playlist "spofy-playlist" (playlist-id-or-uri))
 
 ;;; ========================================================================
 ;;;; Album view
@@ -470,6 +471,7 @@ ARTIST-ID is kept for refresh."
     (define-key map (kbd "A")   #'spofy-playlist-view-artist)
     (define-key map (kbd "d")   #'spofy-playlist-view-remove-track)
     (define-key map (kbd "s")   #'spofy-playlist-view-save-track)
+    (define-key map (kbd "f")   #'spofy-playlist-view-follow)
     (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "g")   #'spofy-playlist-view-refresh)
     (define-key map (kbd "q")   #'quit-window)
@@ -631,6 +633,12 @@ Fetches playlist data from the API and displays it in a tabulated-list buffer."
   (interactive)
   (when-let* ((uri (tabulated-list-get-id)))
     (spofy-library-save uri)))
+
+(defun spofy-playlist-view-follow ()
+  "Follow the current playlist."
+  (interactive)
+  (when-let* ((playlist-id (alist-get 'playlist-id spofy-ui--buffer-context)))
+    (spofy-follow-playlist playlist-id)))
 
 (defun spofy-playlist-view-refresh ()
   "Refresh the playlist view."

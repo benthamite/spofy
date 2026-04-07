@@ -406,13 +406,15 @@ The dashboard keymap provides these bindings: @*
 
 The command @code{spofy-menu} opens a transient popup that provides quick access to all Spofy commands from any buffer.  Before showing the popup, it ensures that @code{spofy-global-mode} is active (@ref{Global minor mode}), so invoking @code{spofy-menu} for the first time in a session automatically starts polling, the mode-line display, and the tab-bar display as configured.  The popup header shows the currently playing track.  When @code{spofy-global-mode} is active, this command is bound to @code{spofy-global-key} (default @samp{C-c s}). @*
 
-The popup is organized into two columns: @*
+The popup is organized into three columns: @*
 
 @itemize
 @item
 @strong{Column 1 — Playback, Volume, Mode:} play/pause, next, previous, seek forward, seek backward, seek to (@samp{t}); volume up/down and set; shuffle and repeat toggles. @*
 @item
-@strong{Column 2 — Spotify search, Browse, Library search, Other:} Spotify search for tracks (@samp{s t}), albums (@samp{s l}), artists (@samp{s a}), playlists (@samp{s p}), context tracks (@samp{s c}); browse saved tracks (@samp{b t}), saved albums (@samp{b a}), playlists (@samp{b p}), current context (@samp{b c}); library search for saved tracks (@samp{l t}), saved albums (@samp{l a}), playlists (@samp{l p}); devices (@samp{d}), Wikipedia lookup (@samp{w}), dashboard (@samp{/}), quit (@samp{q}). @*
+@strong{Column 2 — Search and Browse:} Spotify search for tracks (@samp{s t}), albums (@samp{s l}), playlists (@samp{s p}), artists (@samp{s a}); library search for saved tracks (@samp{l t}), saved albums (@samp{l a}), playlists (@samp{l p}), context (@samp{l c}); browse saved tracks (@samp{b t}), saved albums (@samp{b a}), playlists (@samp{b p}), current context (@samp{b c}). @*
+@item
+@strong{Column 3 — Other:} dashboard (@samp{/}), devices (@samp{d}), Wikipedia lookup (@samp{w}), quit (@samp{q}). @*
 @end itemize
 
 Volume up/down, seek forward/backward, shuffle, and repeat all keep the menu open so they can be used repeatedly. @*
@@ -472,7 +474,7 @@ The command @code{spofy-play-track} plays a specific track by its Spotify URI@. 
 @findex spofy-player-start-polling
 @findex spofy-player-stop-polling
 
-The command @code{spofy-player-start-polling} starts a timer that polls the Spotify player state at @code{spofy-poll-interval} second intervals.  Polling is necessary because the Spotify Web API does not support push notifications.  When the player state changes, Spofy runs @code{spofy-player-state-changed-hook}.  When the track changes specifically, it also runs @code{spofy-player-track-changed-hook}.  When the API reports no active player session (e.g. playback ended or the device went idle), Spofy clears the player state and runs @code{spofy-player-state-changed-hook} so that the mode line and tab bar reflect that nothing is playing.  Polling errors are caught unconditionally (even when @code{debug-on-error} is non-nil) to prevent them from stalling the repeat timer. @*
+The command @code{spofy-player-start-polling} starts a timer that polls the Spotify player state at @code{spofy-poll-interval} second intervals.  Polling is necessary because the Spotify Web API does not support push notifications.  When the player state changes, Spofy runs @code{spofy-player-state-changed-hook}.  When the track changes specifically, it also runs @code{spofy-player-track-changed-hook}.  When the API reports no active player session (e.g. playback ended or the device went idle), the response may contain null fields such as @code{item}; Spofy normalizes these to @code{nil}, clears the player state, and runs @code{spofy-player-state-changed-hook} so that the mode line and tab bar reflect that nothing is playing.  Polling errors are caught unconditionally (even when @code{debug-on-error} is non-nil) to prevent them from stalling the repeat timer. @*
 
 The command @code{spofy-player-stop-polling} cancels the polling timer.  Polling is started automatically by the @code{spofy} command and @code{spofy-global-mode}, and stopped by @code{spofy-stop}. @*
 
@@ -563,6 +565,9 @@ All search result buffers share the @code{spofy-search-mode} keymap: @*
 @item @samp{S}
 @tab @code{spofy-search-unsave}
 @tab Remove item from library
+@item @samp{SPC}
+@tab @code{spofy-play-pause}
+@tab Toggle play/pause
 @item @samp{g}
 @tab @code{spofy-search-refresh}
 @tab Re-run the search
@@ -587,7 +592,7 @@ The Spotify API returns results in pages.  Results load automatically as the use
 
 @findex spofy-view-album
 
-The command @code{spofy-view-album} displays the tracks of a Spotify album in a @samp{*Spofy Album: NAME*} buffer.  The buffer has a header showing the album name, artist, year, and total track count.  Tracks are listed with their track number, name, artist(s), and duration.  For multi-disc albums, the track number column uses @samp{disc.track} notation (e.g. @samp{1.1}, @samp{2.1}, @samp{2.12}); single-disc albums show just the track number.  The currently playing track is highlighted with the @code{spofy-playing} face and the highlight updates automatically when the track changes.  Column widths are controlled by the @code{spofy-columns} user option (@ref{Column widths}). @*
+The command @code{spofy-view-album} displays the tracks of a Spotify album in a @samp{*Spofy Album: NAME*} buffer.  The buffer has a header showing the album name, artist, year, and total track count.  Tracks are listed with their track number, name, artist(s), and duration.  For multi-disc albums, the track number column switches to left-aligned @samp{disc.track} notation (e.g. @samp{1.1}, @samp{1.10}, @samp{2.1}) so that the period stays in a fixed position; single-disc albums show a right-aligned track number.  The currently playing track is highlighted with the @code{spofy-playing} face and the highlight updates automatically when the track changes.  Column widths are controlled by the @code{spofy-columns} user option (@ref{Column widths}). @*
 
 @multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaa}
 @headitem Key
@@ -605,6 +610,9 @@ The command @code{spofy-view-album} displays the tracks of a Spotify album in a 
 @item @samp{s}
 @tab @code{spofy-album-save}
 @tab Save album to library
+@item @samp{SPC}
+@tab @code{spofy-play-pause}
+@tab Toggle play/pause
 @item @samp{g}
 @tab @code{spofy-album-refresh}
 @tab Refresh
@@ -634,6 +642,9 @@ The command @code{spofy-view-artist} displays an artist's albums in a @samp{*Spo
 @item @samp{a}
 @tab @code{spofy-artist-play-album}
 @tab Play the album at point
+@item @samp{SPC}
+@tab @code{spofy-play-pause}
+@tab Toggle play/pause
 @item @samp{g}
 @tab @code{spofy-artist-refresh}
 @tab Refresh
@@ -644,10 +655,35 @@ The command @code{spofy-view-artist} displays an artist's albums in a @samp{*Spo
 
 The function @code{spofy-view-artist-top-tracks} fetches the artist's top tracks (as determined by Spotify's algorithm) and displays them in a @samp{*Spofy Top Tracks: ARTIST*} buffer.  Tracks are listed with their name, album, and duration.  The currently playing track is highlighted and the highlight updates automatically when the track changes.  Column widths are controlled by the @code{spofy-columns} user option (@ref{Column widths}). @*
 
+@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaaaaaa}
+@headitem Key
+@tab Command
+@tab Action
+@item @samp{RET}
+@tab @code{spofy-artist-top-tracks-play}
+@tab Play the track
+@item @samp{a}
+@tab @code{spofy-artist-top-tracks-view-album}
+@tab View album
+@item @samp{s}
+@tab @code{spofy-artist-top-tracks-save}
+@tab Save track to library
+@item @samp{SPC}
+@tab @code{spofy-play-pause}
+@tab Toggle play/pause
+@item @samp{g}
+@tab @code{spofy-artist-top-tracks-refresh}
+@tab Refresh
+@item @samp{q}
+@tab @code{quit-window}
+@tab Close
+@end multitable
+
 @node Playlist detail view
 @subsection Playlist detail view
 
 @findex spofy-view-playlist
+@findex spofy-playlist-view-follow
 
 The command @code{spofy-view-playlist} displays the tracks of a playlist in a @samp{*Spofy Playlist: NAME*} buffer.  The header shows the playlist name, owner, description, and total track count.  Columns include the track number (1-based position in the playlist), track name, artist(s), album, and duration.  The currently playing track is highlighted with the @code{spofy-playing} face and the highlight updates automatically when the track changes.  Column widths are controlled by the @code{spofy-columns} user option (@ref{Column widths}). @*
 
@@ -670,6 +706,12 @@ The command @code{spofy-view-playlist} displays the tracks of a playlist in a @s
 @item @samp{s}
 @tab @code{spofy-playlist-view-save-track}
 @tab Save track to library
+@item @samp{f}
+@tab @code{spofy-playlist-view-follow}
+@tab Follow playlist
+@item @samp{SPC}
+@tab @code{spofy-play-pause}
+@tab Toggle play/pause
 @item @samp{g}
 @tab @code{spofy-playlist-view-refresh}
 @tab Refresh
@@ -719,6 +761,9 @@ The command @code{spofy-library-browse-playlists} displays all of the user's pla
 @item @samp{v}
 @tab @code{spofy-playlist-set-public}
 @tab Toggle public/private
+@item @samp{SPC}
+@tab @code{spofy-play-pause}
+@tab Toggle play/pause
 @item @samp{g}
 @tab @code{spofy-playlists-refresh}
 @tab Refresh
@@ -773,6 +818,9 @@ The command @code{spofy-library-browse-tracks} displays the user's saved tracks 
 @item @samp{p}
 @tab @code{spofy-library-tracks-add-to-playlist}
 @tab Add to a playlist
+@item @samp{SPC}
+@tab @code{spofy-play-pause}
+@tab Toggle play/pause
 @item @samp{g}
 @tab @code{spofy-library-tracks-refresh}
 @tab Refresh
@@ -799,6 +847,9 @@ The command @code{spofy-library-browse-albums} displays saved albums in a @samp{
 @item @samp{S}
 @tab @code{spofy-library-albums-unsave}
 @tab Remove from library
+@item @samp{SPC}
+@tab @code{spofy-play-pause}
+@tab Toggle play/pause
 @item @samp{g}
 @tab @code{spofy-library-albums-refresh}
 @tab Refresh
@@ -811,7 +862,7 @@ The command @code{spofy-library-browse-context} opens the currently playing albu
 
 The command @code{spofy-list-recently-played} displays the last 50 recently played tracks in a @samp{*Spofy Recently Played*} buffer.  The columns are the same as saved tracks, and the playing highlight updates automatically when the track changes. @*
 
-@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaa}
+@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaa}
 @headitem Key
 @tab Command
 @tab Action
@@ -824,6 +875,9 @@ The command @code{spofy-list-recently-played} displays the last 50 recently play
 @item @samp{A}
 @tab @code{spofy-recently-played-view-artist}
 @tab View artist
+@item @samp{SPC}
+@tab @code{spofy-play-pause}
+@tab Toggle play/pause
 @item @samp{g}
 @tab @code{spofy-recently-played-refresh}
 @tab Refresh
@@ -834,7 +888,7 @@ The command @code{spofy-list-recently-played} displays the last 50 recently play
 
 The command @code{spofy-list-top-tracks} displays the user's top tracks in a @samp{*Spofy Top Tracks*} buffer.  It accepts an optional TIME-RANGE argument: @code{"short_term"} (4 weeks), @code{"medium_term"} (6 months, the default), or @code{"long_term"} (1 year).  The columns are the same as saved tracks, and the playing highlight updates automatically when the track changes. @*
 
-@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaa}
+@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaa}
 @headitem Key
 @tab Command
 @tab Action
@@ -847,6 +901,9 @@ The command @code{spofy-list-top-tracks} displays the user's top tracks in a @sa
 @item @samp{A}
 @tab @code{spofy-top-tracks-view-artist}
 @tab View artist
+@item @samp{SPC}
+@tab @code{spofy-play-pause}
+@tab Toggle play/pause
 @item @samp{g}
 @tab @code{spofy-top-tracks-refresh}
 @tab Refresh
@@ -857,13 +914,16 @@ The command @code{spofy-list-top-tracks} displays the user's top tracks in a @sa
 
 The command @code{spofy-list-top-artists} displays the user's top artists in a @samp{*Spofy Top Artists*} buffer with columns for name and genres.  It accepts the same TIME-RANGE argument as @code{spofy-list-top-tracks}. @*
 
-@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaa}
+@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaa}
 @headitem Key
 @tab Command
 @tab Action
 @item @samp{RET}
 @tab @code{spofy-top-artists-view}
 @tab View artist
+@item @samp{SPC}
+@tab @code{spofy-play-pause}
+@tab Toggle play/pause
 @item @samp{g}
 @tab @code{spofy-top-artists-refresh}
 @tab Refresh
@@ -874,7 +934,7 @@ The command @code{spofy-list-top-artists} displays the user's top artists in a @
 
 The command @code{spofy-list-new-releases} displays new album releases in a @samp{*Spofy New Releases*} buffer with columns for album name, artist(s), year, and track count.  This data is not personalized. @*
 
-@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaa}
+@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaa}
 @headitem Key
 @tab Command
 @tab Action
@@ -884,6 +944,9 @@ The command @code{spofy-list-new-releases} displays new album releases in a @sam
 @item @samp{A}
 @tab @code{spofy-new-releases-view-artist}
 @tab View artist
+@item @samp{SPC}
+@tab @code{spofy-play-pause}
+@tab Toggle play/pause
 @item @samp{g}
 @tab @code{spofy-new-releases-refresh}
 @tab Refresh
@@ -1077,7 +1140,7 @@ The command @code{spofy-library-search-playlists} searches the user's playlists 
 
 The command @code{consult-spofy-device} fetches available playback devices with incremental narrowing, with Name and Type columns.  Selecting a device transfers playback to it. @*
 
-The command @code{spofy-library-search-context} fetches the tracklist of the currently playing album or playlist and lets you jump to any track with incremental narrowing.  It is not available for Spotify-generated contexts such as radio or daily mixes.  This command is bound to @samp{s c} in the transient popup (@ref{Transient popup}). @*
+The command @code{spofy-library-search-context} fetches the tracklist of the currently playing album or playlist and lets you jump to any track with incremental narrowing.  It is not available for Spotify-generated contexts such as radio or daily mixes.  This command is bound to @samp{l c} in the transient popup (@ref{Transient popup}). @*
 
 The Spotify search commands use @code{consult--dynamic-collection} for incremental search with synchronous API requests (via @code{url-retrieve-synchronously}), debounced to avoid excessive API calls.  The library search commands pass a pre-fetched candidate list directly to @code{consult--read}, since all items are already in memory from the library cache.  In both cases, each candidate stores the full Spotify entity in a text property; the @code{:lookup} mechanism ensures the original propertized candidate is returned on selection, so the entity data is available for the action.  This makes them compatible with the embark integration (@ref{Embark integration}). @*
 
@@ -1107,7 +1170,7 @@ In addition to single-target actions, @samp{spofy-embark.el} registers exporters
 @findex spofy-org-store
 @findex spofy-org-export
 
-The file @samp{spofy-org.el} registers a @samp{spotify:} link type with Org mode, supporting three operations. @*
+The file @samp{spofy-org.el} registers a @samp{spotify:} link type with Org mode, supporting three operations.  It is loaded automatically when @code{spofy-global-mode} is enabled. @*
 
 The function @code{spofy-org-follow} handles opening @code{spotify:} links.  It parses the link path to determine the entity type and ID, then dispatches to the appropriate Spofy command: tracks are played, while albums, artists, and playlists open their respective browse views (@ref{Browsing}).  This means you can write @samp{[[spotify:track:4uLU6hMCjMI75M1A2tKUQC][Never Gonna Give You Up]]} in an Org file and open it to play the track. @*
 
@@ -1190,7 +1253,7 @@ Spofy defines a set of faces in the @code{spofy-faces} customization group for c
 @item
 @code{spofy-now-playing-track}, @code{spofy-now-playing-artist}, and @code{spofy-now-playing-album} are used in the dashboard now-playing section.  They inherit from the corresponding base faces with a larger height (1.15×). @*
 @item
-@code{spofy-playing} marks the currently playing track in any listing.  It uses ultra-bold weight, layered on top of each column's own face so that the original colors are preserved.  All columns of the playing row use this face, including the duration column.  The cursor is hidden in all table buffers.  A box border is drawn around the entire playing line using the default foreground color.  Due to an Emacs display limitation, the border's vertical lines may not render after a theme change until the buffer is refreshed with @kbd{g}. @*
+@code{spofy-playing} marks the currently playing track in any listing.  It uses ultra-bold weight, layered on top of each column's own face so that the original colors are preserved.  All columns of the playing row use this face, including the duration column.  The cursor is hidden in all table buffers.  A box border is drawn around the entire playing line using the default foreground color.  Due to an Emacs display limitation, the border's vertical lines may not render after a theme change until the buffer is refreshed with @samp{g}. @*
 @item
 @code{spofy-playing-icon} is used for the ▶ icon on the currently playing track.  It inherits from @code{spofy-playing}. @*
 @item

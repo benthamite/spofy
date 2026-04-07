@@ -450,6 +450,7 @@ The function ~spofy-view-artist-top-tracks~ fetches the artist's top tracks (as 
 :END:
 
 #+findex: spofy-view-playlist
+#+findex: spofy-playlist-view-follow
 
 The command ~spofy-view-playlist~ displays the tracks of a playlist in a =*Spofy Playlist: NAME*= buffer.  The header shows the playlist name, owner, description, and total track count.  Columns include the track number (1-based position in the playlist), track name, artist(s), album, and duration.  The currently playing track is highlighted with the ~spofy-playing~ face and the highlight updates automatically when the track changes.  Column widths are controlled by the ~spofy-columns~ user option ([[#h:user-options-columns][Column widths]]).
 
@@ -460,6 +461,7 @@ The command ~spofy-view-playlist~ displays the tracks of a playlist in a =*Spofy
 | =A=   | ~spofy-playlist-view-artist~       | View artist                    |
 | =d=   | ~spofy-playlist-view-remove-track~ | Remove track from playlist     |
 | =s=   | ~spofy-playlist-view-save-track~   | Save track to library          |
+| =f=   | ~spofy-playlist-view-follow~       | Follow playlist                |
 | =SPC= | ~spofy-play-pause~                 | Toggle play/pause              |
 | =g=   | ~spofy-playlist-view-refresh~      | Refresh                        |
 | =q=   | ~quit-window~                      | Close                          |
