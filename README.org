@@ -33,7 +33,7 @@ The core capabilities are:
 - *Playlist management:* Full CRUD operations on playlists: create, rename, delete, add, remove, and reorder tracks ([[#h:playlist-management][Playlist management]]).
 - *Library management:* View and manage saved tracks and albums ([[#h:library-management][Library management]]).
 - *Mode-line display:* A configurable mode-line segment showing the currently playing track ([[#h:mode-line-display][Mode-line display]]).
-- *Playback tracking:* Jump to the currently playing track in any buffer, optional cursor-follows-playback mode, and a custom buffer mode-line showing playback state and track position ([[#h:tracking-playback][Tracking the playing position]]).
+- *Playback tracking:* Jump to the currently playing track in any buffer, optional cursor-follows-playback mode, and a custom buffer mode-line showing entity name, playback state, and track position ([[#h:tracking-playback][Tracking the playing position]]).
 - *Tab-bar display:* A configurable tab-bar segment showing the currently playing track ([[#h:tab-bar-display][Tab-bar display]]).
 - *Wikipedia lookup:* Opens the Wikipedia article for the currently playing album or, for classical music, the underlying musical work.  Classical detection uses Spotify's genre metadata; work identification uses an LLM via =gptel= ([[#h:wikipedia-integration][Wikipedia integration]]).
 
@@ -354,10 +354,11 @@ Enable it from the transient popup ([[#h:transient-popup][Transient popup]]) wit
 All Spofy tabulated-list buffers and the dashboard use a custom ~mode-line-format~ that replaces the default line-and-column indicator with information relevant to a media player.  The mode-line shows:
 
 - The mode name (e.g. "Spofy Playlist", "Spofy Album").
-- Playback state icons: play/pause (⏸/▶), shuffle (⇌ when on), repeat (↻ for context, ↻₁ for track).
+- The entity name, when the buffer displays a specific album, artist, or playlist (e.g. "Spofy Album: Thriller", "Spofy Playlist: Discover Weekly").  List views such as the playlists browser show only the mode name.
+- Playback state icons: shuffle (⇌ when on), repeat (↻ for context, ↻₁ for track).
 - The playing track's position in the current buffer (e.g. "47/213"), displayed with the ~spofy-muted~ face.  This element is empty when the playing track is not in the buffer.
 
-The mode-line updates automatically on player state changes (play/pause, shuffle, repeat) and on track changes.  The variable ~spofy-ui-mode-line-format~ holds the format list; it is set buffer-locally by ~spofy-ui-set-format~ in tabulated-list modes and by ~spofy-dashboard-mode~ in the dashboard.
+The mode-line updates automatically on player state changes (shuffle, repeat) and on track changes.  The constant ~spofy-ui-mode-line-format~ holds the format list; it is set buffer-locally by ~spofy-ui-set-format~ in tabulated-list modes and by ~spofy-dashboard-mode~ in the dashboard.
 
 ** Polling
 :PROPERTIES:
@@ -775,7 +776,7 @@ The function ~spofy-ui-progress-bar-only~ builds a text progress bar for a given
 
 The function ~spofy-ui-insert-header~ inserts a list of strings at the top of the current buffer, each on its own line with the ~spofy-header~ face.  It is used by the album, artist, and playlist browse views to render header metadata above the track listing.
 
-The function ~spofy-ui-play-pause-icon~ returns a play or pause icon string based on the player state alist: =⏸= when playing, =▶= when paused.  The function ~spofy-ui-shuffle-indicator~ returns =⇌= when shuffle is on, or an empty string when off.  The function ~spofy-ui-repeat-indicator~ returns =↻= for context repeat, =↻₁= for track repeat, or an empty string when repeat is off.  These functions are used by the mode-line and tab-bar display modules.
+The function ~spofy-ui-play-pause-icon~ returns a play or pause icon string based on the player state alist: =⏸= when playing, =▶= when paused.  The function ~spofy-ui-shuffle-indicator~ returns =⇌= when shuffle is on, or an empty string when off.  The function ~spofy-ui-repeat-indicator~ returns =↻= for context repeat, =↻₁= for track repeat, or an empty string when repeat is off.  These functions are used by the global mode-line segment, tab-bar display, and buffer mode-line.
 
 *** Pagination
 :PROPERTIES:

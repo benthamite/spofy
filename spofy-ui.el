@@ -420,6 +420,9 @@ for the following page, or nil.")
 (defvar-local spofy-ui--buffer-context nil
   "Alist of context data for the current Spofy buffer.")
 
+(defvar-local spofy-ui--buffer-entity-name nil
+  "Name of the entity displayed in this buffer, shown in the mode line.")
+
 (defvar-local spofy-ui--entry-formatter nil
   "Function to re-format entries when the current track changes.
 Called with (ENTITY INDEX) for each entry whose URI maps to an
@@ -644,14 +647,21 @@ POSITION is 1-based.  Return nil if the track is not here."
 
 ;;;; Buffer mode-line
 
-(defvar spofy-ui-mode-line-format
+(defconst spofy-ui-mode-line-format
   '(" "
     mode-name
+    (:eval (spofy-ui--mode-line-entity-name))
     (:eval (spofy-ui--mode-line-info))
     "  "
     mode-line-misc-info
     mode-line-end-spaces)
   "Mode-line format for Spofy tabulated-list buffers.")
+
+(defun spofy-ui--mode-line-entity-name ()
+  "Return the entity name for the mode line, or empty string."
+  (if spofy-ui--buffer-entity-name
+      (concat ": " spofy-ui--buffer-entity-name)
+    ""))
 
 (defun spofy-ui--mode-line-info ()
   "Return mode-line string with playback state and track position."
@@ -669,19 +679,12 @@ POSITION is 1-based.  Return nil if the track is not here."
 (defun spofy-ui--mode-line-playback-state ()
   "Return a string with playback state icons."
   (if (and (boundp 'spofy-player--current-state) spofy-player--current-state)
-      (let ((parts (list (spofy-ui-play-pause-icon
-                          spofy-player--current-state))))
-        (spofy-ui--mode-line-push-indicator
-         (spofy-ui-shuffle-indicator spofy-player--current-state) parts)
-        (spofy-ui--mode-line-push-indicator
-         (spofy-ui-repeat-indicator spofy-player--current-state) parts)
-        (string-join parts " "))
+      (string-join
+       (seq-remove #'string-empty-p
+                   (list (spofy-ui-shuffle-indicator spofy-player--current-state)
+                         (spofy-ui-repeat-indicator spofy-player--current-state)))
+       " ")
     ""))
-
-(defun spofy-ui--mode-line-push-indicator (indicator parts)
-  "Push INDICATOR onto PARTS when non-empty."
-  (unless (string-empty-p indicator)
-    (nconc parts (list indicator))))
 
 (defun spofy-ui--mode-line-track-position ()
   "Return a string like \"47/213\" for the mode-line."

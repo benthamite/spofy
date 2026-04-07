@@ -201,6 +201,7 @@ the album."
       (spofy-album-mode)
       (when multi-disc
         (spofy-album--left-align-number-column))
+      (setq-local spofy-ui--buffer-entity-name name)
       (setq-local spofy-ui--buffer-context
                   `((album-id . ,album-id)
                     (album-uri . ,uri)
@@ -362,6 +363,7 @@ ARTIST is the artist API object."
       (let ((inhibit-read-only t))
         (erase-buffer))
       (spofy-artist-mode)
+      (setq-local spofy-ui--buffer-entity-name name)
       (setq-local spofy-ui--buffer-context
                   `((artist-id . ,artist-id)
                     (artist-name . ,name)
@@ -486,6 +488,7 @@ ARTIST-ID is kept for refresh."
       (let ((inhibit-read-only t))
         (erase-buffer))
       (spofy-artist-top-tracks-mode)
+      (setq-local spofy-ui--buffer-entity-name artist-name)
       (setq-local spofy-ui--buffer-context
                   `((artist-id . ,artist-id)
                     (artist-name . ,artist-name)))
@@ -659,6 +662,7 @@ the playlist."
     (let ((inhibit-read-only t))
       (erase-buffer))
     (spofy-playlist-view-mode)
+    (setq-local spofy-ui--buffer-entity-name name)
     (setq-local spofy-ui--buffer-context
                 `((playlist-id . ,playlist-id)
                   (playlist-uri . ,uri)))
