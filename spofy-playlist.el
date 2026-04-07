@@ -34,8 +34,11 @@
 (require 'cl-lib)
 
 (declare-function spofy-view-playlist "spofy-browse" (playlist-id))
+(declare-function spofy-browse--cache-invalidate "spofy-browse" (context-uri))
 (declare-function spofy-play-context "spofy-player" (context-uri))
 (declare-function spofy-library-cache-get "spofy-library" (type))
+(declare-function spofy-library-invalidate-cache "spofy-library" (&optional type))
+(declare-function spofy-library--fetch-all-async "spofy-library" (endpoint type &optional callback))
 
 ;;;; User ID cache
 
@@ -192,6 +195,7 @@ playlists buffer if it exists."
         (description . ,description)
         (public . :false))
       (lambda (_response)
+        (spofy-library-invalidate-cache 'playlist)
         (message "Spofy: created playlist \"%s\"." name)
         (when (get-buffer "*Spofy Playlists*")
           (spofy-library-browse-playlists)))))))
@@ -212,6 +216,7 @@ Prompts for a new name and sends a PUT request to update it."
        (format "playlists/%s" playlist-id)
        `((name . ,new-name))
        (lambda (_)
+         (spofy-library-invalidate-cache 'playlist)
          (message "Spofy: renamed playlist to \"%s\"." new-name)
          (when (get-buffer "*Spofy Playlists*")
            (spofy-library-browse-playlists)))))))
@@ -231,6 +236,7 @@ Prompts for a new name and sends a PUT request to update it."
          (format "playlists/%s/followers" playlist-id)
          nil
          (lambda (_)
+           (spofy-library-invalidate-cache 'playlist)
            (message "Spofy: unfollowed playlist \"%s\"." name)
            (when (get-buffer "*Spofy Playlists*")
              (spofy-library-browse-playlists))))))))
@@ -250,6 +256,7 @@ Prompts for a new name and sends a PUT request to update it."
        (format "playlists/%s" playlist-id)
        `((public . ,(if new-public t :false)))
        (lambda (_)
+         (spofy-library-invalidate-cache 'playlist)
          (message "Spofy: playlist is now %s."
                   (if new-public "public" "private"))
          (when (get-buffer "*Spofy Playlists*")
@@ -267,9 +274,31 @@ PLAYLIST-ID-OR-URI is the playlist ID or URI to follow."
      (format "playlists/%s/followers" playlist-id)
      nil
      (lambda (_)
+       (spofy-library-invalidate-cache 'playlist)
        (message "Spofy: now following playlist %s." playlist-id)
-       (when (get-buffer "*Spofy Playlists*")
-         (spofy-library-browse-playlists))))))
+       (spofy-follow-playlist--refresh-list)))))
+
+(defun spofy-follow-playlist--refresh-list ()
+  "Re-warm the playlist cache and silently update the playlists buffer."
+  (spofy-library--fetch-all-async
+   "me/playlists" 'playlist
+   (lambda (items)
+     (spofy-follow-playlist--update-buffer items))))
+
+(defun spofy-follow-playlist--update-buffer (items)
+  "Update the *Spofy Playlists* buffer with ITEMS without displaying it."
+  (when-let* ((buf (get-buffer "*Spofy Playlists*"))
+              ((_live (buffer-live-p buf))))
+    (with-current-buffer buf
+      (let ((inhibit-read-only t))
+        (erase-buffer))
+      (spofy-playlists-mode)
+      (setq spofy-ui--entity-type "playlist")
+      (setq tabulated-list-entries
+            (cl-loop for item in items
+                     collect (spofy-playlist--format-entry item)))
+      (tabulated-list-print t)
+      (goto-char (point-min)))))
 
 (defun spofy-unfollow-playlist ()
   "Unfollow the playlist at point.
@@ -304,8 +333,11 @@ get the track URI from the entity at point."
          (spofy-api-post
           (format "playlists/%s/tracks" playlist-id)
           `((uris . [,track-uri]))
-          (lambda (_)
-            (message "Spofy: added track to \"%s\"." choice))))))))
+          (let ((pid playlist-id))
+            (lambda (_)
+              (spofy-browse--cache-invalidate
+               (format "spotify:playlist:%s" pid))
+              (message "Spofy: added track to \"%s\"." choice)))))))))
 
 ;;;; Remove track from playlist
 
@@ -325,10 +357,11 @@ using `spofy-ui--buffer-context'."
     (spofy-api-delete
      (format "playlists/%s/tracks" playlist-id)
      `((tracks . [((uri . ,track-uri))]))
-     (lambda (_)
-       (message "Spofy: removed track from playlist.")
-       ;; Refresh the playlist view.
-       (when-let* ((pid playlist-id))
+     (let ((pid playlist-id))
+       (lambda (_)
+         (spofy-browse--cache-invalidate
+          (format "spotify:playlist:%s" pid))
+         (message "Spofy: removed track from playlist.")
          (spofy-view-playlist pid))))))
 
 ;;;; Reorder tracks
@@ -354,9 +387,12 @@ for the API)."
          (format "playlists/%s/tracks" playlist-id)
          `((range_start . ,current-index)
            (insert_before . ,insert-before))
-         (lambda (_)
-           (message "Spofy: moved track to position %d." new-position)
-           (spofy-view-playlist playlist-id)))))))
+         (let ((pid playlist-id))
+           (lambda (_)
+             (spofy-browse--cache-invalidate
+              (format "spotify:playlist:%s" pid))
+             (message "Spofy: moved track to position %d." new-position)
+             (spofy-view-playlist pid))))))))
 
 (provide 'spofy-playlist)
 ;;; spofy-playlist.el ends here

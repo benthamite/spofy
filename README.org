@@ -33,6 +33,7 @@ The core capabilities are:
 - *Playlist management:* Full CRUD operations on playlists: create, rename, delete, add, remove, and reorder tracks ([[#h:playlist-management][Playlist management]]).
 - *Library management:* View and manage saved tracks and albums ([[#h:library-management][Library management]]).
 - *Mode-line display:* A configurable mode-line segment showing the currently playing track ([[#h:mode-line-display][Mode-line display]]).
+- *Playback tracking:* Jump to the currently playing track in any buffer, optional cursor-follows-playback mode, and a custom buffer mode-line showing playback state and track position ([[#h:tracking-playback][Tracking the playing position]]).
 - *Tab-bar display:* A configurable tab-bar segment showing the currently playing track ([[#h:tab-bar-display][Tab-bar display]]).
 - *Wikipedia lookup:* Opens the Wikipedia article for the currently playing album or, for classical music, the underlying musical work.  Classical detection uses Spotify's genre metadata; work identification uses an LLM via =gptel= ([[#h:wikipedia-integration][Wikipedia integration]]).
 
@@ -198,7 +199,7 @@ Variable-width columns are sized dynamically so that all columns together fill t
 | =playlist-track=  | Name (30), Artist(s) (20), Album (20)        |
 | =playlist-list=   | Name (35), Owner (20)                        |
 
-The function ~spofy-ui-compute-format~ takes a view symbol and a list of column specs, where each spec is =(NAME WIDTH SORT . PROPS)=.  When WIDTH is the keyword =:flex=, the column width is computed proportionally from ~spofy-columns~.  The convenience function ~spofy-ui-set-format~ calls ~spofy-ui-compute-format~ and stores the recipe so that column widths are recomputed on window resize.  The function ~spofy-ui-col~ returns the computed width for a given view and flex column index.
+The function ~spofy-ui-compute-format~ takes a view symbol and a list of column specs, where each spec is =(NAME WIDTH SORT . PROPS)=.  When WIDTH is the keyword =:flex=, the column width is computed proportionally from ~spofy-columns~.  The convenience function ~spofy-ui-set-format~ calls ~spofy-ui-compute-format~ and stores the recipe so that column widths are recomputed on window resize.  It also installs the custom buffer mode-line ([[#h:buffer-mode-line][Buffer mode-line]]) and binds =.= to ~spofy-jump-to-playing-track~ ([[#h:jump-to-playing-track][Jump to playing track]]).  The function ~spofy-ui-col~ returns the computed width for a given view and flex column index.
 
 * Commands
 :PROPERTIES:
@@ -242,6 +243,7 @@ The dashboard keymap provides these bindings:
 | =p=   | ~spofy-previous~          |
 | =/=   | ~spofy-menu~              |
 | =g=   | ~spofy-dashboard-refresh~ |
+| =.=   | ~spofy-jump-to-playing-track~ | Jump to playing track |
 | =q=   | ~quit-window~             |
 
 ** Transient popup
@@ -257,7 +259,7 @@ The popup is organized into three columns:
 
 - *Column 1 — Playback, Volume, Mode:* play/pause, next, previous, seek forward, seek backward, seek to (=t=); volume up/down and set; shuffle and repeat toggles.
 - *Column 2 — Search and Browse:* Spotify search for tracks (=s t=), albums (=s l=), playlists (=s p=), artists (=s a=); library search for saved tracks (=l t=), saved albums (=l a=), playlists (=l p=), context (=l c=); browse saved tracks (=b t=), saved albums (=b a=), playlists (=b p=), current context (=b c=).
-- *Column 3 — Other:* dashboard (=/=), devices (=d=), Wikipedia lookup (=w=), quit (=q=).
+- *Column 3 — View and Other:* jump to playing track (=.=), cursor follows playback toggle (=F=); dashboard (=/=), devices (=d=), Wikipedia lookup (=w=), quit (=q=).
 
 Volume up/down, seek forward/backward, shuffle, and repeat all keep the menu open so they can be used repeatedly.
 
@@ -308,6 +310,54 @@ The commands ~spofy-volume-up~ and ~spofy-volume-down~ adjust the volume by ~spo
 The command ~spofy-toggle-shuffle~ toggles shuffle mode on or off.  The command ~spofy-toggle-repeat~ cycles through three repeat states: off, context (repeat the current album/playlist), and track (repeat the current track).  Both commands update the local player state immediately on success, so the mode line, tab bar, and transient menu reflect the new state without waiting for the next poll.  In the transient popup ([[#h:transient-popup][Transient popup]]), the current state is shown with the ~transient-value~ face, and both suffixes remain transient so that the user can toggle repeatedly without reopening the menu.
 
 The command ~spofy-play-track~ plays a specific track by its Spotify URI.  If an optional context URI is provided (an album or playlist URI), playback starts within that context at the specified track.  The command ~spofy-play-context~ plays an entire context (album, playlist, or artist) from the beginning.  Both commands are used internally by the browse and search interfaces.
+
+** Tracking the playing position
+:PROPERTIES:
+:CUSTOM_ID: h:tracking-playback
+:END:
+
+#+findex: spofy-jump-to-playing-track
+#+findex: spofy-cursor-follows-playback-mode
+
+When listening to a long playlist—especially in shuffle mode—it is easy to lose track of which item in the list is currently playing.  Spofy provides three complementary mechanisms to address this.
+
+*** Jump to playing track
+:PROPERTIES:
+:CUSTOM_ID: h:jump-to-playing-track
+:END:
+
+#+findex: spofy-jump-to-playing-track
+The command ~spofy-jump-to-playing-track~ navigates to the currently playing track.  It searches the current buffer first, then other open Spofy buffers, and finally opens the playing context (album or playlist) from the API if no buffer contains the track.  When the context must be fetched, the command uses the browse cache ([[#h:browse-cache][Browse cache]]) to avoid refetching previously loaded playlists.
+
+The command is bound to =.= in all Spofy buffers—both tabulated-list views and the dashboard—via ~spofy-ui-set-format~.  It is also available in the transient popup ([[#h:transient-popup][Transient popup]]) under =.=.  After jumping, the echo area displays the track's position (e.g. "Spofy: track 47/213").
+
+*** Cursor follows playback
+:PROPERTIES:
+:CUSTOM_ID: h:cursor-follows-playback
+:END:
+
+#+findex: spofy-cursor-follows-playback-mode
+The command ~spofy-cursor-follows-playback-mode~ toggles a global minor mode that automatically scrolls to the playing track in all visible Spofy windows whenever the track changes.  The mode is off by default.  It hooks into ~spofy-player-track-changed-hook~ at depth 10, which ensures it runs after ~spofy-ui--refresh-track-highlights~ has reprinted the entries with updated playing indicators.
+
+Enable it from the transient popup ([[#h:transient-popup][Transient popup]]) with =F=, or in your init file:
+
+#+begin_src emacs-lisp
+(spofy-cursor-follows-playback-mode 1)
+#+end_src
+
+*** Buffer mode-line
+:PROPERTIES:
+:CUSTOM_ID: h:buffer-mode-line
+:END:
+
+#+vindex: spofy-ui-mode-line-format
+All Spofy tabulated-list buffers and the dashboard use a custom ~mode-line-format~ that replaces the default line-and-column indicator with information relevant to a media player.  The mode-line shows:
+
+- The mode name (e.g. "Spofy Playlist", "Spofy Album").
+- Playback state icons: play/pause (⏸/▶), shuffle (⇌ when on), repeat (↻ for context, ↻₁ for track).
+- The playing track's position in the current buffer (e.g. "47/213"), displayed with the ~spofy-muted~ face.  This element is empty when the playing track is not in the buffer.
+
+The mode-line updates automatically on player state changes (play/pause, shuffle, repeat) and on track changes.  The variable ~spofy-ui-mode-line-format~ holds the format list; it is set buffer-locally by ~spofy-ui-set-format~ in tabulated-list modes and by ~spofy-dashboard-mode~ in the dashboard.
 
 ** Polling
 :PROPERTIES:
@@ -412,6 +462,7 @@ The command ~spofy-view-album~ displays the tracks of a Spotify album in a =*Spo
 | =s=   | ~spofy-album-save~         | Save album to library          |
 | =SPC= | ~spofy-play-pause~         | Toggle play/pause              |
 | =g=   | ~spofy-album-refresh~      | Refresh                        |
+| =.=   | ~spofy-jump-to-playing-track~ | Jump to playing track  |
 | =q=   | ~quit-window~              | Close                          |
 
 *** Artist view
@@ -442,6 +493,7 @@ The function ~spofy-view-artist-top-tracks~ fetches the artist's top tracks (as 
 | =s=   | ~spofy-artist-top-tracks-save~       | Save track to library       |
 | =SPC= | ~spofy-play-pause~                   | Toggle play/pause           |
 | =g=   | ~spofy-artist-top-tracks-refresh~    | Refresh                     |
+| =.=   | ~spofy-jump-to-playing-track~        | Jump to playing track       |
 | =q=   | ~quit-window~                        | Close                       |
 
 *** Playlist detail view
@@ -464,6 +516,7 @@ The command ~spofy-view-playlist~ displays the tracks of a playlist in a =*Spofy
 | =f=   | ~spofy-playlist-view-follow~       | Follow playlist                |
 | =SPC= | ~spofy-play-pause~                 | Toggle play/pause              |
 | =g=   | ~spofy-playlist-view-refresh~      | Refresh                        |
+| =.=   | ~spofy-jump-to-playing-track~      | Jump to playing track    |
 | =q=   | ~quit-window~                      | Close                          |
 
 ** Playlist management
@@ -613,6 +666,21 @@ In addition to the API response cache, Spofy maintains a separate *library cache
 The library cache serves two purposes: it provides instant results for library search commands (~spofy-library-search-tracks~, ~spofy-library-search-albums~, ~spofy-library-search-playlists~), and it allows library browse commands (~spofy-library-browse-tracks~, ~spofy-library-browse-albums~, ~spofy-library-browse-playlists~) to render all items immediately without pagination.  When the cache is empty (e.g., at the start of a session before the background fetch completes), library search commands display a message asking the user to try again shortly, and browse commands fall back to the standard paginated API flow.
 
 The library cache is invalidated automatically when items are saved or unsaved via ~spofy-library-save~ and ~spofy-library-unsave~.  The command ~spofy-library-invalidate-cache~ can also be called manually.  The cache is not persisted to disk; a new Emacs session starts fresh.
+
+*** Browse cache
+:PROPERTIES:
+:CUSTOM_ID: h:browse-cache
+:END:
+
+#+findex: spofy-browse--cache-get
+#+findex: spofy-browse--cache-put
+#+findex: spofy-browse--cache-invalidate
+
+In addition to the API response cache and library cache, Spofy maintains a *browse cache* that stores the complete list of items for each album, artist, and playlist that has been opened in a browse view.  The cache is keyed by context URI (e.g. =spotify:playlist:ID=, =spotify:album:ID=) or a synthetic key for artist views (e.g. =spotify:artist:ID:albums=, =spotify:artist:ID:top-tracks=).
+
+The first time a browse view is opened, all pages of items are fetched from the API and stored in the cache.  Subsequent opens—including those triggered by ~spofy-jump-to-playing-track~ ([[#h:jump-to-playing-track][Jump to playing track]])—serve items from the cache instantly, skipping the multi-page API fetch.  This is particularly noticeable for large playlists (hundreds or thousands of tracks) where the initial fetch may take several seconds.
+
+The cache is invalidated automatically when the user presses =g= (refresh) in any browse buffer, or when a playlist mutation occurs (adding, removing, or reordering tracks).  It is not persisted to disk; a new Emacs session starts with an empty cache.
 
 * Functions
 :PROPERTIES:

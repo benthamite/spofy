@@ -42,6 +42,27 @@
 (declare-function spofy-follow-playlist "spofy-playlist" (playlist-id-or-uri))
 
 ;;; ========================================================================
+;;;; Track item cache
+;;; ========================================================================
+
+(defvar spofy-browse--track-cache (make-hash-table :test 'equal)
+  "Cache mapping context URIs to complete track item lists.
+Populated after the first full fetch of a playlist or album.
+Invalidated on refresh or mutation (add/remove/reorder).")
+
+(defun spofy-browse--cache-get (context-uri)
+  "Return cached track items for CONTEXT-URI, or nil."
+  (gethash context-uri spofy-browse--track-cache))
+
+(defun spofy-browse--cache-put (context-uri items)
+  "Store track ITEMS for CONTEXT-URI in the cache."
+  (puthash context-uri items spofy-browse--track-cache))
+
+(defun spofy-browse--cache-invalidate (context-uri)
+  "Remove CONTEXT-URI from the track cache."
+  (remhash context-uri spofy-browse--track-cache))
+
+;;; ========================================================================
 ;;;; Shared helpers
 ;;; ========================================================================
 
@@ -134,7 +155,8 @@ When MULTI-DISC-P is non-nil, show disc.track numbering."
 
 (defun spofy-album--render (album)
   "Render ALBUM data into the current buffer.
-Fetches all pages of tracks asynchronously before rendering."
+Uses cached track items when available; otherwise fetches all
+pages asynchronously before rendering."
   (let* ((name (or (alist-get 'name album) "Unknown Album"))
          (artists (alist-get 'artists album))
          (year (spofy-ui-album-year album))
@@ -146,17 +168,26 @@ Fetches all pages of tracks asynchronously before rendering."
          (uri (alist-get 'uri album))
          (album-id (alist-get 'id album))
          (artist-str (if artists (spofy-ui-format-artists artists) "Unknown"))
-         (buf-name (format "*Spofy Album: %s*" name)))
-    (if next-url
-        (spofy-browse--fetch-all-pages
-         first-tracks next-url
-         (lambda (all-tracks)
-           (spofy-album--render-tracks
-            all-tracks buf-name album-id uri album
-            name artist-str year total)))
+         (buf-name (format "*Spofy Album: %s*" name))
+         (cached (spofy-browse--cache-get uri)))
+    (cond
+     (cached
+      (spofy-album--render-tracks
+       cached buf-name album-id uri album
+       name artist-str year (length cached)))
+     (next-url
+      (spofy-browse--fetch-all-pages
+       first-tracks next-url
+       (lambda (all-tracks)
+         (spofy-browse--cache-put uri all-tracks)
+         (spofy-album--render-tracks
+          all-tracks buf-name album-id uri album
+          name artist-str year total))))
+     (t
+      (spofy-browse--cache-put uri first-tracks)
       (spofy-album--render-tracks
        first-tracks buf-name album-id uri album
-       name artist-str year total))))
+       name artist-str year total)))))
 
 (defun spofy-album--render-tracks
     (tracks buf-name album-id uri album name artist-str year total)
@@ -242,8 +273,10 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
     (spofy-view-artist artist-id)))
 
 (defun spofy-album-refresh ()
-  "Refresh the album view."
+  "Refresh the album view, bypassing the track cache."
   (interactive)
+  (when-let* ((uri (alist-get 'album-uri spofy-ui--buffer-context)))
+    (spofy-browse--cache-invalidate uri))
   (when-let* ((album-id (alist-get 'album-id spofy-ui--buffer-context)))
     (spofy-view-album album-id)))
 
@@ -294,17 +327,25 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
 
 (defun spofy-artist--render (artist-id artist albums-response)
   "Render ARTIST and ALBUMS-RESPONSE into the artist buffer.
-ARTIST-ID is the Spotify artist ID.  Fetches all album pages
-asynchronously before rendering."
-  (let* ((first-albums (append (alist-get 'items albums-response) nil))
+ARTIST-ID is the Spotify artist ID.  Uses cached album items
+when available; otherwise fetches all pages asynchronously."
+  (let* ((cache-key (format "spotify:artist:%s:albums" artist-id))
+         (cached (spofy-browse--cache-get cache-key))
+         (first-albums (append (alist-get 'items albums-response) nil))
          (next-url (let ((n (alist-get 'next albums-response)))
                      (and (stringp n) n))))
-    (if next-url
-        (spofy-browse--fetch-all-pages
-         first-albums next-url
-         (lambda (all-albums)
-           (spofy-artist--render-albums all-albums artist-id artist)))
-      (spofy-artist--render-albums first-albums artist-id artist))))
+    (cond
+     (cached
+      (spofy-artist--render-albums cached artist-id artist))
+     (next-url
+      (spofy-browse--fetch-all-pages
+       first-albums next-url
+       (lambda (all-albums)
+         (spofy-browse--cache-put cache-key all-albums)
+         (spofy-artist--render-albums all-albums artist-id artist))))
+     (t
+      (spofy-browse--cache-put cache-key first-albums)
+      (spofy-artist--render-albums first-albums artist-id artist)))))
 
 (defun spofy-artist--render-albums (albums artist-id artist)
   "Render all ALBUMS for ARTIST-ID into the artist buffer.
@@ -382,9 +423,11 @@ Fetches artist info and albums, then displays in a tabulated-list buffer."
     (spofy-view-artist-top-tracks artist-id artist-name)))
 
 (defun spofy-artist-refresh ()
-  "Refresh the artist view."
+  "Refresh the artist view, bypassing the cache."
   (interactive)
   (when-let* ((artist-id (alist-get 'artist-id spofy-ui--buffer-context)))
+    (spofy-browse--cache-invalidate
+     (format "spotify:artist:%s:albums" artist-id))
     (spofy-view-artist artist-id)))
 
 ;;; ========================================================================
@@ -460,11 +503,18 @@ ARTIST-ID is kept for refresh."
       (switch-to-buffer (current-buffer)))))
 
 (defun spofy-view-artist-top-tracks (artist-id artist-name)
-  "Fetch and display top tracks for ARTIST-ID (displayed as ARTIST-NAME)."
-  (spofy-api-get (format "artists/%s/top-tracks" artist-id) nil
-                 (lambda (response)
-                   (let ((tracks (alist-get 'tracks response)))
-                     (spofy-top-tracks--render artist-id artist-name tracks)))))
+  "Fetch and display top tracks for ARTIST-ID (displayed as ARTIST-NAME).
+Uses cached tracks when available."
+  (let* ((cache-key (format "spotify:artist:%s:top-tracks" artist-id))
+         (cached (spofy-browse--cache-get cache-key)))
+    (if cached
+        (spofy-top-tracks--render artist-id artist-name cached)
+      (spofy-api-get (format "artists/%s/top-tracks" artist-id) nil
+                     (lambda (response)
+                       (let ((tracks (alist-get 'tracks response)))
+                         (spofy-browse--cache-put cache-key tracks)
+                         (spofy-top-tracks--render
+                          artist-id artist-name tracks)))))))
 
 (defun spofy-artist-top-tracks-play ()
   "Play the track at point."
@@ -487,10 +537,12 @@ ARTIST-ID is kept for refresh."
     (spofy-library-save uri)))
 
 (defun spofy-artist-top-tracks-refresh ()
-  "Refresh the artist top tracks view."
+  "Refresh the artist top tracks view, bypassing the cache."
   (interactive)
   (when-let* ((artist-id (alist-get 'artist-id spofy-ui--buffer-context))
               (artist-name (alist-get 'artist-name spofy-ui--buffer-context)))
+    (spofy-browse--cache-invalidate
+     (format "spotify:artist:%s:top-tracks" artist-id))
     (spofy-view-artist-top-tracks artist-id artist-name)))
 
 ;;; ========================================================================
@@ -563,7 +615,8 @@ TRACK-NUMBER is the 1-based position in the playlist."
 
 (defun spofy-playlist--render (playlist)
   "Render PLAYLIST data into a buffer.
-Fetches all pages of tracks asynchronously before rendering."
+Uses cached track items when available; otherwise fetches all
+pages asynchronously before rendering."
   (let* ((name (or (alist-get 'name playlist) "Unknown Playlist"))
          (owner-obj (alist-get 'owner playlist))
          (owner (if owner-obj
@@ -578,15 +631,24 @@ Fetches all pages of tracks asynchronously before rendering."
                      (and (stringp n) n)))
          (uri (alist-get 'uri playlist))
          (playlist-id (alist-get 'id playlist))
-         (buf-name (format "*Spofy Playlist: %s*" name)))
-    (if next-url
-        (spofy-browse--fetch-all-pages
-         first-items next-url
-         (lambda (all-items)
-           (spofy-playlist--render-tracks
-            all-items buf-name playlist-id uri name owner description total)))
+         (buf-name (format "*Spofy Playlist: %s*" name))
+         (cached (spofy-browse--cache-get uri)))
+    (cond
+     (cached
       (spofy-playlist--render-tracks
-       first-items buf-name playlist-id uri name owner description total))))
+       cached buf-name playlist-id uri name owner description
+       (length cached)))
+     (next-url
+      (spofy-browse--fetch-all-pages
+       first-items next-url
+       (lambda (all-items)
+         (spofy-browse--cache-put uri all-items)
+         (spofy-playlist--render-tracks
+          all-items buf-name playlist-id uri name owner description total))))
+     (t
+      (spofy-browse--cache-put uri first-items)
+      (spofy-playlist--render-tracks
+       first-items buf-name playlist-id uri name owner description total)))))
 
 (defun spofy-playlist--render-tracks
     (items buf-name playlist-id uri name owner description total)
@@ -676,8 +738,10 @@ Fetches playlist data from the API and displays it in a tabulated-list buffer."
     (spofy-follow-playlist playlist-id)))
 
 (defun spofy-playlist-view-refresh ()
-  "Refresh the playlist view."
+  "Refresh the playlist view, bypassing the track cache."
   (interactive)
+  (when-let* ((uri (alist-get 'playlist-uri spofy-ui--buffer-context)))
+    (spofy-browse--cache-invalidate uri))
   (when-let* ((playlist-id (alist-get 'playlist-id spofy-ui--buffer-context)))
     (spofy-view-playlist playlist-id)))
 

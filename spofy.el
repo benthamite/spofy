@@ -77,7 +77,7 @@
 (declare-function spofy-player--ensure-device "spofy-player" ())
 (declare-function spofy-player--poll-sync "spofy-player" ())
 (declare-function spofy-seek-to "spofy-player" ())
-(declare-function spofy-jump-to-track "spofy-player" ())
+(declare-function spofy-jump-to-playing-track "spofy-player" ())
 
 ;; spofy-search
 (declare-function spofy-search-tracks "spofy-search" (query))
@@ -107,6 +107,9 @@
 
 ;; spofy-tab-bar
 (declare-function spofy-tab-bar-mode "spofy-tab-bar" (&optional arg))
+
+;; spofy-ui
+(declare-function spofy-cursor-follows-playback-mode "spofy-ui" (&optional arg))
 
 ;; spofy-wikipedia
 (declare-function spofy-wikipedia "spofy-wikipedia" ())
@@ -178,13 +181,15 @@ Each element is a symbol naming a section.  Available sections:
     (define-key map (kbd "p")   #'spofy-previous)
     (define-key map (kbd "/")   #'spofy-menu)
     (define-key map (kbd "g")   #'spofy-dashboard-refresh)
+    (define-key map (kbd ".")   #'spofy-jump-to-playing-track)
     (define-key map (kbd "q")   #'quit-window)
     map)
   "Keymap for `spofy-dashboard-mode'.")
 
 (define-derived-mode spofy-dashboard-mode special-mode "Spofy"
   "Major mode for the Spofy dashboard buffer."
-  :group 'spofy)
+  :group 'spofy
+  (setq-local mode-line-format spofy-ui-mode-line-format))
 
 ;;;;; Dashboard: album art
 
@@ -792,6 +797,8 @@ If no tokens are available, prompts the user to authenticate."
     (spofy-global-mode 1))
   (add-hook 'spofy-player-track-changed-hook
             #'spofy-ui--refresh-track-highlights)
+  (add-hook 'spofy-player-state-changed-hook
+            #'spofy-ui--update-mode-lines)
   (require 'spofy-library)
   (spofy-library-warm-cache))
 
@@ -812,6 +819,13 @@ If no tokens are available, prompts the user to authenticate."
     (if (equal state "off")
         "Repeat off"
       (concat "Repeat " (propertize state 'face 'transient-value)))))
+
+(defun spofy--cursor-follows-description ()
+  "Return a description for the cursor-follows-playback state."
+  (if (bound-and-true-p spofy-cursor-follows-playback-mode)
+      (concat "Follow playback "
+              (propertize "on" 'face 'transient-value))
+    "Follow playback off"))
 
 (defun spofy--shuffle-description ()
   "Return a description string for the current shuffle state."
@@ -836,6 +850,8 @@ If no tokens are available, prompts the user to authenticate."
     ("v" "Set volume"       spofy-volume-set)
     ""
     "Mode"
+    ("F"                     spofy-cursor-follows-playback-mode
+     :description spofy--cursor-follows-description :transient t)
     ("R"                    spofy-toggle-repeat
      :description spofy--repeat-description :transient t)
     ("S"                    spofy-toggle-shuffle
@@ -860,6 +876,7 @@ If no tokens are available, prompts the user to authenticate."
    [""
     ("/" "Dashboard"        spofy)
     ("d" "Devices"          spofy-select-device)
+    ("." "Jump to track"    spofy-jump-to-playing-track)
     ("w" "Wikipedia"        spofy-wikipedia)
     ("q" "Quit"             transient-quit-one)]])
 
@@ -910,6 +927,8 @@ unsupported (e.g., Spotify-generated radio or daily mixes)."
                #'spofy--dashboard-refresh-recently-played)
   (remove-hook 'spofy-player-track-changed-hook
                #'spofy-ui--refresh-track-highlights)
+  (remove-hook 'spofy-player-state-changed-hook
+               #'spofy-ui--update-mode-lines)
   (when spofy-global-mode
     (spofy-global-mode -1))
   (message "Spofy: stopped."))

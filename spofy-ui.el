@@ -199,12 +199,15 @@ fill the window.  Flex columns consume weights in order of appearance."
   "Set `tabulated-list-format' for VIEW with dynamic COLUMNS.
 Stores the recipe for resize recomputation, sets the format,
 and suppresses `tabulated-list-mode'\\='s built-in ellipsis so that
-only the fade effect from `spofy-ui-truncate' indicates truncation."
+only the fade effect from `spofy-ui-truncate' indicates truncation.
+Also installs the Spofy buffer mode-line and common keybindings."
   (setq-local spofy-ui--format-view view)
   (setq-local spofy-ui--format-columns columns)
   (setq-local truncate-string-ellipsis "")
   (setq-local cursor-type nil)
-  (setq tabulated-list-format (spofy-ui-compute-format view columns)))
+  (setq tabulated-list-format (spofy-ui-compute-format view columns))
+  (setq-local mode-line-format spofy-ui-mode-line-format)
+  (local-set-key (kbd ".") #'spofy-jump-to-playing-track))
 
 (defun spofy-ui--recompute-columns ()
   "Recompute column widths for the current Spofy buffer after resize."
@@ -486,11 +489,30 @@ events under `pixel-scroll-precision-mode'."
 
 (defun spofy-ui--after-tabulated-list-print (&rest _)
   "Post-process Spofy tabulated-list buffers after printing.
-Apply truncation fade overlays and playing-line border.
-Added as :after advice on `tabulated-list-print'."
+Apply truncation fade overlays, playing-line border, and pending
+jump-to-track navigation.  Added as :after advice on
+`tabulated-list-print'."
   (when (string-prefix-p "*Spofy" (buffer-name))
     (spofy-ui--apply-buffer-fades)
-    (spofy-ui--apply-playing-line-overlay)))
+    (spofy-ui--apply-playing-line-overlay)
+    (spofy-ui--maybe-jump-to-pending-track)))
+
+(defun spofy-ui--maybe-jump-to-pending-track ()
+  "Schedule a jump to the pending track after the render completes.
+Deferred to the next event loop tick so that the render
+function's `goto-char' and `switch-to-buffer' finish first."
+  (when spofy-ui--pending-jump-track-id
+    (let ((id spofy-ui--pending-jump-track-id)
+          (buf (current-buffer)))
+      (setq spofy-ui--pending-jump-track-id nil)
+      (run-with-timer 0 nil
+                      #'spofy-ui--execute-pending-jump buf id))))
+
+(defun spofy-ui--execute-pending-jump (buf track-id)
+  "Jump to TRACK-ID in BUF if the buffer is still live."
+  (when (buffer-live-p buf)
+    (with-current-buffer buf
+      (spofy-ui--goto-playing-track track-id))))
 
 (advice-add 'tabulated-list-print :after #'spofy-ui--after-tabulated-list-print)
 
@@ -516,6 +538,7 @@ The row ID is used as the key into `spofy-ui--entities'."
 ;;;; URI and metadata helpers
 
 (declare-function spofy-player-current-track-id "spofy-player" ())
+(declare-function spofy-jump-to-playing-track "spofy-player" ())
 
 (defun spofy-ui-extract-id (uri)
   "Extract the Spotify ID from URI (e.g. \"spotify:track:xyz\" -> \"xyz\")."
@@ -562,6 +585,118 @@ Shows a play icon if TRACK-URI matches the currently playing track."
     ("track"   "↻₁")
     (_         "")))
 
+;;;; Playing track navigation
+
+(defvar spofy-ui--pending-jump-track-id nil
+  "Track ID to jump to after the next buffer render.")
+
+(defun spofy-ui--find-track-position (track-id)
+  "Return buffer position of the row matching TRACK-ID, or nil."
+  (save-excursion
+    (goto-char (point-min))
+    (catch 'found
+      (while (not (eobp))
+        (when-let* ((entry-id (tabulated-list-get-id)))
+          (when (string-match-p (regexp-quote track-id) entry-id)
+            (throw 'found (point))))
+        (forward-line 1))
+      nil)))
+
+(defun spofy-ui--goto-playing-track (&optional track-id)
+  "Move point to the row of the currently playing track.
+If TRACK-ID is non-nil, use it instead of the current player
+state.  Return non-nil if found."
+  (when-let* ((id (or track-id
+                      (and (fboundp 'spofy-player-current-track-id)
+                           (spofy-player-current-track-id))))
+              (pos (spofy-ui--find-track-position id)))
+    (goto-char pos)
+    (when (get-buffer-window (current-buffer))
+      (recenter))
+    t))
+
+(defun spofy-ui--playing-track-position ()
+  "Return (POSITION . TOTAL) for the playing track in this buffer.
+POSITION is 1-based.  Return nil if the track is not here."
+  (when-let* ((current-id (and (fboundp 'spofy-player-current-track-id)
+                                (spofy-player-current-track-id)))
+              (entries (bound-and-true-p tabulated-list-entries)))
+    (let ((pos nil)
+          (total (length entries))
+          (idx 0))
+      (dolist (entry entries)
+        (when (and (not pos)
+                   (car entry)
+                   (string-match-p (regexp-quote current-id) (car entry)))
+          (setq pos (1+ idx)))
+        (cl-incf idx))
+      (when pos (cons pos total)))))
+
+(defun spofy-ui--find-buffer-with-track (track-id)
+  "Return a Spofy buffer containing TRACK-ID, or nil."
+  (cl-find-if
+   (lambda (buf)
+     (with-current-buffer buf
+       (and spofy-ui--entry-formatter
+            (bound-and-true-p tabulated-list-entries)
+            (spofy-ui--find-track-position track-id))))
+   (buffer-list)))
+
+;;;; Buffer mode-line
+
+(defvar spofy-ui-mode-line-format
+  '(" "
+    mode-name
+    (:eval (spofy-ui--mode-line-info))
+    "  "
+    mode-line-misc-info
+    mode-line-end-spaces)
+  "Mode-line format for Spofy tabulated-list buffers.")
+
+(defun spofy-ui--mode-line-info ()
+  "Return mode-line string with playback state and track position."
+  (let ((state-str (spofy-ui--mode-line-playback-state))
+        (pos-str (spofy-ui--mode-line-track-position)))
+    (cond
+     ((and (string-empty-p state-str) (string-empty-p pos-str))
+      "")
+     ((string-empty-p pos-str)
+      (concat "  " state-str))
+     ((string-empty-p state-str)
+      (concat "  " pos-str))
+     (t (concat "  " state-str "  " pos-str)))))
+
+(defun spofy-ui--mode-line-playback-state ()
+  "Return a string with playback state icons."
+  (if (and (boundp 'spofy-player--current-state) spofy-player--current-state)
+      (let ((parts (list (spofy-ui-play-pause-icon
+                          spofy-player--current-state))))
+        (spofy-ui--mode-line-push-indicator
+         (spofy-ui-shuffle-indicator spofy-player--current-state) parts)
+        (spofy-ui--mode-line-push-indicator
+         (spofy-ui-repeat-indicator spofy-player--current-state) parts)
+        (string-join parts " "))
+    ""))
+
+(defun spofy-ui--mode-line-push-indicator (indicator parts)
+  "Push INDICATOR onto PARTS when non-empty."
+  (unless (string-empty-p indicator)
+    (nconc parts (list indicator))))
+
+(defun spofy-ui--mode-line-track-position ()
+  "Return a string like \"47/213\" for the mode-line."
+  (if-let* ((pos-info (spofy-ui--playing-track-position)))
+      (propertize (format "%d/%d" (car pos-info) (cdr pos-info))
+                  'face 'spofy-muted)
+    ""))
+
+(defun spofy-ui--update-mode-lines ()
+  "Force mode-line update in all Spofy buffers."
+  (dolist (buf (buffer-list))
+    (when (buffer-local-value 'spofy-ui--format-view buf)
+      (with-current-buffer buf
+        (force-mode-line-update)))))
+
 ;;;; List buffer rendering
 
 (defun spofy-ui-render-list (buf-name mode-fn entries next-url
@@ -593,15 +728,39 @@ pass `switch-to-buffer' for browse views."
 
 (defun spofy-ui--refresh-track-highlights ()
   "Re-render playing indicators in all Spofy list buffers.
-Intended for `spofy-player-track-changed-hook'."
+Intended for `spofy-player-track-changed-hook'.  Saves and
+restores window points around the reprint, since
+`tabulated-list-print' erases the buffer and invalidates
+window-point markers."
   (dolist (buf (buffer-list))
     (when (buffer-live-p buf)
       (with-current-buffer buf
         (when (and spofy-ui--entry-formatter
                    spofy-ui--entities
                    tabulated-list-entries)
-          (spofy-ui--reformat-entries)
-          (tabulated-list-print t))))))
+          (let ((saved (spofy-ui--save-window-entries buf)))
+            (spofy-ui--reformat-entries)
+            (tabulated-list-print t)
+            (spofy-ui--restore-window-entries buf saved))))))
+  (spofy-ui--update-mode-lines))
+
+(defun spofy-ui--save-window-entries (buf)
+  "Return an alist of (WINDOW . ENTRY-ID) for windows showing BUF."
+  (mapcar (lambda (win)
+            (cons win (save-excursion
+                        (goto-char (window-point win))
+                        (tabulated-list-get-id))))
+          (get-buffer-window-list buf nil t)))
+
+(defun spofy-ui--restore-window-entries (buf saved)
+  "Restore window points in BUF from SAVED (WINDOW . ENTRY-ID) pairs."
+  (ignore buf)
+  (dolist (entry saved)
+    (let ((win (car entry))
+          (id (cdr entry)))
+      (when (and (window-live-p win) id)
+        (when-let* ((pos (spofy-ui--find-track-position id)))
+          (set-window-point win pos))))))
 
 (defun spofy-ui--reformat-entries ()
   "Regenerate `tabulated-list-entries' using `spofy-ui--entry-formatter'."
@@ -615,6 +774,35 @@ Intended for `spofy-player-track-changed-hook'."
               new-entries))
       (setq idx (1+ idx)))
     (setq tabulated-list-entries (nreverse new-entries))))
+
+;;;; Cursor follows playback
+
+;;;###autoload
+(define-minor-mode spofy-cursor-follows-playback-mode
+  "When enabled, scroll to the playing track on track changes.
+Applies to all visible Spofy track-list windows.  Off by default."
+  :global t
+  :group 'spofy
+  (if spofy-cursor-follows-playback-mode
+      (add-hook 'spofy-player-track-changed-hook
+                #'spofy-ui--follow-playing-track 10)
+    (remove-hook 'spofy-player-track-changed-hook
+                 #'spofy-ui--follow-playing-track)))
+
+(defun spofy-ui--follow-playing-track ()
+  "Scroll to the playing track in all visible Spofy windows."
+  (when-let* ((current-id (and (fboundp 'spofy-player-current-track-id)
+                                (spofy-player-current-track-id))))
+    (dolist (window (window-list nil 'no-minibuf))
+      (spofy-ui--maybe-follow-in-window window current-id))))
+
+(defun spofy-ui--maybe-follow-in-window (window track-id)
+  "In WINDOW, scroll to TRACK-ID if the buffer is a Spofy track list."
+  (with-current-buffer (window-buffer window)
+    (when (and spofy-ui--entry-formatter
+               (bound-and-true-p tabulated-list-entries))
+      (when-let* ((pos (spofy-ui--find-track-position track-id)))
+        (set-window-point window pos)))))
 
 (provide 'spofy-ui)
 ;;; spofy-ui.el ends here
