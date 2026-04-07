@@ -210,18 +210,37 @@ The full entity is stored as a text property."
   (eq item :null))
 
 (defun spofy-consult--search-collection (type format-fn)
-  "Return a synchronous dynamic collection function searching Spotify for TYPE.
-FORMAT-FN is called on each result item to produce a candidate string."
+  "Return a dynamic collection function searching Spotify for TYPE.
+FORMAT-FN is called on each result item to produce a candidate string.
+Each candidate carries a `spofy-search-state' text property with the
+search type, query, and next-page URL for use by embark exporters."
   (lambda (input)
     (let* ((response (spofy-api-get-sync
                       "search"
                       `(("q" . ,input) ("type" . ,type) ("limit" . "20"))))
            (section-key (intern (concat type "s")))
            (section (alist-get section-key response))
-           (items (alist-get 'items section)))
+           (items (alist-get 'items section))
+           (next-url (spofy-consult--extract-next-url section))
+           (state `(:type ,type :query ,input :next-url ,next-url)))
       (when items
-        (mapcar format-fn (seq-remove #'spofy-consult--null-p
-                                      (append items nil)))))))
+        (mapcar (lambda (item)
+                  (spofy-consult--tag-search-state
+                   (funcall format-fn item) state))
+                (seq-remove #'spofy-consult--null-p
+                            (append items nil)))))))
+
+(defun spofy-consult--extract-next-url (section)
+  "Extract the next-page URL from SECTION, returning nil for JSON null."
+  (let ((url (alist-get 'next section)))
+    (unless (spofy-consult--null-p url) url)))
+
+(defun spofy-consult--tag-search-state (candidate state)
+  "Attach search STATE as a text property on CANDIDATE.
+STATE is a plist with :type, :query, and :next-url keys."
+  (put-text-property 0 (length candidate)
+                     'spofy-search-state state candidate)
+  candidate)
 
 ;;;; Track source
 

@@ -44,6 +44,8 @@
 (declare-function spofy-view-artist-top-tracks "spofy-browse" (artist-id artist-name))
 (declare-function spofy-follow-playlist "spofy-playlist" (playlist-id-or-uri))
 (declare-function spofy-unfollow-playlist "spofy-playlist" ())
+(declare-function spofy-search--display-results "spofy-search"
+                  (type query items next-url))
 (declare-function spofy-wikipedia-track "spofy-wikipedia" (target))
 (declare-function spofy-wikipedia-album "spofy-wikipedia" (target))
 (declare-function spofy-wikipedia-artist "spofy-wikipedia" (target))
@@ -249,28 +251,68 @@ treating TARGET as a URI directly."
 (declare-function spofy-playlist--display-from-cache "spofy-playlist" (items))
 
 (defun spofy-embark-export-tracks (candidates)
-  "Export track CANDIDATES to a *Spofy Saved Tracks* buffer."
-  (let ((items (cl-loop for c in candidates
-                        for entity = (spofy-embark--get-entity c)
-                        when entity collect `((track . ,entity)))))
-    (require 'spofy-library)
-    (spofy-library--render-tracks-from-cache items)))
+  "Export track CANDIDATES to a Spofy buffer.
+When CANDIDATES originate from a search, create a paginated search
+buffer with infinite scroll.  Otherwise, render as saved tracks."
+  (let ((entities (spofy-embark--extract-entities candidates))
+        (state (spofy-embark--get-search-state candidates)))
+    (if state
+        (spofy-embark--export-as-search "track" entities state)
+      (require 'spofy-library)
+      (spofy-library--render-tracks-from-cache
+       (mapcar (lambda (e) `((track . ,e))) entities)))))
 
 (defun spofy-embark-export-albums (candidates)
-  "Export album CANDIDATES to a *Spofy Saved Albums* buffer."
-  (let ((items (cl-loop for c in candidates
-                        for entity = (spofy-embark--get-entity c)
-                        when entity collect `((album . ,entity)))))
-    (require 'spofy-library)
-    (spofy-library--render-albums-from-cache items)))
+  "Export album CANDIDATES to a Spofy buffer.
+When CANDIDATES originate from a search, create a paginated search
+buffer with infinite scroll.  Otherwise, render as saved albums."
+  (let ((entities (spofy-embark--extract-entities candidates))
+        (state (spofy-embark--get-search-state candidates)))
+    (if state
+        (spofy-embark--export-as-search "album" entities state)
+      (require 'spofy-library)
+      (spofy-library--render-albums-from-cache
+       (mapcar (lambda (e) `((album . ,e))) entities)))))
+
+(defun spofy-embark-export-artists (candidates)
+  "Export artist CANDIDATES to a Spofy search buffer with pagination."
+  (spofy-embark--export-as-search
+   "artist"
+   (spofy-embark--extract-entities candidates)
+   (spofy-embark--get-search-state candidates)))
 
 (defun spofy-embark-export-playlists (candidates)
-  "Export playlist CANDIDATES to a *Spofy Playlists* buffer."
-  (let ((items (cl-loop for c in candidates
-                        for entity = (spofy-embark--get-entity c)
-                        when entity collect entity)))
-    (require 'spofy-playlist)
-    (spofy-playlist--display-from-cache items)))
+  "Export playlist CANDIDATES to a Spofy buffer.
+When CANDIDATES originate from a search, create a paginated search
+buffer with infinite scroll.  Otherwise, render as a playlist list."
+  (let ((entities (spofy-embark--extract-entities candidates))
+        (state (spofy-embark--get-search-state candidates)))
+    (if state
+        (spofy-embark--export-as-search "playlist" entities state)
+      (require 'spofy-playlist)
+      (spofy-playlist--display-from-cache entities))))
+
+(defun spofy-embark--export-as-search (type entities state)
+  "Export ENTITIES into a search buffer of TYPE with pagination.
+STATE is the search state plist from the `spofy-search-state' text
+property, or nil for a static buffer without pagination."
+  (require 'spofy-search)
+  (spofy-search--display-results
+   type
+   (or (plist-get state :query) "")
+   (vconcat entities)
+   (plist-get state :next-url)))
+
+(defun spofy-embark--extract-entities (candidates)
+  "Extract entity alists from CANDIDATES, filtering nil entries."
+  (cl-loop for c in candidates
+           for entity = (spofy-embark--get-entity c)
+           when entity collect entity))
+
+(defun spofy-embark--get-search-state (candidates)
+  "Extract the search state plist from CANDIDATES, if present."
+  (when candidates
+    (get-text-property 0 'spofy-search-state (car candidates))))
 
 ;;;; Registration
 
@@ -282,6 +324,7 @@ treating TARGET as a URI directly."
 (defvar embark-exporters-alist)
 (add-to-list 'embark-exporters-alist '(spofy-track . spofy-embark-export-tracks))
 (add-to-list 'embark-exporters-alist '(spofy-album . spofy-embark-export-albums))
+(add-to-list 'embark-exporters-alist '(spofy-artist . spofy-embark-export-artists))
 (add-to-list 'embark-exporters-alist '(spofy-playlist . spofy-embark-export-playlists))
 
 (provide 'spofy-embark)
