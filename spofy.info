@@ -719,8 +719,8 @@ Key     Command                          Action
 ‘g’     ‘spofy-search-refresh’           Re-run the search
 ‘q’     ‘quit-window’                    Close the buffer
 
-   The Spotify API returns results in pages.  Results load automatically
-as the user scrolls (*note Pagination::).
+   The Spotify API returns search results in pages.  Results load
+automatically as the user scrolls (*note Pagination::).
 
 
 File: spofy.info,  Node: Browsing,  Next: Playlist management,  Prev: Search,  Up: Commands
@@ -1211,8 +1211,17 @@ File: spofy.info,  Node: Pagination,  Next: Entity storage and list rendering,  
 4.5.1 Pagination
 ----------------
 
-All Spofy ‘tabulated-list-mode’ buffers share a single pagination
-mechanism.  Results load automatically as the user scrolls: the function
+Browse views (album, artist, and playlist detail) fetch all pages of
+results asynchronously before rendering, so the buffer always shows the
+complete list of items with no pagination.  The shared helper
+‘spofy-browse--fetch-all-pages’ recursively follows the Spotify API's
+‘next’ URL until all pages are collected, then hands the complete list
+to the rendering function.  This is consistent with how the library
+cache pre-fetches all saved tracks and albums ([BROKEN LINK:
+h:library-cache]).
+
+   Search results use a scroll-triggered pagination mechanism instead,
+since the total result set can be very large.  The function
 ‘spofy-ui--maybe-load-more’ is registered on ‘window-scroll-functions’
 and triggers a fetch when the window end is within a few lines of the
 buffer end.  A ‘post-command-hook’ complement ensures pagination fires
@@ -1885,33 +1894,33 @@ Node: Polling25485
 Node: Device management26675
 Node: Search27338
 Node: Navigating search results28837
-Node: Browsing29946
-Node: Album view30134
-Node: Artist view31532
-Node: Playlist detail view33494
-Node: Playlist management34938
-Node: Library management37657
-Node: Cache management43502
-Node: Functions45763
-Node: Player state accessors46014
-Node: Entity access in buffers47126
-Node: API client47724
-Node: Authentication helpers49301
-Node: Formatting utilities50420
-Node: Pagination53950
-Node: Entity storage and list rendering55320
-Node: Consult integration57880
-Node: Embark integration61944
-Node: Org-mode integration64001
-Node: Wikipedia integration65246
-Node: Wikipedia user options68894
-Node: Faces70573
-Node: Hooks72694
-Node: Mode-line display73905
-Node: Tab-bar display74833
-Node: Indices76083
-Node: Function index76224
-Node: Variable index86255
+Node: Browsing29953
+Node: Album view30141
+Node: Artist view31539
+Node: Playlist detail view33501
+Node: Playlist management34945
+Node: Library management37664
+Node: Cache management43509
+Node: Functions45770
+Node: Player state accessors46021
+Node: Entity access in buffers47133
+Node: API client47731
+Node: Authentication helpers49308
+Node: Formatting utilities50427
+Node: Pagination53957
+Node: Entity storage and list rendering55816
+Node: Consult integration58376
+Node: Embark integration62440
+Node: Org-mode integration64497
+Node: Wikipedia integration65742
+Node: Wikipedia user options69390
+Node: Faces71069
+Node: Hooks73190
+Node: Mode-line display74401
+Node: Tab-bar display75329
+Node: Indices76579
+Node: Function index76720
+Node: Variable index86751
 
 End Tag Table
 

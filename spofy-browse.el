@@ -42,6 +42,25 @@
 (declare-function spofy-follow-playlist "spofy-playlist" (playlist-id-or-uri))
 
 ;;; ========================================================================
+;;;; Shared helpers
+;;; ========================================================================
+
+(defun spofy-browse--fetch-all-pages (collected next-url callback)
+  "Fetch all remaining pages starting from NEXT-URL.
+COLLECTED is the list of items accumulated so far.
+CALLBACK is called with the complete item list when done."
+  (spofy-api--request
+   "GET" next-url nil nil
+   (lambda (response)
+     (let* ((items (append (alist-get 'items response) nil))
+            (next (let ((n (alist-get 'next response)))
+                    (and (stringp n) n)))
+            (all (append collected items)))
+       (if next
+           (spofy-browse--fetch-all-pages all next callback)
+         (funcall callback all))))))
+
+;;; ========================================================================
 ;;;; Album view
 ;;; ========================================================================
 
@@ -107,19 +126,44 @@ When MULTI-DISC-P is non-nil, show disc.track numbering."
            for disc = (alist-get 'disc_number track)
            thereis (and disc (> disc 1))))
 
+(defun spofy-album--multi-disc-p-list (tracks)
+  "Return non-nil if TRACKS (a list) span more than one disc."
+  (cl-loop for track in tracks
+           for disc = (alist-get 'disc_number track)
+           thereis (and disc (> disc 1))))
+
 (defun spofy-album--render (album)
-  "Render ALBUM data into the current buffer."
+  "Render ALBUM data into the current buffer.
+Fetches all pages of tracks asynchronously before rendering."
   (let* ((name (or (alist-get 'name album) "Unknown Album"))
          (artists (alist-get 'artists album))
          (year (spofy-ui-album-year album))
          (tracks-obj (alist-get 'tracks album))
          (total (alist-get 'total tracks-obj))
-         (tracks (alist-get 'items tracks-obj))
-         (next-url (alist-get 'next tracks-obj))
+         (first-tracks (append (alist-get 'items tracks-obj) nil))
+         (next-url (let ((n (alist-get 'next tracks-obj)))
+                     (and (stringp n) n)))
          (uri (alist-get 'uri album))
-         (multi-disc (spofy-album--multi-disc-p tracks))
+         (album-id (alist-get 'id album))
          (artist-str (if artists (spofy-ui-format-artists artists) "Unknown"))
          (buf-name (format "*Spofy Album: %s*" name)))
+    (if next-url
+        (spofy-browse--fetch-all-pages
+         first-tracks next-url
+         (lambda (all-tracks)
+           (spofy-album--render-tracks
+            all-tracks buf-name album-id uri album
+            name artist-str year total)))
+      (spofy-album--render-tracks
+       first-tracks buf-name album-id uri album
+       name artist-str year total))))
+
+(defun spofy-album--render-tracks
+    (tracks buf-name album-id uri album name artist-str year total)
+  "Render all album TRACKS into BUF-NAME.
+ALBUM-ID, URI, ALBUM, NAME, ARTIST-STR, YEAR, and TOTAL describe
+the album."
+  (let ((multi-disc (spofy-album--multi-disc-p-list tracks)))
     (with-current-buffer (get-buffer-create buf-name)
       (let ((inhibit-read-only t))
         (erase-buffer))
@@ -127,25 +171,10 @@ When MULTI-DISC-P is non-nil, show disc.track numbering."
       (when multi-disc
         (spofy-album--left-align-number-column))
       (setq-local spofy-ui--buffer-context
-                  `((album-id . ,(alist-get 'id album))
+                  `((album-id . ,album-id)
                     (album-uri . ,uri)
                     (album . ,album)))
-      (setq-local spofy-ui--next-page-url next-url)
       (setq-local spofy-ui--entity-type 'track)
-      (setq-local spofy-ui--load-more-handler
-                  (let ((album-uri uri)
-                        (multi-disc-p multi-disc))
-                    (lambda (response)
-                      (let ((tracks (alist-get 'items response))
-                            (next-url (alist-get 'next response)))
-                        (unless multi-disc-p
-                          (when (spofy-album--multi-disc-p tracks)
-                            (setq multi-disc-p t)
-                            (spofy-album--left-align-number-column)))
-                        (cons (cl-loop for track across tracks
-                                       collect (spofy-album--format-track
-                                                track album-uri multi-disc-p))
-                              next-url)))))
       (setq-local spofy-ui--entry-formatter
                   (let ((album-uri uri)
                         (multi-disc-p multi-disc))
@@ -157,7 +186,7 @@ When MULTI-DISC-P is non-nil, show disc.track numbering."
              (format "Year: %s" year)
              (format "Tracks: %s" (or total "?"))))
       (setq tabulated-list-entries
-            (cl-loop for track across tracks
+            (cl-loop for track in tracks
                      collect (spofy-album--format-track track uri multi-disc)))
       (tabulated-list-print t)
       (goto-char (point-min))
@@ -265,13 +294,25 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
 
 (defun spofy-artist--render (artist-id artist albums-response)
   "Render ARTIST and ALBUMS-RESPONSE into the artist buffer.
-ARTIST-ID is the Spotify artist ID."
+ARTIST-ID is the Spotify artist ID.  Fetches all album pages
+asynchronously before rendering."
+  (let* ((first-albums (append (alist-get 'items albums-response) nil))
+         (next-url (let ((n (alist-get 'next albums-response)))
+                     (and (stringp n) n))))
+    (if next-url
+        (spofy-browse--fetch-all-pages
+         first-albums next-url
+         (lambda (all-albums)
+           (spofy-artist--render-albums all-albums artist-id artist)))
+      (spofy-artist--render-albums first-albums artist-id artist))))
+
+(defun spofy-artist--render-albums (albums artist-id artist)
+  "Render all ALBUMS for ARTIST-ID into the artist buffer.
+ARTIST is the artist API object."
   (let* ((name (or (alist-get 'name artist) "Unknown Artist"))
          (genres (alist-get 'genres artist))
          (followers-obj (alist-get 'followers artist))
          (followers (if followers-obj (alist-get 'total followers-obj) 0))
-         (albums (alist-get 'items albums-response))
-         (next-url (alist-get 'next albums-response))
          (genres-str (if (and genres (> (length genres) 0))
                          (mapconcat #'identity genres ", ")
                        "None listed"))
@@ -284,22 +325,14 @@ ARTIST-ID is the Spotify artist ID."
                   `((artist-id . ,artist-id)
                     (artist-name . ,name)
                     (artist . ,artist)))
-      (setq-local spofy-ui--next-page-url next-url)
       (setq-local spofy-ui--entity-type 'album)
-      (setq-local spofy-ui--load-more-handler
-                  (lambda (response)
-                    (let ((albums (alist-get 'items response))
-                          (next-url (alist-get 'next response)))
-                      (cons (cl-loop for album across albums
-                                     collect (spofy-artist--format-album album))
-                            next-url))))
       (spofy-ui-insert-header
        (list (format "Artist: %s" name)
              (format "Genres: %s" genres-str)
              (format "Followers: %s"
                      (number-to-string followers))))
       (setq tabulated-list-entries
-            (cl-loop for album across albums
+            (cl-loop for album in albums
                      collect (spofy-artist--format-album album)))
       (tabulated-list-print t)
       (goto-char (point-min))
@@ -529,7 +562,8 @@ TRACK-NUMBER is the 1-based position in the playlist."
                                     (spofy-ui-playing-face 'spofy-muted playing-p)))))))))
 
 (defun spofy-playlist--render (playlist)
-  "Render PLAYLIST data into a buffer."
+  "Render PLAYLIST data into a buffer.
+Fetches all pages of tracks asynchronously before rendering."
   (let* ((name (or (alist-get 'name playlist) "Unknown Playlist"))
          (owner-obj (alist-get 'owner playlist))
          (owner (if owner-obj
@@ -539,51 +573,52 @@ TRACK-NUMBER is the 1-based position in the playlist."
          (description (or (alist-get 'description playlist) ""))
          (tracks-obj (alist-get 'tracks playlist))
          (total (alist-get 'total tracks-obj))
-         (items (alist-get 'items tracks-obj))
-         (next-url (alist-get 'next tracks-obj))
+         (first-items (append (alist-get 'items tracks-obj) nil))
+         (next-url (let ((n (alist-get 'next tracks-obj)))
+                     (and (stringp n) n)))
          (uri (alist-get 'uri playlist))
          (playlist-id (alist-get 'id playlist))
          (buf-name (format "*Spofy Playlist: %s*" name)))
-    (with-current-buffer (get-buffer-create buf-name)
-      (let ((inhibit-read-only t))
-        (erase-buffer))
-      (spofy-playlist-view-mode)
-      (setq-local spofy-ui--buffer-context
-                  `((playlist-id . ,playlist-id)
-                    (playlist-uri . ,uri)
-                    (playlist . ,playlist)))
-      (setq-local spofy-ui--next-page-url next-url)
-      (setq-local spofy-ui--entity-type 'track)
-      (setq-local spofy-ui--load-more-handler
-                  (let ((playlist-uri uri))
-                    (lambda (response)
-                      (let ((items (alist-get 'items response))
-                            (next-url (alist-get 'next response))
-                            (offset (length tabulated-list-entries)))
-                        (cons (cl-loop for item across items
-                                       for idx from (1+ offset)
-                                       for entry = (spofy-playlist--format-track-item
-                                                    item playlist-uri idx)
-                                       when entry collect entry)
-                              next-url)))))
-      (setq-local spofy-ui--entry-formatter
-                  (let ((playlist-uri uri))
-                    (lambda (entity idx)
-                      (spofy-playlist--format-track-item
-                       entity playlist-uri (1+ idx)))))
-      (spofy-ui-insert-header
-       (list (format "Playlist: %s" name)
-             (format "Owner: %s" owner)
-             (format "Description: %s" description)
-             (format "Tracks: %s" (or total "?"))))
-      (setq tabulated-list-entries
-            (cl-loop for item across items
-                     for idx from 1
-                     for entry = (spofy-playlist--format-track-item item uri idx)
-                     when entry collect entry))
-      (tabulated-list-print t)
-      (goto-char (point-min))
-      (switch-to-buffer (current-buffer)))))
+    (if next-url
+        (spofy-browse--fetch-all-pages
+         first-items next-url
+         (lambda (all-items)
+           (spofy-playlist--render-tracks
+            all-items buf-name playlist-id uri name owner description total)))
+      (spofy-playlist--render-tracks
+       first-items buf-name playlist-id uri name owner description total))))
+
+(defun spofy-playlist--render-tracks
+    (items buf-name playlist-id uri name owner description total)
+  "Render all playlist track ITEMS into BUF-NAME.
+PLAYLIST-ID, URI, NAME, OWNER, DESCRIPTION, and TOTAL describe
+the playlist."
+  (with-current-buffer (get-buffer-create buf-name)
+    (let ((inhibit-read-only t))
+      (erase-buffer))
+    (spofy-playlist-view-mode)
+    (setq-local spofy-ui--buffer-context
+                `((playlist-id . ,playlist-id)
+                  (playlist-uri . ,uri)))
+    (setq-local spofy-ui--entity-type 'track)
+    (setq-local spofy-ui--entry-formatter
+                (let ((playlist-uri uri))
+                  (lambda (entity idx)
+                    (spofy-playlist--format-track-item
+                     entity playlist-uri (1+ idx)))))
+    (spofy-ui-insert-header
+     (list (format "Playlist: %s" name)
+           (format "Owner: %s" owner)
+           (format "Description: %s" description)
+           (format "Tracks: %s" (or total "?"))))
+    (setq tabulated-list-entries
+          (cl-loop for item in items
+                   for idx from 1
+                   for entry = (spofy-playlist--format-track-item item uri idx)
+                   when entry collect entry))
+    (tabulated-list-print t)
+    (goto-char (point-min))
+    (switch-to-buffer (current-buffer))))
 
 ;;;###autoload
 (defun spofy-view-playlist (playlist-id)

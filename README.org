@@ -388,7 +388,7 @@ All search result buffers share the ~spofy-search-mode~ keymap:
 | =g=   | ~spofy-search-refresh~        | Re-run the search                   |
 | =q=   | ~quit-window~                 | Close the buffer                    |
 
-The Spotify API returns results in pages.  Results load automatically as the user scrolls ([[#h:pagination][Pagination]]).
+The Spotify API returns search results in pages.  Results load automatically as the user scrolls ([[#h:pagination][Pagination]]).
 
 ** Browsing
 :PROPERTIES:
@@ -714,7 +714,9 @@ The function ~spofy-ui-play-pause-icon~ returns a play or pause icon string base
 :CUSTOM_ID: h:pagination
 :END:
 
-All Spofy ~tabulated-list-mode~ buffers share a single pagination mechanism.  Results load automatically as the user scrolls: the function ~spofy-ui--maybe-load-more~ is registered on ~window-scroll-functions~ and triggers a fetch when the window end is within a few lines of the buffer end.  A ~post-command-hook~ complement ensures pagination fires reliably under ~pixel-scroll-precision-mode~, which can miss ~window-scroll-functions~ events.  A guard variable (~spofy-ui--loading-more~) prevents duplicate requests while one is already in flight, and the URL is checked with ~stringp~ to avoid attempting a fetch when the JSON ~:null~ sentinel has not yet been normalized.  Each buffer stores a buffer-local handler (set by the module that created the buffer) that knows how to extract items and the next-page URL from the API response.  This keeps all pagination logic in one place in =spofy-ui.el= while letting each module control its own entry formatting.  Both ~spofy-api--extract-paged-results~ and ~spofy-ui-load-more~ normalize JSON ~:null~ values to ~nil~, so that a ~null~ next-page URL from the Spotify API is correctly treated as the end of results.
+Browse views (album, artist, and playlist detail) fetch all pages of results asynchronously before rendering, so the buffer always shows the complete list of items with no pagination.  The shared helper ~spofy-browse--fetch-all-pages~ recursively follows the Spotify API's ~next~ URL until all pages are collected, then hands the complete list to the rendering function.  This is consistent with how the library cache pre-fetches all saved tracks and albums ([[#h:library-cache][Library cache]]).
+
+Search results use a scroll-triggered pagination mechanism instead, since the total result set can be very large.  The function ~spofy-ui--maybe-load-more~ is registered on ~window-scroll-functions~ and triggers a fetch when the window end is within a few lines of the buffer end.  A ~post-command-hook~ complement ensures pagination fires reliably under ~pixel-scroll-precision-mode~, which can miss ~window-scroll-functions~ events.  A guard variable (~spofy-ui--loading-more~) prevents duplicate requests while one is already in flight, and the URL is checked with ~stringp~ to avoid attempting a fetch when the JSON ~:null~ sentinel has not yet been normalized.  Each buffer stores a buffer-local handler (set by the module that created the buffer) that knows how to extract items and the next-page URL from the API response.  This keeps all pagination logic in one place in =spofy-ui.el= while letting each module control its own entry formatting.  Both ~spofy-api--extract-paged-results~ and ~spofy-ui-load-more~ normalize JSON ~:null~ values to ~nil~, so that a ~null~ next-page URL from the Spotify API is correctly treated as the end of results.
 
 *** Entity storage and list rendering
 :PROPERTIES:
