@@ -99,7 +99,10 @@ IMAGES is the `images' array from a Spotify album object."
            (album (alist-get 'album item))
            (device (alist-get 'device data))
            (context (let ((c (alist-get 'context data)))
-                      (and (listp c) c))))
+                      (and (listp c) c)))
+           (album-id (alist-get 'id album))
+           (context-uri (spofy-player--resolve-context-uri context album-id))
+           (context-type (alist-get 'type context)))
       `((track     . ,(alist-get 'name item))
         (artist    . ,(when (and artists (> (length artists) 0))
                        (spofy-ui-format-artists artists)))
@@ -107,7 +110,7 @@ IMAGES is the `images' array from a Spotify album object."
                        (alist-get 'id (aref artists 0))))
         (album     . ,(alist-get 'name album))
         (album-date . ,(alist-get 'release_date album))
-        (album-id  . ,(alist-get 'id album))
+        (album-id  . ,album-id)
         (album-image-url . ,(spofy-player--best-image-url
                               (alist-get 'images album)))
         (progress  . ,(alist-get 'progress_ms data))
@@ -118,8 +121,22 @@ IMAGES is the `images' array from a Spotify album object."
         (device    . ,(alist-get 'name device))
         (volume    . ,(alist-get 'volume_percent device))
         (track-id  . ,(alist-get 'id item))
-        (context-uri  . ,(alist-get 'uri context))
-        (context-type . ,(alist-get 'type context))))))
+        (context-uri  . ,context-uri)
+        (context-type . ,context-type)))))
+
+(defun spofy-player--resolve-context-uri (context album-id)
+  "Return the correct context URI from CONTEXT.
+When the context is an album whose ID does not match ALBUM-ID,
+Spotify autoplay has moved past the original album; return the
+track's actual album URI instead."
+  (let ((uri (alist-get 'uri context)))
+    (if (and uri
+             (equal (alist-get 'type context) "album")
+             album-id
+             (not (equal (car (last (split-string uri ":")))
+                         album-id)))
+        (concat "spotify:album:" album-id)
+      uri)))
 
 (defun spofy-player--update-state (key value)
   "Set KEY to VALUE in the current player state and run hooks."
@@ -501,14 +518,10 @@ Return non-nil on success."
     (unless (and context-uri (member context-type '("album" "playlist")))
       (user-error "Spofy: cannot browse this context"))
     (setq spofy-ui--pending-jump-track-id track-id)
-    (spofy-jump-to-playing-track--open-context-uri context-type context-uri)))
-
-(defun spofy-jump-to-playing-track--open-context-uri (context-type context-uri)
-  "Open CONTEXT-URI of CONTEXT-TYPE as a browse buffer."
-  (let ((context-id (car (last (split-string context-uri ":")))))
-    (pcase context-type
-      ("album" (spofy-view-album context-id))
-      ("playlist" (spofy-view-playlist context-id)))))
+    (let ((context-id (car (last (split-string context-uri ":")))))
+      (pcase context-type
+        ("album" (spofy-view-album context-id))
+        ("playlist" (spofy-view-playlist context-id))))))
 
 (defun spofy-jump-to-playing-track--message ()
   "Display the playing track position in the echo area."

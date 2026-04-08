@@ -372,6 +372,8 @@ The command ~spofy-player-start-polling~ starts a timer that polls the Spotify p
 
 The command ~spofy-player-stop-polling~ cancels the polling timer.  Polling is started automatically by the ~spofy~ command and ~spofy-global-mode~, and stopped by ~spofy-stop~.
 
+When Spotify's autoplay continues beyond an album, the API may still report the original album as the playback context even though the current track belongs to a different album.  During state extraction, Spofy detects this mismatch by comparing the context album ID with the track's actual album ID and corrects the context URI to point to the track's own album.  This ensures that all context-dependent commands—~spofy-jump-to-playing-track~ ([[#h:jump-to-playing-track][Jump to playing track]]), ~spofy-library-browse-context~, ~spofy-library-search-context~—navigate to the correct album.
+
 ** Device management
 :PROPERTIES:
 :CUSTOM_ID: h:device-management
