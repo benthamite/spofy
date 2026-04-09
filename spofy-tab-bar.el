@@ -60,8 +60,8 @@ Only used when the format string contains %G."
 
 (defcustom spofy-tab-bar-max-length 50
   "Maximum length of the Spofy tab-bar string.
-If the formatted string exceeds this length, it is truncated with an
-ellipsis.  Set to nil to disable truncation."
+If the formatted string exceeds this length, it is truncated with
+a fade-out gradient.  Set to nil to disable truncation."
   :type '(choice integer (const :tag "No truncation" nil))
   :group 'spofy)
 
@@ -120,9 +120,45 @@ Returns nil if no player state is available."
                                          (spofy-ui-progress-time
                                           prog-val dur-val)
                                          result)))))
-      (if spofy-tab-bar-max-length
-          (spofy-ui-truncate result spofy-tab-bar-max-length)
+      (if (and spofy-tab-bar-max-length
+               (> (string-width result) spofy-tab-bar-max-length))
+          (spofy-tab-bar--apply-string-fade
+           (truncate-string-to-width result spofy-tab-bar-max-length))
         result))))
+
+(defun spofy-tab-bar--apply-string-fade (string)
+  "Apply a fade-out gradient to the last 3 characters of STRING.
+Blend each character's foreground toward the `tab-bar' face
+background, producing the same truncation indicator used in Spofy
+list buffers but encoded directly as text properties rather than
+overlays."
+  (let* ((len (length string))
+         (bg (spofy-tab-bar--fade-background)))
+    (when (and (>= len 3) bg)
+      (dotimes (i 3)
+        (spofy-tab-bar--fade-char string (+ (- len 3) i) (1+ i) bg))))
+  string)
+
+(defun spofy-tab-bar--fade-char (string pos level bg)
+  "Fade the character at POS in STRING by LEVEL toward BG.
+LEVEL is 1, 2, or 3 (25%, 50%, 75% blend toward background)."
+  (let* ((existing (get-text-property pos 'face string))
+         (fg (or (spofy-ui--resolve-foreground existing)
+                 (face-foreground 'default nil t)))
+         (blended (when fg
+                    (spofy-ui--blend-color fg bg (* 0.25 level)))))
+    (when blended
+      (put-text-property
+       pos (1+ pos) 'face
+       (if existing
+           `((:foreground ,blended) ,existing)
+         `(:foreground ,blended))
+       string))))
+
+(defun spofy-tab-bar--fade-background ()
+  "Return the background color to fade toward."
+  (or (face-background 'tab-bar nil t)
+      (face-background 'default nil t)))
 
 ;;;; Tab-bar format function
 
@@ -200,6 +236,13 @@ Also removes `tab-bar-format-align-right' if it was added by this mode."
     (cancel-timer spofy-tab-bar--progress-timer)
     (setq spofy-tab-bar--progress-timer nil)))
 
+;;;; Theme change handling
+
+(defun spofy-tab-bar--on-theme-change (&rest _)
+  "Rebuild the tab-bar string to recompute fade colors."
+  (when spofy-tab-bar-mode
+    (spofy-tab-bar--update)))
+
 ;;;; Global minor mode
 
 ;;;###autoload
@@ -211,11 +254,13 @@ Also removes `tab-bar-format-align-right' if it was added by this mode."
       (progn
         (spofy-tab-bar--insert-into-format)
         (add-hook 'spofy-player-state-changed-hook #'spofy-tab-bar--update)
+        (add-hook 'enable-theme-functions #'spofy-tab-bar--on-theme-change)
         (spofy-tab-bar--update)
         (spofy-tab-bar--start-progress-timer))
     (spofy-tab-bar--stop-progress-timer)
     (spofy-tab-bar--remove-from-format)
     (remove-hook 'spofy-player-state-changed-hook #'spofy-tab-bar--update)
+    (remove-hook 'enable-theme-functions #'spofy-tab-bar--on-theme-change)
     (setq spofy-tab-bar--string nil)
     (force-mode-line-update t)))
 
