@@ -58,11 +58,12 @@ Only used when the format string contains %G."
   :type 'integer
   :group 'spofy)
 
-(defcustom spofy-tab-bar-max-length 50
-  "Maximum length of the Spofy tab-bar string.
-If the formatted string exceeds this length, it is truncated with
-a fade-out gradient.  Set to nil to disable truncation."
-  :type '(choice integer (const :tag "No truncation" nil))
+(defcustom spofy-tab-bar-max-length nil
+  "Optional upper bound on the Spofy tab-bar string length.
+The segment is always truncated dynamically to fit the available
+frame width.  When this option is non-nil, the segment is further
+capped at this many columns even when more space is available."
+  :type '(choice (const :tag "Dynamic only" nil) integer)
   :group 'spofy)
 
 (defcustom spofy-tab-bar-alignment 'left
@@ -76,9 +77,6 @@ When `right', the segment is placed after
 
 ;;;; Internal state
 
-(defvar spofy-tab-bar--string nil
-  "Cached tab-bar string, updated on player state changes.")
-
 (defvar spofy-tab-bar--added-align-right nil
   "Non-nil if this mode inserted `tab-bar-format-align-right'.")
 
@@ -86,7 +84,10 @@ When `right', the segment is placed after
 
 (defun spofy-tab-bar--construct-string ()
   "Build the tab-bar string from `spofy-tab-bar-format' and current state.
-Returns nil if no player state is available."
+Returns nil if no player state is available.  The text portion
+(track, artist, album) is truncated with a fade-out gradient when
+it would cause the tab bar to exceed the frame width; the status
+portion (indicators, progress bar) is never truncated."
   (when-let* ((state spofy-player--current-state)
               (track (or (alist-get 'track state) ""))
               (artist (or (alist-get 'artist state) ""))
@@ -96,35 +97,74 @@ Returns nil if no player state is available."
            (repeat (spofy-ui-repeat-indicator state))
            (propertized-track (propertize track 'face 'spofy-track-name))
            (propertized-artist (propertize artist 'face 'spofy-artist-name))
-           (result spofy-tab-bar-format))
-      (setq result (string-replace "%t" propertized-track result))
-      (setq result (string-replace "%a" propertized-artist result))
-      (setq result (string-replace "%b" album result))
-      (setq result (string-replace "%p" play-pause result))
-      (setq result (string-replace "%s" shuffle result))
-      (setq result (string-replace "%r" repeat result))
-      (when (string-match-p "%[GT]" result)
-        (let* ((progress (and (fboundp 'spofy-player-interpolated-progress)
-                              (spofy-player-interpolated-progress)))
-               (duration (alist-get 'duration state))
-               (prog-val (or progress 0))
-               (dur-val (or duration 0)))
-          (when (string-search "%G" result)
-            (setq result (string-replace "%G"
-                                         (spofy-ui-progress-bar-only
-                                          prog-val dur-val
-                                          spofy-tab-bar-progress-width)
-                                         result)))
-          (when (string-search "%T" result)
-            (setq result (string-replace "%T"
-                                         (spofy-ui-progress-time
-                                          prog-val dur-val)
-                                         result)))))
-      (if (and spofy-tab-bar-max-length
-               (> (string-width result) spofy-tab-bar-max-length))
-          (spofy-tab-bar--apply-string-fade
-           (truncate-string-to-width result spofy-tab-bar-max-length))
-        result))))
+           (parts (spofy-tab-bar--split-format))
+           (text (spofy-tab-bar--substitute-text
+                  (car parts) propertized-track propertized-artist album))
+           (status (spofy-tab-bar--substitute-status
+                    (cdr parts) play-pause shuffle repeat state))
+           (text (spofy-tab-bar--truncate-text text status)))
+      (concat text status))))
+
+(defun spofy-tab-bar--split-format ()
+  "Split `spofy-tab-bar-format' at the last variable specifier.
+Return (TEXT-FMT . STATUS-FMT) where TEXT-FMT contains %t, %a,
+%b and STATUS-FMT contains the remaining fixed-width specifiers."
+  (let ((fmt spofy-tab-bar-format)
+        (last-var-end 0))
+    (dolist (spec '("%t" "%a" "%b"))
+      (when-let* ((pos (string-search spec fmt)))
+        (setq last-var-end (max last-var-end (+ pos 2)))))
+    (if (zerop last-var-end)
+        (cons fmt "")
+      (cons (substring fmt 0 last-var-end)
+            (substring fmt last-var-end)))))
+
+(defun spofy-tab-bar--substitute-text (fmt track artist album)
+  "Substitute variable specifiers in FMT with TRACK, ARTIST, ALBUM."
+  (let ((result fmt))
+    (setq result (string-replace "%t" track result))
+    (setq result (string-replace "%a" artist result))
+    (string-replace "%b" album result)))
+
+(defun spofy-tab-bar--substitute-status (fmt play-pause shuffle repeat state)
+  "Substitute fixed-width specifiers in FMT.
+PLAY-PAUSE, SHUFFLE, REPEAT are pre-built indicator strings.
+STATE is the player state alist for progress computation."
+  (let ((result fmt))
+    (setq result (string-replace "%p" play-pause result))
+    (setq result (string-replace "%s" shuffle result))
+    (setq result (string-replace "%r" repeat result))
+    (when (string-match-p "%[GT]" result)
+      (let* ((progress (and (fboundp 'spofy-player-interpolated-progress)
+                            (spofy-player-interpolated-progress)))
+             (duration (alist-get 'duration state))
+             (prog-val (or progress 0))
+             (dur-val (or duration 0)))
+        (when (string-search "%G" result)
+          (setq result (string-replace "%G"
+                                       (spofy-ui-progress-bar-only
+                                        prog-val dur-val
+                                        spofy-tab-bar-progress-width)
+                                       result)))
+        (when (string-search "%T" result)
+          (setq result (string-replace "%T"
+                                       (spofy-ui-progress-time
+                                        prog-val dur-val)
+                                       result)))))
+    result))
+
+(defun spofy-tab-bar--truncate-text (text status)
+  "Truncate TEXT with a fade gradient to fit alongside STATUS.
+Returns TEXT unchanged when it already fits."
+  (let* ((available (spofy-tab-bar--available-width))
+         (budget (if spofy-tab-bar-max-length
+                     (min available spofy-tab-bar-max-length)
+                   available))
+         (text-budget (max 10 (- budget (string-width status)))))
+    (if (> (string-width text) text-budget)
+        (spofy-tab-bar--apply-string-fade
+         (truncate-string-to-width text text-budget))
+      text)))
 
 (defun spofy-tab-bar--apply-string-fade (string)
   "Apply a fade-out gradient to the last 3 characters of STRING.
@@ -143,7 +183,7 @@ overlays."
   "Fade the character at POS in STRING by LEVEL toward BG.
 LEVEL is 1, 2, or 3 (25%, 50%, 75% blend toward background)."
   (let* ((existing (get-text-property pos 'face string))
-         (fg (or (spofy-ui--resolve-foreground existing)
+         (fg (or (and existing (spofy-ui--resolve-foreground existing))
                  (face-foreground 'default nil t)))
          (blended (when fg
                     (spofy-ui--blend-color fg bg (* 0.25 level)))))
@@ -160,19 +200,42 @@ LEVEL is 1, 2, or 3 (25%, 50%, 75% blend toward background)."
   (or (face-background 'tab-bar nil t)
       (face-background 'default nil t)))
 
+;;;; Available width computation
+
+(defun spofy-tab-bar--available-width ()
+  "Return the display columns available for the Spofy segment.
+Measure the combined width of all other tab-bar items and subtract
+from the frame width."
+  (let ((other-width 0))
+    (dolist (fn tab-bar-format)
+      (unless (memq fn '(tab-bar-format-spofy tab-bar-format-align-right))
+        (when-let* ((items (ignore-errors (funcall fn))))
+          (dolist (item items)
+            (when-let* ((label (spofy-tab-bar--item-label item)))
+              (setq other-width (+ other-width (string-width label))))))))
+    (max 10 (- (frame-width) other-width 1))))
+
+(defun spofy-tab-bar--item-label (item)
+  "Extract the display label string from a tab-bar ITEM, or nil."
+  (and (consp item)
+       (eq (cadr item) 'menu-item)
+       (let ((label (caddr item)))
+         (and (stringp label) label))))
+
 ;;;; Tab-bar format function
 
 (defun tab-bar-format-spofy ()
-  "Produce a tab-bar segment showing the currently playing Spotify track."
-  (when spofy-tab-bar--string
-    `((spofy-tab-bar menu-item ,spofy-tab-bar--string ignore
+  "Produce a tab-bar segment showing the currently playing Spotify track.
+The string is computed fresh on each call so it adapts to changes
+in other tab-bar elements without requiring explicit invalidation."
+  (when-let* ((str (spofy-tab-bar--construct-string)))
+    `((spofy-tab-bar menu-item ,str ignore
                      :help "Currently playing on Spotify"))))
 
 ;;;; Updating
 
 (defun spofy-tab-bar--update ()
-  "Rebuild the cached tab-bar string and force a tab-bar update."
-  (setq spofy-tab-bar--string (spofy-tab-bar--construct-string))
+  "Force a tab-bar re-render."
   (force-mode-line-update t))
 
 ;;;; Tab-bar format management
@@ -261,7 +324,6 @@ Also removes `tab-bar-format-align-right' if it was added by this mode."
     (spofy-tab-bar--remove-from-format)
     (remove-hook 'spofy-player-state-changed-hook #'spofy-tab-bar--update)
     (remove-hook 'enable-theme-functions #'spofy-tab-bar--on-theme-change)
-    (setq spofy-tab-bar--string nil)
     (force-mode-line-update t)))
 
 (provide 'spofy-tab-bar)

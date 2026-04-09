@@ -134,7 +134,9 @@ The user option ~spofy-tab-bar-format~ is a format string that controls what the
 
 The user option ~spofy-tab-bar-progress-width~ sets the width in characters of the progress bar in the tab bar.  It defaults to ~15~.  This option is only relevant when the format string contains =%G=.
 
-The user option ~spofy-tab-bar-max-length~ sets the maximum character length of the tab-bar string.  It defaults to ~50~.  Longer strings are truncated with a fade-out gradient that progressively blends the last three characters toward the tab-bar background, matching the truncation style used in Spofy list buffers.  Set it to ~nil~ to disable truncation entirely.
+The tab-bar segment dynamically truncates the text portion (track, artist, album names) to fit the available frame width.  The segment measures the combined width of all other tab-bar items (tabs, alignment spacers, global mode string) and allocates the remaining columns to the text; status indicators and the progress bar are never truncated.  When the text is truncated, a fade-out gradient progressively blends the last three characters toward the tab-bar background, matching the truncation style used in Spofy list buffers.
+
+The user option ~spofy-tab-bar-max-length~ provides an optional upper bound.  It defaults to ~nil~ (dynamic only).  When set to an integer, the segment is capped at that many columns even when more space is available.
 
 The user option ~spofy-tab-bar-alignment~ controls whether the Spofy segment appears on the left or right side of the tab bar.  It accepts the symbols ~left~ (default) and ~right~.  When set to ~left~, the segment is inserted before any ~tab-bar-format-align-right~ entry, keeping it on the left side.  When set to ~right~, the segment is placed after ~tab-bar-format-align-right~, inserting that alignment entry automatically if it is not already present.  Set this option before enabling ~spofy-tab-bar-mode~ ([[#h:tab-bar-display][Tab-bar display]]).
 
@@ -1022,7 +1024,7 @@ The mode is enabled automatically when ~spofy-global-mode~ is active and ~spofy-
 
 The command ~spofy-tab-bar-mode~ toggles a global minor mode that adds a Spofy segment to the tab bar.  The segment shows the currently playing track formatted according to ~spofy-tab-bar-format~ ([[#h:user-options-tab-bar][Tab-bar options]]).
 
-When enabled, the mode inserts a ~tab-bar-format-spofy~ entry into ~tab-bar-format~ at a position determined by ~spofy-tab-bar-alignment~ ([[#h:user-options-tab-bar][Tab-bar options]]) and hooks into ~spofy-player-state-changed-hook~ to rebuild the tab-bar string whenever the player state changes.  When the format string contains =%g=, a 1-second timer is also started to update the progress bar smoothly between poll cycles.  The fade colors are also recomputed on theme changes via ~enable-theme-functions~.  When disabled, it removes the entry, stops the progress timer, and cleans up any ~tab-bar-format-align-right~ entry that was added automatically.
+When enabled, the mode inserts a ~tab-bar-format-spofy~ entry into ~tab-bar-format~ at a position determined by ~spofy-tab-bar-alignment~ ([[#h:user-options-tab-bar][Tab-bar options]]).  The segment is computed fresh on each tab-bar render, so it automatically adapts when other tab-bar elements appear or disappear.  Player state changes and theme changes trigger a re-render, and when the format string contains =%G= or =%T=, a 1-second timer keeps the progress bar updating smoothly.  When disabled, the mode removes the entry, stops the progress timer, and cleans up any ~tab-bar-format-align-right~ entry that was added automatically.
 
 The mode is enabled automatically when ~spofy-global-mode~ is active and ~spofy-enable-tab-bar~ is non-nil ([[#h:user-options-global][Global options]]).  When enabled, it takes precedence over the mode-line display to avoid showing track information twice.
 
