@@ -331,9 +331,13 @@ The next 1-second progress timer tick will pick up the new image."
 
 (defun spofy--dashboard-truncate (text)
   "Truncate TEXT to fit within the window, accounting for indent.
+When the text face has a `:height' scale (e.g. 1.15), reduce
+the available width proportionally so the text does not overflow.
 When truncated, mark the last three characters with the
 `spofy-fade' text property for gradient fade-out rendering."
-  (let ((max-width (max 10 (- (window-width) 4))))
+  (let* ((scale (spofy--dashboard-face-scale
+                 (get-text-property 0 'face text)))
+         (max-width (max 10 (floor (/ (- (window-width) 4) scale)))))
     (if (<= (string-width text) max-width)
         text
       (let ((result (truncate-string-to-width text max-width)))
@@ -343,6 +347,16 @@ When truncated, mark the last three characters with the
               (put-text-property (+ (- len 3) i) (+ (- len 3) i 1)
                                  'spofy-fade (1+ i) result))))
         result))))
+
+(defun spofy--dashboard-face-scale (face)
+  "Return the height scale factor for FACE, defaulting to 1.0.
+A float `:height' attribute (e.g. 1.15) indicates a scale
+relative to the default font; an absolute or unspecified value
+maps to 1.0."
+  (if (and face (facep face))
+      (let ((h (face-attribute face :height)))
+        (if (floatp h) h 1.0))
+    1.0))
 
 ;;;;; Dashboard: recently played section
 

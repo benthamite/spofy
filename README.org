@@ -173,7 +173,7 @@ The user option ~spofy-dashboard-sections~ controls which sections appear on the
 
 The user option ~spofy-dashboard-album-art~ controls whether album artwork is displayed in the now-playing section.  It defaults to ~t~.  When enabled, the album cover appears between the track information (track, artist, album) and the player controls (progress bar, shuffle/repeat state).  Album art is fetched asynchronously from the Spotify API and cached on disk under =XDG_CACHE_HOME/spofy/album-art/= (defaulting to =~/.cache/spofy/album-art/=).  The image updates automatically when the track changes.  This option has no effect in terminal frames, since Emacs cannot display images there.
 
-The now-playing section always appears at the top regardless of this option.  Each section is fetched asynchronously and includes a "View all" link that opens a full tabulated-list buffer.  Track and artist names in every section are truncated to the window width with a fade-out gradient when they would otherwise overflow.
+The now-playing section always appears at the top regardless of this option.  Each section is fetched asynchronously and includes a "View all" link that opens a full tabulated-list buffer.  Track and artist names in every section are truncated to the window width with a fade-out gradient when they would otherwise overflow.  The truncation accounts for the scaled font size of the now-playing faces so that text does not wrap even at larger display heights.
 
 ** Column widths
 :PROPERTIES:
