@@ -1044,3 +1044,4 @@ The mode is enabled automatically when ~spofy-global-mode~ is active and ~spofy-
 :INDEX: vr
 :CUSTOM_ID: h:variable-index
 :END:
+
