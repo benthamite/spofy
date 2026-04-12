@@ -357,7 +357,7 @@ All Spofy tabulated-list buffers and the dashboard use a custom ~mode-line-forma
 
 - The mode name (e.g. "Spofy Playlist", "Spofy Album").
 - The entity name, when the buffer displays a specific album, artist, or playlist (e.g. "Spofy Album: Thriller", "Spofy Playlist: Discover Weekly").  List views such as the playlists browser show only the mode name.
-- Playback state icons: shuffle (⇌ when on), repeat (↻ for context, ↻₁ for track).
+- Playback state icons: shuffle (⇌ when on), repeat (↻ for context, ↻₁ for track).  These are omitted in the dashboard, which already displays shuffle and repeat state in its now-playing section.
 - The playing track's position in the current buffer (e.g. "47/213"), displayed with the ~spofy-muted~ face.  This element is empty when the playing track is not in the buffer.
 
 The mode-line updates automatically on player state changes (shuffle, repeat) and on track changes.  The constant ~spofy-ui-mode-line-format~ holds the format list; it is set buffer-locally by ~spofy-ui-set-format~ in tabulated-list modes and by ~spofy-dashboard-mode~ in the dashboard.

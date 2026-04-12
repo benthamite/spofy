@@ -677,14 +677,19 @@ POSITION is 1-based.  Return nil if the track is not here."
      (t (concat "  " state-str "  " pos-str)))))
 
 (defun spofy-ui--mode-line-playback-state ()
-  "Return a string with playback state icons."
-  (if (and (boundp 'spofy-player--current-state) spofy-player--current-state)
-      (string-join
-       (seq-remove #'string-empty-p
-                   (list (spofy-ui-shuffle-indicator spofy-player--current-state)
-                         (spofy-ui-repeat-indicator spofy-player--current-state)))
-       " ")
-    ""))
+  "Return a string with playback state icons.
+In `spofy-dashboard-mode' buffers, return an empty string because
+the dashboard already displays shuffle and repeat state in its
+content."
+  (if (or (derived-mode-p 'spofy-dashboard-mode)
+          (not (and (boundp 'spofy-player--current-state)
+                    spofy-player--current-state)))
+      ""
+    (string-join
+     (seq-remove #'string-empty-p
+                 (list (spofy-ui-shuffle-indicator spofy-player--current-state)
+                       (spofy-ui-repeat-indicator spofy-player--current-state)))
+     " ")))
 
 (defun spofy-ui--mode-line-track-position ()
   "Return a string like \"47/213\" for the mode-line."
