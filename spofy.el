@@ -121,6 +121,7 @@
 (defvar spofy-player-state-changed-hook)
 (defvar spofy-player-track-changed-hook)
 (defvar spofy-player--timer)
+(defvar spofy-poll-interval)
 (defvar spofy-global-mode)
 
 ;;;; Customization
@@ -192,6 +193,9 @@ Each element is a symbol naming a section.  Available sections:
   (setq-local mode-line-format spofy-ui-mode-line-format))
 
 ;;;;; Dashboard: album art
+
+(defvar spofy--dashboard-recently-played-timer nil
+  "Timer for delayed recently-played section refresh.")
 
 (defvar spofy--album-art-cache-dir nil
   "Directory for cached album art images.")
@@ -679,8 +683,25 @@ Called from `spofy-player-state-changed-hook' and the progress timer."
                      (goto-char (min pos (point-max))))))))))))))
 
 (defun spofy--dashboard-refresh-recently-played ()
-  "Refresh the recently-played dashboard section after a track change."
+  "Refresh the recently-played dashboard section after a track change.
+The refresh is delayed by `spofy-poll-interval' seconds because the
+Spotify API takes time to update the recently-played endpoint after
+a track finishes."
+  (spofy--dashboard-cancel-recently-played-timer)
+  (setq spofy--dashboard-recently-played-timer
+        (run-with-timer spofy-poll-interval nil
+                        #'spofy--dashboard-refresh-recently-played-now)))
+
+(defun spofy--dashboard-refresh-recently-played-now ()
+  "Perform the actual recently-played section refresh."
+  (setq spofy--dashboard-recently-played-timer nil)
   (spofy--dashboard-refresh-section 'recently-played))
+
+(defun spofy--dashboard-cancel-recently-played-timer ()
+  "Cancel any pending recently-played refresh timer."
+  (when (timerp spofy--dashboard-recently-played-timer)
+    (cancel-timer spofy--dashboard-recently-played-timer)
+    (setq spofy--dashboard-recently-played-timer nil)))
 
 ;;;;; Dashboard: full render
 
@@ -775,6 +796,7 @@ authentication, starts polling, and displays the dashboard buffer."
       (add-hook 'kill-buffer-hook
                 (lambda ()
                   (spofy--dashboard-stop-progress-timer)
+                  (spofy--dashboard-cancel-recently-played-timer)
                   (remove-hook 'spofy-player-state-changed-hook
                                #'spofy--dashboard-refresh-now-playing)
                   (remove-hook 'spofy-player-track-changed-hook
