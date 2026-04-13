@@ -57,6 +57,15 @@
 (defconst spofy-api--default-retry-after 1
   "Default Retry-After delay in seconds when the header is missing.")
 
+(defun spofy-api--log-error (url format-string &rest args)
+  "Log a rate-limited error for URL using FORMAT-STRING and ARGS.
+Suppresses repeated messages for the same URL within
+`spofy-api--error-cooldown' seconds."
+  (let ((last (gethash url spofy-api--last-error-times 0)))
+    (when (> (- (float-time) last) spofy-api--error-cooldown)
+      (puthash url (float-time) spofy-api--last-error-times)
+      (apply #'message format-string args))))
+
 ;;;; Cache
 
 (defvar spofy-api--cache (make-hash-table :test #'equal)
@@ -227,64 +236,56 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
             (url-retrieve
              full-url
              (lambda (_status)
-               (let ((buf (current-buffer))
-                     (status-code (spofy-api--response-status)))
-                 (cond
-                  ;; Success (2xx)
-                  ((and status-code (>= status-code 200) (< status-code 300))
-                   (let ((parsed (spofy-api--parse-response)))
-                     (kill-buffer buf)
-                     ;; Cache GET responses (unless skip-cache)
-                     (when (and (equal method "GET")
-                                (not (spofy-api--skip-cache-p full-url)))
-                       (spofy-api--cache-put cache-key parsed
-                                             (spofy-api--cache-ttl full-url)))
-                     (when callback
-                       (funcall callback parsed))))
-                  ;; Unauthorized (401): refresh token and retry once
-                  ((and (eql status-code 401) (not refreshed-p))
-                   (kill-buffer buf)
-                   (condition-case err
-                       (spofy-auth-refresh-token)
-                     (error
-                      (message "Spofy: token refresh failed: %s"
-                               (error-message-string err))))
-                   (spofy-api--request-with-retries
-                    method url params data callback retry-count t))
-                  ;; Rate limited (429): retry after delay
-                  ((and (eql status-code 429)
-                        (< retry-count spofy-api--max-retries))
-                   (let ((delay (spofy-api--parse-retry-after)))
-                     (kill-buffer buf)
-                     (run-at-time delay nil
-                                  #'spofy-api--request-with-retries
-                                  method url params data callback
-                                  (1+ retry-count) refreshed-p)))
-                  ;; Server error (5xx): exponential backoff
-                  ((and status-code (>= status-code 500)
-                        (< retry-count spofy-api--max-retries))
-                   (let ((delay (spofy-api--backoff-delay retry-count)))
-                     (kill-buffer buf)
-                     (run-at-time delay nil
-                                  #'spofy-api--request-with-retries
-                                  method url params data callback
-                                  (1+ retry-count) refreshed-p)))
-                  ;; No active device (404 on player endpoints)
-                  ((and (eql status-code 404)
-                        (string-match-p "me/player" full-url))
-                   (kill-buffer buf)
-                   (let ((last (gethash full-url spofy-api--last-error-times 0)))
-                     (when (> (- (float-time) last) spofy-api--error-cooldown)
-                       (puthash full-url (float-time) spofy-api--last-error-times)
-                       (message "Spofy: no active device found; please open Spotify on a device"))))
-                  ;; All retries exhausted or unrecoverable error
-                  (t
-                   (kill-buffer buf)
-                   (let ((last (gethash full-url spofy-api--last-error-times 0)))
-                     (when (> (- (float-time) last) spofy-api--error-cooldown)
-                       (puthash full-url (float-time) spofy-api--last-error-times)
-                       (message "Spofy: API request failed (HTTP %s): %s %s"
-                                (or status-code "?") method full-url))))))))))))))
+               (let ((buf (current-buffer)))
+                 (unwind-protect
+                     (let ((status-code (spofy-api--response-status)))
+                       (cond
+                        ;; Success (2xx)
+                        ((and status-code (>= status-code 200) (< status-code 300))
+                         (let ((parsed (spofy-api--parse-response)))
+                           (when (and (equal method "GET")
+                                      (not (spofy-api--skip-cache-p full-url)))
+                             (spofy-api--cache-put cache-key parsed
+                                                   (spofy-api--cache-ttl full-url)))
+                           (when callback
+                             (funcall callback parsed))))
+                        ;; Unauthorized (401): refresh token and retry once
+                        ((and (eql status-code 401) (not refreshed-p))
+                         (condition-case err
+                             (spofy-auth-refresh-token)
+                           (error
+                            (message "Spofy: token refresh failed: %s"
+                                     (error-message-string err))))
+                         (spofy-api--request-with-retries
+                          method url params data callback retry-count t))
+                        ;; Rate limited (429): retry after delay
+                        ((and (eql status-code 429)
+                              (< retry-count spofy-api--max-retries))
+                         (let ((delay (spofy-api--parse-retry-after)))
+                           (run-at-time delay nil
+                                        #'spofy-api--request-with-retries
+                                        method url params data callback
+                                        (1+ retry-count) refreshed-p)))
+                        ;; Server error (5xx): exponential backoff
+                        ((and status-code (>= status-code 500)
+                              (< retry-count spofy-api--max-retries))
+                         (let ((delay (spofy-api--backoff-delay retry-count)))
+                           (run-at-time delay nil
+                                        #'spofy-api--request-with-retries
+                                        method url params data callback
+                                        (1+ retry-count) refreshed-p)))
+                        ;; No active device (404 on player endpoints)
+                        ((and (eql status-code 404)
+                              (string-match-p "me/player" full-url))
+                         (spofy-api--log-error full-url
+                          "Spofy: no active device found; please open Spotify on a device"))
+                        ;; All retries exhausted or unrecoverable error
+                        (t
+                         (spofy-api--log-error full-url
+                          "Spofy: API request failed (HTTP %s): %s %s"
+                          (or status-code "?") method full-url)))))
+                   (when (buffer-live-p buf)
+                     (kill-buffer buf)))))))))))
 
 ;;;; High-level helpers
 

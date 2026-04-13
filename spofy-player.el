@@ -75,6 +75,11 @@ device, volume, track-id, context-uri, context-type.")
 (defvar spofy-player--volume-set-time nil
   "Timestamp of the last optimistic volume update, or nil.")
 
+(defvar spofy-player--poll-generation 0
+  "Generation counter for the current polling loop.
+Incremented on each `spofy-player-start-polling' call so that
+stale in-flight callbacks do not reschedule a stopped loop.")
+
 ;;;; State extraction
 
 (defun spofy-player--best-image-url (images)
@@ -147,12 +152,20 @@ track's actual album URI instead."
 ;;;; Polling
 
 (defun spofy-player--poll ()
-  "Poll the Spotify player state and run hooks on changes.
-Errors are caught unconditionally so that `debug-on-error' does not
-prevent the repeat timer from being rescheduled."
-  (condition-case err
-      (spofy-api-get "me/player" nil #'spofy-player--handle-poll-response)
-    (error (message "Spofy: poll error: %S" err))))
+  "Poll the Spotify player state and reschedule when done.
+Uses a one-shot timer that only reschedules after the response
+callback completes, so requests never pile up under network
+latency."
+  (let ((gen spofy-player--poll-generation))
+    (condition-case err
+        (spofy-api-get "me/player" nil
+                       (lambda (data)
+                         (unwind-protect
+                             (spofy-player--handle-poll-response data)
+                           (spofy-player--reschedule-poll gen))))
+      (error
+       (message "Spofy: poll error: %S" err)
+       (spofy-player--reschedule-poll gen)))))
 
 (defun spofy-player--handle-poll-response (data)
   "Handle the poll response DATA.
@@ -184,6 +197,15 @@ Compare to previous state and run appropriate hooks."
         (setq spofy-player--current-state nil)
         (run-hooks 'spofy-player-state-changed-hook)))))
 
+(defun spofy-player--reschedule-poll (generation)
+  "Schedule the next poll after `spofy-poll-interval' seconds.
+Only reschedules if GENERATION matches the current loop and
+polling has not been stopped."
+  (when (and spofy-player--timer
+             (= generation spofy-player--poll-generation))
+    (setq spofy-player--timer
+          (run-with-timer spofy-poll-interval nil #'spofy-player--poll))))
+
 (defun spofy-player--poll-sync ()
   "Synchronously fetch and update the player state."
   (let ((data (spofy-api-get-sync "me/player")))
@@ -195,8 +217,9 @@ Compare to previous state and run appropriate hooks."
 Polls at `spofy-poll-interval' second intervals."
   (interactive)
   (spofy-player-stop-polling)
+  (cl-incf spofy-player--poll-generation)
   (setq spofy-player--timer
-        (run-with-timer 0 spofy-poll-interval #'spofy-player--poll)))
+        (run-with-timer 0 nil #'spofy-player--poll)))
 
 ;;;###autoload
 (defun spofy-player-stop-polling ()
