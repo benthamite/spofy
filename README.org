@@ -1030,6 +1030,16 @@ When enabled, the mode inserts a ~tab-bar-format-spofy~ entry into ~tab-bar-form
 
 The mode is enabled automatically when ~spofy-global-mode~ is active and ~spofy-enable-tab-bar~ is non-nil ([[#h:user-options-global][Global options]]).  When enabled, it takes precedence over the mode-line display to avoid showing track information twice.
 
+* Development
+:PROPERTIES:
+:CUSTOM_ID: h:development
+:END:
+
+#+begin_src sh
+make test     # run the full ERT suite
+make compile  # byte-compile all source files
+#+end_src
+
 * Indices
 :PROPERTIES:
 :CUSTOM_ID: h:indices

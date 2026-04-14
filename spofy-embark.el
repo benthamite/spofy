@@ -112,7 +112,7 @@ treating TARGET as a URI directly."
   "View the artist of the track identified by TARGET."
   (when-let* ((entity (spofy-embark--get-entity target))
               (artists (alist-get 'artists entity))
-              ((_notempty (> (length artists) 0)))
+              (notempty (> (length artists) 0))
               (artist (aref artists 0))
               (artist-id (alist-get 'id artist)))
     (spofy-view-artist artist-id)))
@@ -138,7 +138,7 @@ treating TARGET as a URI directly."
   "View the artist of the album identified by TARGET."
   (when-let* ((entity (spofy-embark--get-entity target))
               (artists (alist-get 'artists entity))
-              ((_notempty (> (length artists) 0)))
+              (notempty (> (length artists) 0))
               (artist (aref artists 0))
               (artist-id (alist-get 'id artist)))
     (spofy-view-artist artist-id)))

@@ -35,6 +35,7 @@
 
 (declare-function spofy-view-playlist "spofy-browse" (playlist-id))
 (declare-function spofy-browse--cache-invalidate "spofy-browse" (context-uri))
+(declare-function spofy-play-pause "spofy-player" ())
 (declare-function spofy-play-context "spofy-player" (context-uri))
 (declare-function spofy-library-cache-get "spofy-library" (type))
 (declare-function spofy-library-invalidate-cache "spofy-library" (&optional type))
@@ -288,7 +289,7 @@ PLAYLIST-ID-OR-URI is the playlist ID or URI to follow."
 (defun spofy-follow-playlist--update-buffer (items)
   "Update the *Spofy Playlists* buffer with ITEMS without displaying it."
   (when-let* ((buf (get-buffer "*Spofy Playlists*"))
-              ((_live (buffer-live-p buf))))
+              (live (buffer-live-p buf)))
     (with-current-buffer buf
       (let ((inhibit-read-only t))
         (erase-buffer))

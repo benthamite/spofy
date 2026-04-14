@@ -32,6 +32,7 @@
 (require 'spofy-ui)
 (require 'tabulated-list)
 
+(declare-function spofy-play-pause "spofy-player" ())
 (declare-function spofy-play-context "spofy-player" (context-uri))
 (declare-function spofy-play-track "spofy-player" (track-uri &optional context-uri))
 (declare-function spofy-view-album "spofy-browse" (album-id))

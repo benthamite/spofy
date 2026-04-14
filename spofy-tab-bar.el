@@ -301,6 +301,8 @@ Also removes `tab-bar-format-align-right' if it was added by this mode."
 
 ;;;; Theme change handling
 
+(defvar spofy-tab-bar-mode)
+
 (defun spofy-tab-bar--on-theme-change (&rest _)
   "Rebuild the tab-bar string to recompute fade colors."
   (when spofy-tab-bar-mode

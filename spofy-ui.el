@@ -540,6 +540,7 @@ The row ID is used as the key into `spofy-ui--entities'."
 
 ;;;; URI and metadata helpers
 
+(defvar spofy-player--current-state)
 (declare-function spofy-player-current-track-id "spofy-player" ())
 (declare-function spofy-jump-to-playing-track "spofy-player" ())
 
