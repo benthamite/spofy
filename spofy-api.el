@@ -225,7 +225,9 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
             (let ((last (gethash full-url spofy-api--last-error-times 0)))
               (when (> (- (float-time) last) spofy-api--error-cooldown)
                 (puthash full-url (float-time) spofy-api--last-error-times)
-                (message "Spofy: no valid access token; try M-x spofy-authenticate")))
+                (message "Spofy: no valid access token; try M-x spofy-authenticate"))
+              (when callback
+                (funcall callback nil)))
           (let* ((url-request-method method)
                  (url-request-extra-headers
                   `(("Authorization" . ,(concat "Bearer " token))
@@ -278,12 +280,16 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
                         ((and (eql status-code 404)
                               (string-match-p "me/player" full-url))
                          (spofy-api--log-error full-url
-                          "Spofy: no active device found; please open Spotify on a device"))
+                          "Spofy: no active device found; please open Spotify on a device")
+                         (when callback
+                           (funcall callback nil)))
                         ;; All retries exhausted or unrecoverable error
                         (t
                          (spofy-api--log-error full-url
                           "Spofy: API request failed (HTTP %s): %s %s"
-                          (or status-code "?") method full-url)))))
+                          (or status-code "?") method full-url)
+                         (when callback
+                           (funcall callback nil))))))
                    (when (buffer-live-p buf)
                      (kill-buffer buf)))))))))))
 
