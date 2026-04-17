@@ -59,6 +59,8 @@ Run =M-x spofy-authenticate= to authorize Spofy with your Spotify account.  This
 
 Once authenticated, run =M-x spofy= to open the dashboard.
 
+The development repository is on [[https://github.com/benthamite/spofy][GitHub]].
+
 * User options
 :PROPERTIES:
 :CUSTOM_ID: h:user-options
