@@ -71,4 +71,4 @@ Optional integrations extend `spofy` into the broader Emacs ecosystem:
 
 ## Documentation
 
-For a comprehensive description of all user options, commands, and functions, see the [manual](README.org).
+For a comprehensive description of all user options, commands, and functions, see the [manual](https://stafforini.com/notes/spofy/).
