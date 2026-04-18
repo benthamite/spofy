@@ -500,7 +500,18 @@ radio or daily mixes)."
               :lookup #'consult--lookup-member)))
         (when-let* ((entity (spofy-consult--get-entity selected))
                     (uri (alist-get 'uri entity)))
-          (spofy-play-track uri context-uri))))))
+          (spofy-play-track uri context-uri
+                            (spofy-consult--jump-position raw-items playlist-p uri)))))))
+
+(defun spofy-consult--jump-position (raw-items playlist-p uri)
+  "Return the 0-indexed position of URI in RAW-ITEMS.
+PLAYLIST-P indicates whether RAW-ITEMS wraps each track in a \"track\"
+field (true for playlists).  Returns nil when URI is not found."
+  (cl-loop for item across raw-items
+           for index from 0
+           for track = (if playlist-p (alist-get 'track item) item)
+           when (and track (equal (alist-get 'uri track) uri))
+           return index))
 
 (provide 'spofy-consult)
 ;;; spofy-consult.el ends here

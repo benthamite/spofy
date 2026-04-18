@@ -28,6 +28,8 @@
 
 ;;; Code:
 
+(require 'cl-lib)
+
 ;;;; Customization group
 
 (defgroup spofy nil
@@ -537,6 +539,14 @@ The row ID is used as the key into `spofy-ui--entities'."
   (when-let* ((id (tabulated-list-get-id)))
     (and spofy-ui--entities
          (gethash id spofy-ui--entities))))
+
+(defun spofy-ui-row-position ()
+  "Return the 0-indexed position of the tabulated-list row at point.
+Position is the row's index in `tabulated-list-entries', which matches
+the offset Spotify expects for \"offset.position\" in a context-based
+play request.  Returns nil when point is not on a row."
+  (when-let* ((id (tabulated-list-get-id)))
+    (cl-position id tabulated-list-entries :key #'car :test #'equal)))
 
 ;;;; URI and metadata helpers
 

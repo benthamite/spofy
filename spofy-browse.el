@@ -247,7 +247,7 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
   (interactive)
   (when-let* ((uri (tabulated-list-get-id))
               (album-uri (alist-get 'album-uri spofy-ui--buffer-context)))
-    (spofy-play-track uri album-uri)))
+    (spofy-play-track uri album-uri (spofy-ui-row-position))))
 
 (defun spofy-album-play ()
   "Play the entire album."
@@ -700,7 +700,7 @@ Fetches playlist data from the API and displays it in a tabulated-list buffer."
   (interactive)
   (when-let* ((uri (tabulated-list-get-id))
               (playlist-uri (alist-get 'playlist-uri spofy-ui--buffer-context)))
-    (spofy-play-track uri playlist-uri)))
+    (spofy-play-track uri playlist-uri (spofy-ui-row-position))))
 
 (defun spofy-playlist-view-album ()
   "View the album of the track at point."

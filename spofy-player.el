@@ -443,18 +443,32 @@ poll catches a brief transitional pause."
 ;;;; Playing context
 
 ;;;###autoload
-(defun spofy-play-track (uri &optional context-uri)
+(defun spofy-play-track (uri &optional context-uri position)
   "Play the track at URI.
 If CONTEXT-URI is non-nil, play within that context (album, playlist,
-etc.) starting at the given track."
+etc.) starting at the given track.  POSITION, when an integer, is the
+0-indexed offset of URI within the context; it is preferred over the
+URI-based offset because Spotify rejects URI offsets for tracks that
+have been relinked (common in compilation albums)."
   (interactive "sSpotify track URI: ")
   (spofy-player--ensure-device)
-  (let ((body (if context-uri
-                  `((context_uri . ,context-uri)
-                    (offset . ((uri . ,uri))))
-                `((uris . [,uri])))))
-    (spofy-api-put "me/player/play" body
-                   (lambda (_) (message "Spofy: playing track")))))
+  (spofy-api-put "me/player/play"
+                 (spofy-player--play-body uri context-uri position)
+                 (lambda (_) (message "Spofy: playing track"))))
+
+(defun spofy-player--play-body (uri context-uri position)
+  "Return the JSON body for a play request of URI.
+CONTEXT-URI, when non-nil, frames playback within an album or playlist
+context.  POSITION, when an integer, uses \"offset.position\" instead of
+\"offset.uri\" for reliable starting-track selection."
+  (cond
+   ((and context-uri (integerp position))
+    `((context_uri . ,context-uri)
+      (offset . ((position . ,position)))))
+   (context-uri
+    `((context_uri . ,context-uri)
+      (offset . ((uri . ,uri)))))
+   (t `((uris . [,uri])))))
 
 ;;;###autoload
 (defun spofy-play-context (context-uri)
