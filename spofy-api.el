@@ -116,7 +116,7 @@ Patterns are matched as regexps against the URL.")
 
 (defun spofy-api--skip-cache-p (url)
   "Return non-nil if URL should never be cached (e.g. player state)."
-  (string-match-p "me/player\\(?:/\\|$\\)" url))
+  (string-match-p "me/player\\(?:[/?]\\|$\\)" url))
 
 ;;;###autoload
 (defun spofy-clear-cache ()
