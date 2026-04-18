@@ -454,7 +454,9 @@ have been relinked (common in compilation albums)."
   (spofy-player--ensure-device)
   (spofy-api-put "me/player/play"
                  (spofy-player--play-body uri context-uri position)
-                 (lambda (_) (message "Spofy: playing track"))))
+                 (lambda (_)
+                   (message "Spofy: playing track")
+                   (spofy-player--poll-after-skip t))))
 
 (defun spofy-player--play-body (uri context-uri position)
   "Return the JSON body for a play request of URI.
@@ -477,7 +479,9 @@ context.  POSITION, when an integer, uses \"offset.position\" instead of
   (spofy-player--ensure-device)
   (spofy-api-put "me/player/play"
                  `((context_uri . ,context-uri))
-                 (lambda (_) (message "Spofy: playing context"))))
+                 (lambda (_)
+                   (message "Spofy: playing context")
+                   (spofy-player--poll-after-skip t))))
 
 ;;;; Seek to timestamp
 
