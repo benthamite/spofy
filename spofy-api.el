@@ -300,13 +300,15 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
 ENDPOINT is a relative API path (e.g. \"me/playlists\").  CALLBACK
 is called with the parsed JSON response."
   (spofy-api--request "GET" (spofy-api--build-url endpoint nil)
-                      (spofy-api--with-market params) nil callback))
+                      params nil callback))
 
-(defun spofy-api--with-market (params)
-  "Return PARAMS with a default market=from_token pair added.
-Track Relinking requires a market for Spotify to return playable
-track URIs when content is relinked in the user's market.
-Endpoints that do not support the parameter ignore it."
+(defun spofy-api-with-market (params)
+  "Return PARAMS with a market=from_token pair added if absent.
+Callers that need Spotify Track Relinking (album, playlist, and
+player-state fetches) wrap their PARAMS with this helper so that
+relinked, playable track URIs are returned.  Callers that would break
+with a market (notably \"search\", which requires the user-read-private
+scope to accept from_token) must not use this helper."
   (if (assoc "market" params)
       params
     (cons '("market" . "from_token") params)))
@@ -315,7 +317,7 @@ Endpoints that do not support the parameter ignore it."
   "Synchronously GET ENDPOINT with optional query PARAMS.
 Return the parsed JSON response, or nil on error."
   (when-let* ((token (spofy-auth-access-token)))
-    (let* ((url (spofy-api--build-url endpoint (spofy-api--with-market params)))
+    (let* ((url (spofy-api--build-url endpoint params))
            (url-request-method "GET")
            (url-request-extra-headers
             `(("Authorization" . ,(concat "Bearer " token))))

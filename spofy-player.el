@@ -158,7 +158,7 @@ callback completes, so requests never pile up under network
 latency."
   (let ((gen spofy-player--poll-generation))
     (condition-case err
-        (spofy-api-get "me/player" nil
+        (spofy-api-get "me/player" (spofy-api-with-market nil)
                        (lambda (data)
                          (unwind-protect
                              (spofy-player--handle-poll-response data)
@@ -208,7 +208,7 @@ polling has not been stopped."
 
 (defun spofy-player--poll-sync ()
   "Synchronously fetch and update the player state."
-  (let ((data (spofy-api-get-sync "me/player")))
+  (let ((data (spofy-api-get-sync "me/player" (spofy-api-with-market nil))))
     (spofy-player--handle-poll-response data)))
 
 ;;;###autoload
@@ -348,7 +348,7 @@ poll catches a brief transitional pause."
    0.5 nil
    (lambda ()
      (spofy-api-get
-      "me/player" nil
+      "me/player" (spofy-api-with-market nil)
       (lambda (data)
         (when (and was-playing data)
           ;; Ensure Spotify's transitional pause doesn't stop our playback

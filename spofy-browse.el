@@ -239,7 +239,7 @@ the period stays in a fixed position."
 Fetches album data from the API and displays it in a tabulated-list buffer."
   (interactive
    (list (read-string "Spotify album ID: ")))
-  (spofy-api-get (format "albums/%s" album-id) nil
+  (spofy-api-get (format "albums/%s" album-id) (spofy-api-with-market nil)
                  #'spofy-album--render))
 
 (defun spofy-album-play-track ()
@@ -692,7 +692,7 @@ the playlist."
 Fetches playlist data from the API and displays it in a tabulated-list buffer."
   (interactive
    (list (read-string "Spotify playlist ID: ")))
-  (spofy-api-get (format "playlists/%s" playlist-id) nil
+  (spofy-api-get (format "playlists/%s" playlist-id) (spofy-api-with-market nil)
                  #'spofy-playlist--render))
 
 (defun spofy-playlist-view-play-track ()
