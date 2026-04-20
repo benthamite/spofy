@@ -66,7 +66,8 @@
 
 (defvar spofy-player--current-state nil
   "Alist holding the last polled player state.
-Keys: track, artist, album, progress, is-playing, shuffle, repeat,
+Keys: track, artist, artist-id, artists, album, album-id, album-date,
+album-image-url, progress, duration, is-playing, shuffle, repeat,
 device, volume, track-id, context-uri, context-type.")
 
 (defvar spofy-player--timer nil
@@ -113,6 +114,11 @@ IMAGES is the `images' array from a Spotify album object."
                        (spofy-ui-format-artists artists)))
         (artist-id . ,(when (and artists (> (length artists) 0))
                        (alist-get 'id (aref artists 0))))
+        (artists   . ,(when (and artists (> (length artists) 0))
+                       (mapcar (lambda (a)
+                                 (cons (alist-get 'name a)
+                                       (alist-get 'id a)))
+                               (append artists nil))))
         (album     . ,(alist-get 'name album))
         (album-date . ,(alist-get 'release_date album))
         (album-id  . ,album-id)

@@ -506,9 +506,13 @@ opens the ‘*Spofy*’ dashboard buffer.  The dashboard always shows a *now
 playing* section at the top (track name, artist, and album with release
 year each on its own line, then a progress bar, then shuffle/repeat
 state on the left with elapsed/total timestamps right-aligned to the
-progress bar).  Below it, a configurable list of sections is displayed
-according to ‘spofy-dashboard-sections’ (*note Global options: Global
-key and mode-line activation.).  By default, the dashboard shows
+progress bar).  The three title lines are clickable: clicking the track
+name jumps to the currently playing track via
+‘spofy-jump-to-playing-track’, clicking an artist name opens that artist
+via ‘spofy-view-artist’, and clicking the album line opens that album
+via ‘spofy-view-album’.  Below it, a configurable list of sections is
+displayed according to ‘spofy-dashboard-sections’ (*note Global options:
+Global key and mode-line activation.).  By default, the dashboard shows
 recently played tracks and user playlists.  Each section includes a
 "View all" link that opens the full list in a tabulated-list buffer.
 Use the transient popup (*note Transient popup::) to discover available
@@ -2106,46 +2110,46 @@ Node: Column widths15190
 Node: Commands17173
 Node: Authentication17567
 Node: Dashboard and global control18792
-Node: Transient popup20929
-Node: Global minor mode22583
-Node: Playback control24037
-Node: Tracking the playing position27174
-Node: Jump to playing track27645
-Node: Cursor follows playback28537
-Node: Buffer mode-line29296
-Node: Polling30681
-Node: Device management32963
-Node: Search33626
-Node: Navigating search results35125
-Node: Browsing36241
-Node: Album view36431
-Node: Artist view37937
-Node: Playlist detail view39978
-Node: Playlist management41499
-Node: Library management44218
-Node: Cache management50063
-Node: Browse cache52351
-Node: Functions53566
-Node: Player state accessors53817
-Node: Entity access in buffers54929
-Node: API client55527
-Node: Authentication helpers57104
-Node: Formatting utilities58223
-Node: Pagination61779
-Node: Entity storage and list rendering63608
-Node: Consult integration66168
-Node: Embark integration70579
-Node: Org-mode integration73698
-Node: Wikipedia integration74943
-Node: Wikipedia user options78591
-Node: Faces80270
-Node: Hooks82391
-Node: Mode-line display83602
-Node: Tab-bar display84530
-Node: Development85849
-Node: Indices86066
-Node: Function index86203
-Node: Variable index97312
+Node: Transient popup21211
+Node: Global minor mode22865
+Node: Playback control24319
+Node: Tracking the playing position27456
+Node: Jump to playing track27927
+Node: Cursor follows playback28819
+Node: Buffer mode-line29578
+Node: Polling30963
+Node: Device management33245
+Node: Search33908
+Node: Navigating search results35407
+Node: Browsing36523
+Node: Album view36713
+Node: Artist view38219
+Node: Playlist detail view40260
+Node: Playlist management41781
+Node: Library management44500
+Node: Cache management50345
+Node: Browse cache52633
+Node: Functions53848
+Node: Player state accessors54099
+Node: Entity access in buffers55211
+Node: API client55809
+Node: Authentication helpers57386
+Node: Formatting utilities58505
+Node: Pagination62061
+Node: Entity storage and list rendering63890
+Node: Consult integration66450
+Node: Embark integration70861
+Node: Org-mode integration73980
+Node: Wikipedia integration75225
+Node: Wikipedia user options78873
+Node: Faces80552
+Node: Hooks82673
+Node: Mode-line display83884
+Node: Tab-bar display84812
+Node: Development86131
+Node: Indices86348
+Node: Function index86485
+Node: Variable index97594
 
 End Tag Table
 

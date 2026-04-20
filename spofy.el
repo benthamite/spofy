@@ -270,8 +270,11 @@ The next 1-second progress timer tick will pick up the new image."
   (let* ((state (and (boundp 'spofy-player--current-state)
                      spofy-player--current-state))
          (track (and state (alist-get 'track state)))
+         (track-id (and state (alist-get 'track-id state)))
          (artist (and state (alist-get 'artist state)))
+         (artists (and state (alist-get 'artists state)))
          (album (and state (alist-get 'album state)))
+         (album-id (and state (alist-get 'album-id state)))
          (album-date (and state (alist-get 'album-date state)))
          (progress (and state (spofy-player-interpolated-progress)))
          (duration (and state (alist-get 'duration state)))
@@ -283,25 +286,13 @@ The next 1-second progress timer tick will pick up the new image."
           (setq spofy--album-art-current-album-id nil
                 spofy--album-art-image nil)
           (insert (propertize "  No track playing" 'face 'spofy-muted) "\n"))
-      ;; Track info
-      (insert "  "
-              (spofy--dashboard-truncate
-               (propertize track 'face 'spofy-now-playing-track))
-              "\n")
-      (insert "  "
-              (spofy--dashboard-truncate
-               (propertize (or artist "") 'face 'spofy-now-playing-artist))
-              "\n")
-      (let ((album-str (or album "")))
-        (when album-date
-          (setq album-str (concat album-str
-                                  " ("
-                                  (substring album-date 0 (min 4 (length album-date)))
-                                  ")")))
-        (insert "  "
-                (spofy--dashboard-truncate
-                 (propertize album-str 'face 'spofy-now-playing-album))
-                "\n"))
+      (insert "  ")
+      (spofy--dashboard-insert-now-playing-track track track-id)
+      (insert "\n  ")
+      (spofy--dashboard-insert-now-playing-artists artists artist)
+      (insert "\n  ")
+      (spofy--dashboard-insert-now-playing-album album album-id album-date)
+      (insert "\n")
       ;; Album art
       (let ((art-char-width nil))
         (when (and spofy-dashboard-album-art (display-graphic-p))
@@ -330,6 +321,66 @@ The next 1-second progress timer tick will pick up the new image."
                     (make-string gap ?\s)
                     time-str
                     "\n")))))))
+
+(defun spofy--dashboard-insert-now-playing-track (track track-id)
+  "Insert the TRACK title as a clickable link when TRACK-ID is non-nil.
+Clicking invokes `spofy-jump-to-playing-track' to reveal the track in its
+playing context."
+  (let ((text (spofy--dashboard-truncate
+               (propertize track 'face 'spofy-now-playing-track))))
+    (if track-id
+        (insert-text-button text
+                            'action (lambda (_btn)
+                                      (require 'spofy-player)
+                                      (spofy-jump-to-playing-track))
+                            'follow-link t)
+      (insert text))))
+
+(defun spofy--dashboard-insert-now-playing-artists (artists fallback)
+  "Insert ARTISTS as clickable links, or FALLBACK when unavailable.
+ARTISTS is a list of (NAME . ID) pairs.  Each name links to
+`spofy-view-artist' for its ID.  FALLBACK is the preformatted artist
+string used when ARTISTS is nil or any entry lacks an ID."
+  (if (and artists (seq-every-p #'cdr artists))
+      (spofy--dashboard-insert-clickable-artists artists)
+    (insert (spofy--dashboard-truncate
+             (propertize (or fallback "") 'face 'spofy-now-playing-artist)))))
+
+(defun spofy--dashboard-insert-clickable-artists (artists)
+  "Insert ARTISTS as a comma-separated list of clickable links.
+ARTISTS is a list of (NAME . ID) pairs, each non-nil."
+  (let ((separator (propertize ", " 'face 'spofy-now-playing-artist))
+        (first t))
+    (dolist (artist artists)
+      (unless first (insert separator))
+      (setq first nil)
+      (let ((name (car artist))
+            (id (cdr artist)))
+        (insert-text-button
+         (propertize name 'face 'spofy-now-playing-artist)
+         'action (lambda (_btn)
+                   (require 'spofy-browse)
+                   (spofy-view-artist id))
+         'follow-link t)))))
+
+(defun spofy--dashboard-insert-now-playing-album (album album-id album-date)
+  "Insert the ALBUM title as a clickable link when ALBUM-ID is non-nil.
+ALBUM-DATE, if non-nil, contributes a parenthesized year suffix.  Clicking
+invokes `spofy-view-album' for ALBUM-ID."
+  (let* ((year (and album-date
+                    (substring album-date 0 (min 4 (length album-date)))))
+         (album-str (if year
+                        (format "%s (%s)" (or album "") year)
+                      (or album "")))
+         (text (spofy--dashboard-truncate
+                (propertize album-str 'face 'spofy-now-playing-album))))
+    (if album-id
+        (insert-text-button text
+                            'action (lambda (_btn)
+                                      (require 'spofy-browse)
+                                      (spofy-view-album album-id))
+                            'follow-link t)
+      (insert text))))
 
 ;;;;; Dashboard: text truncation
 
