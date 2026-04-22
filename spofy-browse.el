@@ -38,6 +38,8 @@
 (declare-function spofy-play-context "spofy-player" (context-uri))
 (declare-function spofy-playlist-remove-track "spofy-playlist" (&optional playlist-id track-uri))
 (declare-function spofy-library-save "spofy-library" (uri-or-type &optional id))
+(declare-function spofy-follow-artist "spofy-library" (artist-id))
+(declare-function spofy-unfollow-artist "spofy-library" (artist-id))
 (declare-function spofy-library-unsave "spofy-library" (uri-or-type &optional id))
 (declare-function spofy-follow-playlist "spofy-playlist" (playlist-id-or-uri))
 
@@ -290,6 +292,8 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
     (define-key map (kbd "RET") #'spofy-artist-view-album)
     (define-key map (kbd "t")   #'spofy-artist-top-tracks)
     (define-key map (kbd "a")   #'spofy-artist-play-album)
+    (define-key map (kbd "F")   #'spofy-follow-artist)
+    (define-key map (kbd "U")   #'spofy-unfollow-artist)
     (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "g")   #'spofy-artist-refresh)
     (define-key map (kbd "q")   #'quit-window)

@@ -542,6 +542,46 @@ type string/symbol plus ID supplied separately."
                           (message "Spofy: removed %s from library." type))))))
 
 ;;; ========================================================================
+;;;; Follow / unfollow artists
+;;; ========================================================================
+
+(defun spofy-library--artist-id-at-point ()
+  "Return the artist ID relevant to the current Spofy buffer or URI at point.
+In an artist view buffer, uses the buffer context.  In list
+buffers whose rows are artists, uses the row ID.  Otherwise
+returns nil."
+  (or (alist-get 'artist-id spofy-ui--buffer-context)
+      (when-let* ((uri (tabulated-list-get-id))
+                  (type (spofy-library--extract-type uri)))
+        (and (equal type "artist") (spofy-ui-extract-id uri)))))
+
+;;;###autoload
+(defun spofy-follow-artist (artist-id)
+  "Follow the Spotify artist identified by ARTIST-ID.
+When called interactively, uses the artist at point or prompts
+for an artist ID."
+  (interactive
+   (list (or (spofy-library--artist-id-at-point)
+             (read-string "Spotify artist ID: "))))
+  (spofy-api-put (format "me/following?type=artist&ids=%s" artist-id)
+                 nil
+                 (lambda (_)
+                   (message "Spofy: now following artist %s" artist-id))))
+
+;;;###autoload
+(defun spofy-unfollow-artist (artist-id)
+  "Unfollow the Spotify artist identified by ARTIST-ID.
+When called interactively, uses the artist at point or prompts
+for an artist ID."
+  (interactive
+   (list (or (spofy-library--artist-id-at-point)
+             (read-string "Spotify artist ID: "))))
+  (spofy-api-delete (format "me/following?type=artist&ids=%s" artist-id)
+                    nil
+                    (lambda (_)
+                      (message "Spofy: unfollowed artist %s" artist-id))))
+
+;;; ========================================================================
 ;;;; Top tracks
 ;;; ========================================================================
 

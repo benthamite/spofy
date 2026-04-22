@@ -23,6 +23,8 @@
                      "user-top-read"
                      "user-library-read"
                      "user-library-modify"
+                     "user-follow-read"
+                     "user-follow-modify"
                      "playlist-read-private"
                      "playlist-read-collaborative"
                      "playlist-modify-public"
@@ -33,7 +35,7 @@
 
 (ert-deftest spofy-auth-test-scopes-no-extras ()
   "No extra scopes beyond the required set."
-  (should (= (length spofy-auth--scopes) 12)))
+  (should (= (length spofy-auth--scopes) 14)))
 
 ;;;; Redirect URI construction
 

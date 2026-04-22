@@ -44,6 +44,8 @@
 (declare-function spofy-view-artist-top-tracks "spofy-browse" (artist-id artist-name))
 (declare-function spofy-follow-playlist "spofy-playlist" (playlist-id-or-uri))
 (declare-function spofy-unfollow-playlist "spofy-playlist" ())
+(declare-function spofy-follow-artist "spofy-library" (artist-id))
+(declare-function spofy-unfollow-artist "spofy-library" (artist-id))
 (declare-function spofy-search--display-results "spofy-search"
                   (type query items next-url))
 (declare-function spofy-wikipedia-track "spofy-wikipedia" (target))
@@ -157,6 +159,16 @@ treating TARGET as a URI directly."
   (when-let* ((artist-id (spofy-embark--get-id target)))
     (spofy-view-artist artist-id)))
 
+(defun spofy-embark-follow-artist (target)
+  "Follow the artist identified by TARGET."
+  (when-let* ((artist-id (spofy-embark--get-id target)))
+    (spofy-follow-artist artist-id)))
+
+(defun spofy-embark-unfollow-artist (target)
+  "Unfollow the artist identified by TARGET."
+  (when-let* ((artist-id (spofy-embark--get-id target)))
+    (spofy-unfollow-artist artist-id)))
+
 ;;;; Playlist actions
 
 (defun spofy-embark-play-playlist (target)
@@ -232,6 +244,8 @@ treating TARGET as a URI directly."
   :parent embark-general-map
   "RET" #'spofy-embark-artist-play-top-tracks
   "v"   #'spofy-embark-artist-view-albums
+  "f"   #'spofy-embark-follow-artist
+  "u"   #'spofy-embark-unfollow-artist
   "w"   #'spofy-embark-artist-wikipedia
   "W"   #'spofy-embark-copy-uri)
 
