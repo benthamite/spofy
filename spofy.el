@@ -112,6 +112,7 @@
 
 ;; spofy-ui
 (declare-function spofy-cursor-follows-playback-mode "spofy-ui" (&optional arg))
+(declare-function spofy-copy-url "spofy-ui" ())
 
 ;; spofy-wikipedia
 (declare-function spofy-wikipedia "spofy-wikipedia" ())
@@ -970,6 +971,7 @@ If no tokens are available, prompts the user to authenticate."
     "Now playing"
     ("L" "Save track"       spofy-save-current-track)
     ("U" "Unsave track"     spofy-unsave-current-track)
+    ("c" "Copy URL"         spofy-copy-url)
     ("w" "Wikipedia"        spofy-wikipedia)
     ""
     ("q" "Quit"             transient-quit-one)]])

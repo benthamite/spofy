@@ -560,6 +560,41 @@ play request.  Returns nil when point is not on a row."
       (match-string 1 uri)
     uri))
 
+(defun spofy-ui-uri-to-url (uri)
+  "Convert a Spotify URI to its open.spotify.com URL.
+URI is a string like \"spotify:track:abc123\".  Returns a URL like
+\"https://open.spotify.com/track/abc123\", or nil when URI is
+malformed."
+  (when (and (stringp uri)
+             (string-match "\\`spotify:\\([^:]+\\):\\(.+\\)\\'" uri))
+    (format "https://open.spotify.com/%s/%s"
+            (match-string 1 uri) (match-string 2 uri))))
+
+;;;###autoload
+(defun spofy-copy-url ()
+  "Copy the Spotify URL of the entity at point or the current track.
+In a Spofy list buffer, copies the URL of the row at point.
+Otherwise, copies the URL of the currently playing track.  Adds
+the URL to the kill ring."
+  (interactive)
+  (let* ((uri (or (spofy-ui--row-uri) (spofy-ui--current-track-uri)))
+         (url (and uri (spofy-ui-uri-to-url uri))))
+    (unless url
+      (user-error "No Spotify entity at point or currently playing"))
+    (kill-new url)
+    (message "Spofy: copied %s" url)))
+
+(defun spofy-ui--row-uri ()
+  "Return the Spotify URI of the tabulated-list row at point, or nil."
+  (and (derived-mode-p 'tabulated-list-mode)
+       (tabulated-list-get-id)))
+
+(defun spofy-ui--current-track-uri ()
+  "Return the Spotify URI of the currently playing track, or nil."
+  (require 'spofy-player)
+  (when-let* ((track-id (alist-get 'track-id spofy-player--current-state)))
+    (format "spotify:track:%s" track-id)))
+
 (defun spofy-ui-album-year (album)
   "Extract the release year from ALBUM alist."
   (let ((date (or (alist-get 'release_date album) "")))
