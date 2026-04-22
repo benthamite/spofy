@@ -4,8 +4,7 @@
 
 ;;; Commentary:
 
-;; ERT tests for pure helpers in `spofy-queue': URI validation and
-;; header formatting.
+;; ERT tests for `spofy-queue--queueable-uri-p'.
 
 ;;; Code:
 
@@ -39,31 +38,6 @@
   (should-not (spofy-queue--queueable-uri-p "not-a-uri"))
   (should-not (spofy-queue--queueable-uri-p ""))
   (should-not (spofy-queue--queueable-uri-p nil)))
-
-;;;; Header formatting
-
-(ert-deftest spofy-queue-test-header-with-current-track ()
-  "Header shows currently-playing track and upcoming count."
-  (let* ((current '((name . "Track A")
-                    (artists . [((name . "Artist 1"))])))
-         (queue [((name . "T1")) ((name . "T2"))])
-         (lines (spofy-queue--header current queue)))
-    (should (= 2 (length lines)))
-    (should (string-match-p "Currently playing: Track A — Artist 1"
-                            (nth 0 lines)))
-    (should (string-match-p "Upcoming: 2 tracks" (nth 1 lines)))))
-
-(ert-deftest spofy-queue-test-header-no-current-track ()
-  "Header omits the current-track line when nothing is playing."
-  (let* ((queue [((name . "T1"))])
-         (lines (spofy-queue--header nil queue)))
-    (should (= 1 (length lines)))
-    (should (string-match-p "Upcoming: 1 track\\'" (nth 0 lines)))))
-
-(ert-deftest spofy-queue-test-header-empty-queue ()
-  "Header shows \"0 tracks\" when the queue is empty."
-  (let ((lines (spofy-queue--header nil [])))
-    (should (string-match-p "Upcoming: 0 tracks" (nth 0 lines)))))
 
 (provide 'spofy-queue-test)
 ;;; spofy-queue-test.el ends here

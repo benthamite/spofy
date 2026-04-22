@@ -96,7 +96,6 @@
 ;; spofy-library
 (declare-function spofy-library-browse-tracks "spofy-library" ())
 (declare-function spofy-library-browse-albums "spofy-library" ())
-(declare-function spofy-list-recently-played "spofy-library" ())
 (declare-function spofy-list-top-tracks "spofy-library" (&optional time-range))
 (declare-function spofy-list-top-artists "spofy-library" (&optional time-range))
 (declare-function spofy-list-new-releases "spofy-library" ())
@@ -105,8 +104,10 @@
 (declare-function spofy-unsave-current-track "spofy-library" ())
 
 ;; spofy-queue
-(declare-function spofy-view-queue "spofy-queue" ())
 (declare-function spofy-add-to-queue "spofy-queue" (uri))
+
+;; spofy-timeline
+(declare-function spofy-view-timeline "spofy-timeline" ())
 
 ;; spofy-mode-line
 (declare-function spofy-mode-line-mode "spofy-mode-line" (&optional arg))
@@ -447,10 +448,10 @@ maps to 1.0."
           (insert "\n")))))
   (insert "\n  ")
   (insert-text-button
-   (propertize "View all recently played" 'face 'spofy-muted)
+   (propertize "Open timeline" 'face 'spofy-muted)
    'action (lambda (_btn)
-             (require 'spofy-library)
-             (spofy-list-recently-played))
+             (require 'spofy-timeline)
+             (spofy-view-timeline))
    'follow-link t)
   (insert "\n"))
 
@@ -937,7 +938,7 @@ If no tokens are available, prompts the user to authenticate."
     ("f" "Seek forward   "  spofy-seek-forward :transient t)
     ("r" "Seek backward  "  spofy-seek-backward :transient t)
     ("t" "Seek to"          spofy-seek-to)
-    ("Q" "View queue"       spofy-view-queue)
+    ("Q" "Timeline"         spofy-view-timeline)
     ""
     "Volume"
     ("+" "Volume up"        spofy-volume-up :transient t)
