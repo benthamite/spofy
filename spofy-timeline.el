@@ -26,11 +26,12 @@
 ;; `spofy-view-timeline' opens a single buffer that combines three
 ;; chronologically-ordered sections: recently played tracks at the top,
 ;; the currently playing track in the middle, and upcoming queue
-;; entries at the bottom.  The buffer refreshes automatically on every
-;; track change while it is visible.
+;; entries at the bottom.  The buffer auto-refreshes on every track
+;; change while it is visible, and recenters on the now-playing row.
 ;;
-;; Row actions (RET, Q, a, A, s) work on history and queue rows as well
-;; as on the now-playing row.
+;; Row actions (RET, Q, a, A, s, g) work on history and queue rows as
+;; well as on the now-playing row.  Playing a track from the timeline
+;; preserves the current playback context when one is active.
 
 ;;; Code:
 
@@ -54,13 +55,14 @@
   :type 'integer
   :group 'spofy)
 
-(defcustom spofy-timeline-column-widths '(35 25 25)
-  "Column widths for Name, Artist, and Album in the timeline view."
-  :type '(list integer integer integer)
-  :group 'spofy)
-
 (defconst spofy-timeline--buffer-name "*Spofy Timeline*"
   "Name of the buffer that displays the unified timeline.")
+
+(defconst spofy-timeline--section-titles
+  '((":sep:history" . "Recently played")
+    (":sep:now"     . "Now playing")
+    (":sep:queue"   . "Up next"))
+  "Titles for section-separator entry IDs.")
 
 ;;;; Mode
 
@@ -73,17 +75,25 @@
     (define-key map (kbd "Q")   #'spofy-timeline-queue-at-point)
     (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "g")   #'spofy-view-timeline)
-    (define-key map (kbd "n")   #'next-line)
-    (define-key map (kbd "p")   #'previous-line)
     (define-key map (kbd "q")   #'quit-window)
     map)
   "Keymap for `spofy-timeline-mode'.")
 
-(define-derived-mode spofy-timeline-mode special-mode "Spofy Timeline"
+(define-derived-mode spofy-timeline-mode tabulated-list-mode "Spofy Timeline"
   "Major mode for the combined history/now-playing/queue view."
   :group 'spofy
-  (buffer-disable-undo)
-  (setq truncate-lines t))
+  (setq tabulated-list-padding 2)
+  (spofy-ui-set-format
+   'library-track
+   '((" "         2 nil)
+     ("Name"      :flex t)
+     ("Artist(s)" :flex t)
+     ("Album"     :flex t)
+     ("Duration"  6 nil :right-align t)))
+  (setq-local spofy-ui--entity-type 'track)
+  (setq-local tabulated-list-printer #'spofy-timeline--printer)
+  (setq-local spofy-ui--entry-formatter #'spofy-timeline--reformat-entry)
+  (tabulated-list-init-header))
 
 ;;;; Interactive commands
 
@@ -92,6 +102,8 @@
   "Open the combined history / now-playing / queue timeline buffer."
   (interactive)
   (let ((buf (get-buffer-create spofy-timeline--buffer-name)))
+    (with-current-buffer buf
+      (spofy-timeline-mode))
     (spofy-timeline--fetch
      (lambda (history queue currently)
        (when (buffer-live-p buf)
@@ -99,11 +111,17 @@
     (pop-to-buffer buf)))
 
 (defun spofy-timeline-play-at-point ()
-  "Play the track at point."
+  "Play the track at point.
+For tracks in the \"Up next\" section, preserves the current
+playback context so the remainder of the queue stays intact.
+For history and now-playing rows, plays the bare track URI, since
+historical plays are often unrelated to the current context."
   (interactive)
   (when-let* ((entity (spofy-timeline--entity-at-point))
               (uri (alist-get 'uri entity)))
-    (spofy-play-track uri)))
+    (spofy-play-track
+     uri (when (eq (spofy-timeline--section-at-point) 'queue)
+           (alist-get 'context-uri spofy-player--current-state)))))
 
 (defun spofy-timeline-view-album-at-point ()
   "View the album for the track at point."
@@ -155,13 +173,20 @@
 
 (defun spofy-timeline--entity-at-point ()
   "Return the track alist on the current line, or nil."
-  (get-text-property (point) 'spofy-entity))
+  (spofy-ui-entity-at-point))
+
+(defun spofy-timeline--section-at-point ()
+  "Return the section symbol (`history', `now', `queue') for the row at point.
+Returns nil when point is not under any section."
+  (save-excursion
+    (when (text-property-search-backward 'spofy-sep-section)
+      (get-text-property (point) 'spofy-sep-section))))
 
 (defun spofy-timeline--fetch (callback)
   "Fetch history and queue data, then call CALLBACK.
-CALLBACK is called with three arguments: the history items vector,
-the queue items vector, and the currently-playing track alist (or
-nil)."
+CALLBACK is called with three arguments: the history items
+vector, the queue items vector, and the currently-playing track
+alist (or nil)."
   (let ((history nil) (queue nil) (currently nil) (done 0))
     (cl-labels
         ((maybe-finish ()
@@ -184,23 +209,25 @@ nil)."
 (defun spofy-timeline--render (buf history queue currently)
   "Render HISTORY, CURRENTLY, and QUEUE into BUF."
   (with-current-buffer buf
-    (let ((inhibit-read-only t))
-      (spofy-timeline-mode)
-      (erase-buffer)
-      (spofy-timeline--insert-section
-       "Recently played"
-       (spofy-timeline--history-tracks history)
-       'history)
-      (spofy-timeline--insert-section
-       "Now playing"
-       (when currently (list currently))
-       'now-playing)
-      (spofy-timeline--insert-section
-       "Up next"
-       (append queue nil)
-       'queue)
-      (setq-local buffer-read-only t))
+    (unless (derived-mode-p 'spofy-timeline-mode)
+      (spofy-timeline-mode))
+    (setq tabulated-list-entries
+          (spofy-timeline--build-entries history queue currently))
+    (tabulated-list-print t)
     (spofy-timeline--goto-now-playing)))
+
+(defun spofy-timeline--build-entries (history queue currently)
+  "Return a list of tabulated-list entries from HISTORY, QUEUE, and CURRENTLY."
+  (let ((entries (list (spofy-timeline--separator-entry ":sep:history"))))
+    (dolist (track (spofy-timeline--history-tracks history))
+      (push (spofy-timeline--format-track track 'history) entries))
+    (push (spofy-timeline--separator-entry ":sep:now") entries)
+    (when currently
+      (push (spofy-timeline--format-track currently 'now-playing) entries))
+    (push (spofy-timeline--separator-entry ":sep:queue") entries)
+    (cl-loop for track across queue
+             do (push (spofy-timeline--format-track track 'queue) entries))
+    (nreverse entries)))
 
 (defun spofy-timeline--history-tracks (history)
   "Return HISTORY items as a list of track alists, oldest first."
@@ -209,59 +236,83 @@ nil)."
                          when track collect track)))
     (nreverse tracks)))
 
-(defun spofy-timeline--insert-section (title tracks section)
-  "Insert a section titled TITLE containing TRACKS, tagged as SECTION.
-SECTION is a symbol: `history', `now-playing', or `queue'."
-  (insert (propertize (format "%s\n" title) 'face 'spofy-header))
-  (insert (propertize (make-string 60 ?─) 'face 'spofy-header) "\n")
-  (if (null tracks)
-      (insert (propertize "  (empty)\n" 'face 'spofy-muted))
-    (dolist (track tracks)
-      (spofy-timeline--insert-track track section)))
-  (insert "\n"))
+(defun spofy-timeline--separator-entry (id)
+  "Return a tabulated-list entry representing a section separator ID."
+  (list id (vector "" "" "" "" "")))
 
-(defun spofy-timeline--insert-track (track section)
-  "Insert a single TRACK row tagged as SECTION."
-  (pcase-let*
-      ((`(,name-w ,artist-w ,album-w) spofy-timeline-column-widths)
-       (uri (alist-get 'uri track))
-       (name (or (alist-get 'name track) ""))
-       (artists (or (alist-get 'artists track) []))
-       (album (alist-get 'album track))
-       (album-name (if album (or (alist-get 'name album) "") ""))
-       (duration-ms (or (alist-get 'duration_ms track) 0))
-       (duration-str (spofy-ui-format-duration-ms duration-ms))
-       (artist-str (spofy-ui-format-artists artists))
-       (playing (eq section 'now-playing))
-       (indicator (if playing
-                      (propertize "▶ " 'face 'spofy-playing-icon)
-                    "  "))
-       (face-track (spofy-ui-playing-face 'spofy-track-name playing))
-       (face-artist (spofy-ui-playing-face 'spofy-artist-name playing))
-       (face-album (spofy-ui-playing-face 'spofy-album-name playing))
-       (line-start (point)))
-    (insert indicator)
-    (insert (spofy-ui-truncate name name-w face-track))
-    (insert "  ")
-    (insert (spofy-ui-truncate artist-str artist-w face-artist))
-    (insert "  ")
-    (insert (spofy-ui-truncate album-name album-w face-album))
-    (insert "  ")
-    (insert (propertize duration-str 'face 'spofy-muted))
-    (insert "\n")
-    (add-text-properties line-start (point)
-                         (list 'spofy-entity track
-                               'spofy-uri uri
-                               'spofy-section section
-                               'follow-link t))))
+(defun spofy-timeline--format-track (track section)
+  "Format TRACK alist as a `tabulated-list-entries' entry.
+SECTION is `history', `now-playing', or `queue'.  The row's face
+reflects whether the track matches the currently playing one."
+  (let* ((uri (alist-get 'uri track))
+         (name (or (alist-get 'name track) ""))
+         (artists (or (alist-get 'artists track) []))
+         (album (alist-get 'album track))
+         (album-name (if album (or (alist-get 'name album) "") ""))
+         (duration-ms (or (alist-get 'duration_ms track) 0))
+         (artist-str (spofy-ui-format-artists artists))
+         (duration-str (spofy-ui-format-duration-ms duration-ms))
+         (playing (or (eq section 'now-playing)
+                      (not (string-empty-p
+                            (spofy-ui-playing-indicator uri)))))
+         (indicator (if playing
+                        (propertize "▶" 'face 'spofy-playing-icon)
+                      " ")))
+    (spofy-ui-store-entity uri track)
+    (list uri
+          (vector indicator
+                  (spofy-ui-truncate
+                   name (spofy-ui-col 'library-track 0)
+                   (spofy-ui-playing-face 'spofy-track-name playing))
+                  (spofy-ui-truncate
+                   artist-str (spofy-ui-col 'library-track 1)
+                   (spofy-ui-playing-face 'spofy-artist-name playing))
+                  (spofy-ui-truncate
+                   album-name (spofy-ui-col 'library-track 2)
+                   (spofy-ui-playing-face 'spofy-album-name playing))
+                  (propertize duration-str 'face
+                              (spofy-ui-playing-face 'spofy-muted playing))))))
+
+(defun spofy-timeline--reformat-entry (entity _idx)
+  "Re-format ENTITY as a track row on track change.
+The correct section (history vs queue) is irrelevant here: the
+now-playing face is decided by whether ENTITY's URI matches the
+current track, which works across sections.  A full rerender via
+`spofy-timeline--refresh-if-visible' follows shortly afterwards to
+reshuffle the sections."
+  (spofy-timeline--format-track entity 'queue))
+
+(defun spofy-timeline--printer (id cols)
+  "Custom tabulated-list printer.
+Render section separators specially; delegate track rows to
+`tabulated-list-print-entry'.  ID is the row ID, COLS its columns."
+  (if (spofy-timeline--separator-id-p id)
+      (spofy-timeline--insert-separator id)
+    (tabulated-list-print-entry id cols)))
+
+(defun spofy-timeline--separator-id-p (id)
+  "Return non-nil when ID is a section-separator entry ID."
+  (and (stringp id) (string-prefix-p ":sep:" id)))
+
+(defun spofy-timeline--insert-separator (id)
+  "Insert a section separator block for the separator ID."
+  (unless (bobp) (insert "\n"))
+  (let* ((start (point))
+         (title (alist-get id spofy-timeline--section-titles
+                           nil nil #'equal))
+         (pad (make-string (or tabulated-list-padding 0) ?\s))
+         (width (max 40 (- (window-body-width) 6))))
+    (insert pad (propertize title 'face 'spofy-header) "\n")
+    (insert pad (propertize (make-string width ?─) 'face 'spofy-header) "\n")
+    (put-text-property start (point) 'spofy-sep-section
+                       (intern (substring id 5)))))
 
 (defun spofy-timeline--goto-now-playing ()
   "Move point to the now-playing row and recenter if visible."
   (goto-char (point-min))
   (when-let* ((match (text-property-search-forward
-                      'spofy-section 'now-playing t)))
-    (goto-char (prop-match-beginning match))
-    (beginning-of-line)
+                      'spofy-sep-section 'now t)))
+    (goto-char (prop-match-end match))
     (when-let* ((win (get-buffer-window (current-buffer) 'visible))
                 ((eq win (selected-window))))
       (recenter))))
