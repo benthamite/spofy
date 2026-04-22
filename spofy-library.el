@@ -43,6 +43,7 @@
 (declare-function spofy-view-album "spofy-browse" (album-id))
 (declare-function spofy-view-artist "spofy-browse" (artist-id))
 (declare-function spofy-playlist-add-track "spofy-playlist" (track-uri))
+(declare-function spofy-add-to-queue "spofy-queue" (uri))
 
 ;;;; Helpers
 
@@ -83,6 +84,7 @@ Returns \"track\" or \"album\"."
     (define-key map (kbd "A")   #'spofy-library-tracks-view-artist)
     (define-key map (kbd "S")   #'spofy-library-tracks-unsave)
     (define-key map (kbd "p")   #'spofy-library-tracks-add-to-playlist)
+    (define-key map (kbd "Q")   #'spofy-add-to-queue)
     (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "g")   #'spofy-library-tracks-refresh)
 
@@ -354,6 +356,7 @@ the /me/albums endpoint with pagination."
     (define-key map (kbd "RET") #'spofy-recently-played-play)
     (define-key map (kbd "a")   #'spofy-recently-played-view-album)
     (define-key map (kbd "A")   #'spofy-recently-played-view-artist)
+    (define-key map (kbd "Q")   #'spofy-add-to-queue)
     (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "g")   #'spofy-recently-played-refresh)
 
@@ -614,6 +617,7 @@ for an artist ID."
     (define-key map (kbd "RET") #'spofy-top-tracks-play)
     (define-key map (kbd "a")   #'spofy-top-tracks-view-album)
     (define-key map (kbd "A")   #'spofy-top-tracks-view-artist)
+    (define-key map (kbd "Q")   #'spofy-add-to-queue)
     (define-key map (kbd "SPC") #'spofy-play-pause)
     (define-key map (kbd "g")   #'spofy-top-tracks-refresh)
 

@@ -104,6 +104,10 @@
 (declare-function spofy-save-current-track "spofy-library" ())
 (declare-function spofy-unsave-current-track "spofy-library" ())
 
+;; spofy-queue
+(declare-function spofy-view-queue "spofy-queue" ())
+(declare-function spofy-add-to-queue "spofy-queue" (uri))
+
 ;; spofy-mode-line
 (declare-function spofy-mode-line-mode "spofy-mode-line" (&optional arg))
 
@@ -933,6 +937,7 @@ If no tokens are available, prompts the user to authenticate."
     ("f" "Seek forward   "  spofy-seek-forward :transient t)
     ("r" "Seek backward  "  spofy-seek-backward :transient t)
     ("t" "Seek to"          spofy-seek-to)
+    ("Q" "View queue"       spofy-view-queue)
     ""
     "Volume"
     ("+" "Volume up"        spofy-volume-up :transient t)

@@ -46,6 +46,7 @@
 (declare-function spofy-unfollow-playlist "spofy-playlist" ())
 (declare-function spofy-follow-artist "spofy-library" (artist-id))
 (declare-function spofy-unfollow-artist "spofy-library" (artist-id))
+(declare-function spofy-add-to-queue "spofy-queue" (uri))
 (declare-function spofy-search--display-results "spofy-search"
                   (type query items next-url))
 (declare-function spofy-wikipedia-track "spofy-wikipedia" (target))
@@ -102,6 +103,11 @@ treating TARGET as a URI directly."
   "Save the track identified by TARGET to the user's library."
   (when-let* ((uri (spofy-embark--get-uri target)))
     (spofy-library-save uri)))
+
+(defun spofy-embark-add-track-to-queue (target)
+  "Add the track identified by TARGET to the playback queue."
+  (when-let* ((uri (spofy-embark--get-uri target)))
+    (spofy-add-to-queue uri)))
 
 (defun spofy-embark-track-view-album (target)
   "View the album of the track identified by TARGET."
@@ -214,6 +220,7 @@ treating TARGET as a URI directly."
   "RET" #'spofy-embark-play-track
   "p"   #'spofy-embark-add-track-to-playlist
   "s"   #'spofy-embark-save-track
+  "Q"   #'spofy-embark-add-track-to-queue
   "a"   #'spofy-embark-track-view-album
   "A"   #'spofy-embark-track-view-artist
   "w"   #'spofy-embark-track-wikipedia
