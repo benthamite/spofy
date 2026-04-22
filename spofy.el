@@ -101,6 +101,8 @@
 (declare-function spofy-list-top-artists "spofy-library" (&optional time-range))
 (declare-function spofy-list-new-releases "spofy-library" ())
 (declare-function spofy-library-warm-cache "spofy-library" ())
+(declare-function spofy-save-current-track "spofy-library" ())
+(declare-function spofy-unsave-current-track "spofy-library" ())
 
 ;; spofy-mode-line
 (declare-function spofy-mode-line-mode "spofy-mode-line" (&optional arg))
@@ -964,7 +966,12 @@ If no tokens are available, prompts the user to authenticate."
     ("/" "Dashboard"        spofy)
     ("d" "Devices"          spofy-select-device)
     ("." "Jump to track"    spofy-jump-to-playing-track)
+    ""
+    "Now playing"
+    ("L" "Save track"       spofy-save-current-track)
+    ("U" "Unsave track"     spofy-unsave-current-track)
     ("w" "Wikipedia"        spofy-wikipedia)
+    ""
     ("q" "Quit"             transient-quit-one)]])
 
 ;;;###autoload (autoload 'spofy-menu "spofy" nil t)

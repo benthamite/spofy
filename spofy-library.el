@@ -34,7 +34,9 @@
 (require 'spofy-ui)
 (require 'cl-lib)
 
-;; Functions from other Spofy modules that may not be loaded yet.
+;; Functions and variables from other Spofy modules that may not be
+;; loaded yet.
+(defvar spofy-player--current-state)
 (declare-function spofy-play-pause "spofy-player" ())
 (declare-function spofy-play-track "spofy-player" (track-uri &optional context-uri))
 (declare-function spofy-play-context "spofy-player" (context-uri))
@@ -540,6 +542,28 @@ type string/symbol plus ID supplied separately."
                         (lambda (_response)
                           (spofy-library-invalidate-cache (intern type))
                           (message "Spofy: removed %s from library." type))))))
+
+;;;###autoload
+(defun spofy-save-current-track ()
+  "Save the currently playing track to the user's library."
+  (interactive)
+  (spofy-library--library-act-on-current "track" #'spofy-library-save))
+
+;;;###autoload
+(defun spofy-unsave-current-track ()
+  "Remove the currently playing track from the user's library."
+  (interactive)
+  (spofy-library--library-act-on-current "track" #'spofy-library-unsave))
+
+(defun spofy-library--library-act-on-current (type action)
+  "Call ACTION on the current track with TYPE and its Spotify ID.
+ACTION must be `spofy-library-save' or `spofy-library-unsave'.
+Signals a `user-error' when no track is playing."
+  (require 'spofy-player)
+  (let ((track-id (alist-get 'track-id spofy-player--current-state)))
+    (unless track-id
+      (user-error "Spofy: no track currently playing"))
+    (funcall action type track-id)))
 
 ;;; ========================================================================
 ;;;; Follow / unfollow artists
