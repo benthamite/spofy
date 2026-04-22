@@ -74,6 +74,7 @@ Commands
 * Browsing::
 * Playlist management::
 * Library management::
+* Timeline::
 * Cache management::
 
 Tracking the playing position
@@ -144,7 +145,9 @@ The core capabilities are:
 @item
 @strong{Playlist management:} Full CRUD operations on playlists: create, rename, delete, add, remove, and reorder tracks (@ref{Playlist management}).
 @item
-@strong{Library management:} View and manage saved tracks and albums (@ref{Library management}).
+@strong{Library management:} View and manage saved tracks and albums; follow and unfollow artists (@ref{Library management}).
+@item
+@strong{Timeline:} A unified buffer showing recently played tracks, the now-playing track, and the upcoming queue in one view, with row actions for each (@ref{Timeline}).
 @item
 @strong{Mode-line display:} A configurable mode-line segment showing the currently playing track (@ref{Mode-line display}).
 @item
@@ -373,6 +376,7 @@ The function @code{spofy-ui-compute-format} takes a view symbol and a list of co
 * Browsing::
 * Playlist management::
 * Library management::
+* Timeline::
 * Cache management::
 @end menu
 
@@ -432,11 +436,11 @@ The popup is organized into three columns:
 
 @itemize
 @item
-@strong{Column 1 — Playback, Volume, Mode:} play/pause, next, previous, seek forward, seek backward, seek to (@samp{t}); volume up/down and set; shuffle and repeat toggles.
+@strong{Column 1 — Playback, Volume, Mode:} play/pause, next, previous, seek forward, seek backward, seek to (@samp{t}), timeline (@samp{Q}); volume up/down and set; shuffle and repeat toggles.
 @item
 @strong{Column 2 — Search and Browse:} Spotify search for tracks (@samp{s t}), albums (@samp{s l}), playlists (@samp{s p}), artists (@samp{s a}); library search for saved tracks (@samp{l t}), saved albums (@samp{l a}), playlists (@samp{l p}), context (@samp{l c}); browse saved tracks (@samp{b t}), saved albums (@samp{b a}), playlists (@samp{b p}), current context (@samp{b c}).
 @item
-@strong{Column 3 — View and Other:} jump to playing track (@samp{.}), cursor follows playback toggle (@samp{F}); dashboard (@samp{/}), devices (@samp{d}), Wikipedia lookup (@samp{w}), quit (@samp{q}).
+@strong{Column 3 — View and Now playing:} dashboard (@samp{/}), devices (@samp{d}), jump to playing track (@samp{.}); ``Now playing'' actions — save track (@samp{L}), unsave track (@samp{U}), copy URL (@samp{c}), Wikipedia lookup (@samp{w}); quit (@samp{q}).
 @end itemize
 
 Volume up/down, seek forward/backward, shuffle, and repeat all keep the menu open so they can be used repeatedly.
@@ -489,6 +493,14 @@ The commands @code{spofy-volume-up} and @code{spofy-volume-down} adjust the volu
 The command @code{spofy-toggle-shuffle} toggles shuffle mode on or off.  The command @code{spofy-toggle-repeat} cycles through three repeat states: off, context (repeat the current album/playlist), and track (repeat the current track).  Both commands update the local player state immediately on success, so the mode line, tab bar, and transient menu reflect the new state without waiting for the next poll.  In the transient popup (@ref{Transient popup}), the current state is shown with the @code{transient-value} face, and both suffixes remain transient so that the user can toggle repeatedly without reopening the menu.
 
 The command @code{spofy-play-track} plays a specific track by its Spotify URI@.  If an optional context URI is provided (an album or playlist URI), playback starts within that context at the specified track.  The command @code{spofy-play-context} plays an entire context (album, playlist, or artist) from the beginning.  Both commands are used internally by the browse and search interfaces.
+
+@findex spofy-save-current-track
+@findex spofy-unsave-current-track
+@findex spofy-copy-url
+
+The command @code{spofy-save-current-track} saves the currently playing track to the user's library; @code{spofy-unsave-current-track} removes it.  Both are available from the transient popup under the ``Now playing'' column (@samp{L} and @samp{U}).
+
+The command @code{spofy-copy-url} copies the @samp{https://open.spotify.com} URL of the entity at point in a Spofy list buffer, or of the currently playing track when invoked elsewhere.  The URL is placed on the kill ring.  It is also bound to @samp{c} in the transient popup.
 
 @node Tracking the playing position
 @section Tracking the playing position
@@ -724,6 +736,12 @@ The command @code{spofy-view-artist} displays an artist's albums in a @samp{*Spo
 @item @samp{a}
 @tab @code{spofy-artist-play-album}
 @tab Play the album at point
+@item @samp{F}
+@tab @code{spofy-follow-artist}
+@tab Follow this artist
+@item @samp{U}
+@tab @code{spofy-unfollow-artist}
+@tab Unfollow this artist
 @item @samp{SPC}
 @tab @code{spofy-play-pause}
 @tab Toggle play/pause
@@ -878,12 +896,13 @@ The command @code{spofy-follow-playlist} prompts for a playlist ID or URI and fo
 @findex spofy-library-browse-tracks
 @findex spofy-library-browse-albums
 @findex spofy-library-browse-context
-@findex spofy-list-recently-played
 @findex spofy-list-top-tracks
 @findex spofy-list-top-artists
 @findex spofy-list-new-releases
 @findex spofy-library-save
 @findex spofy-library-unsave
+@findex spofy-follow-artist
+@findex spofy-unfollow-artist
 
 The command @code{spofy-library-browse-tracks} displays the user's saved tracks in a @samp{*Spofy Saved Tracks*} buffer.  Columns include a play indicator, track name, artist(s), album, and duration.  The currently playing track is highlighted with the @code{spofy-playing} face across all columns, and the highlight updates automatically when the track changes.  When the library cache is warm (@ref{Cache management}), all items render instantly; otherwise the command falls back to paginated API requests.  Column widths are controlled by the @code{spofy-columns} user option (@ref{Column widths}).
 
@@ -948,31 +967,7 @@ The command @code{spofy-library-browse-albums} displays saved albums in a @samp{
 
 The command @code{spofy-library-browse-context} opens the currently playing album or playlist in a standard browse buffer.  For album contexts it opens the album view (@ref{Album view}); for playlist contexts it opens the playlist detail view (@ref{Playlist detail view}).  It signals an error when the context is unsupported (e.g., Spotify-generated radio or daily mixes).
 
-The command @code{spofy-list-recently-played} displays the last 50 recently played tracks in a @samp{*Spofy Recently Played*} buffer.  The columns are the same as saved tracks, and the playing highlight updates automatically when the track changes.
-
-@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaa}
-@headitem Key
-@tab Command
-@tab Action
-@item @samp{RET}
-@tab @code{spofy-recently-played-play}
-@tab Play the track
-@item @samp{a}
-@tab @code{spofy-recently-played-view-album}
-@tab View album
-@item @samp{A}
-@tab @code{spofy-recently-played-view-artist}
-@tab View artist
-@item @samp{SPC}
-@tab @code{spofy-play-pause}
-@tab Toggle play/pause
-@item @samp{g}
-@tab @code{spofy-recently-played-refresh}
-@tab Refresh
-@item @samp{q}
-@tab @code{quit-window}
-@tab Close
-@end multitable
+See @ref{Timeline} for the recently-played and queue views, which live in a single buffer.
 
 The command @code{spofy-list-top-tracks} displays the user's top tracks in a @samp{*Spofy Top Tracks*} buffer.  It accepts an optional TIME-RANGE argument: @code{"short_term"} (4 weeks), @code{"medium_term"} (6 months, the default), or @code{"long_term"} (1 year).  The columns are the same as saved tracks, and the playing highlight updates automatically when the track changes.
 
@@ -1044,6 +1039,53 @@ The command @code{spofy-list-new-releases} displays new album releases in a @sam
 @end multitable
 
 The command @code{spofy-library-save} saves a Spotify entity (track or album) to the user's library.  It accepts a Spotify URI and determines the entity type from it.  The command @code{spofy-library-unsave} removes an entity from the library.  Both commands are available through keybindings in search, browse, and library buffers.
+
+The command @code{spofy-follow-artist} follows the artist at point (in artist views) or prompts for an artist ID@.  The command @code{spofy-unfollow-artist} is its counterpart.  Both are bound to @samp{F} and @samp{U} in the artist view (@ref{Artist view}), and to @samp{f} and @samp{u} in the embark artist map (@ref{Embark integration}).
+
+@node Timeline
+@section Timeline
+
+@findex spofy-view-timeline
+@findex spofy-add-to-queue
+@vindex spofy-timeline-history-limit
+
+The command @code{spofy-view-timeline} opens a @samp{*Spofy Timeline*} buffer that combines three chronologically-ordered sections in one view: ``Recently played'' at the top (oldest first), ``Now playing'' in the middle, and ``Up next'' at the bottom.  Row actions (@code{RET}, @code{Q}, @code{a}, @code{A}, @code{s}, @code{g}) work in every section.  The buffer refreshes automatically on every track change while it is visible, and recenters the window on the now-playing row.
+
+The user option @code{spofy-timeline-history-limit} controls how many past tracks to fetch for the history section.  It defaults to @code{20}.
+
+@multitable {aaaaa} {aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa} {aaaaaaaaaaaaaaaaaaaaaaa}
+@headitem Key
+@tab Command
+@tab Action
+@item @samp{RET}
+@tab @code{spofy-timeline-play-at-point}
+@tab Play the track at point
+@item @samp{a}
+@tab @code{spofy-timeline-view-album-at-point}
+@tab View album
+@item @samp{A}
+@tab @code{spofy-timeline-view-artist-at-point}
+@tab View artist
+@item @samp{s}
+@tab @code{spofy-timeline-save-at-point}
+@tab Save to library
+@item @samp{Q}
+@tab @code{spofy-timeline-queue-at-point}
+@tab Add to queue
+@item @samp{SPC}
+@tab @code{spofy-play-pause}
+@tab Toggle play/pause
+@item @samp{g}
+@tab @code{spofy-view-timeline}
+@tab Refresh
+@item @samp{q}
+@tab @code{quit-window}
+@tab Close
+@end multitable
+
+@code{RET} is section-aware.  In the ``Up next'' section, it plays the track inside the current playback context so the remainder of the queue stays intact.  In ``Recently played'' and on the now-playing row, it plays the bare track URI, since historical tracks are often unrelated to the current context.
+
+The command @code{spofy-add-to-queue} adds a track or podcast episode to the Spotify playback queue.  When called interactively, it uses the URI at point (in tabulated-list and timeline buffers) or prompts for one.  Non-queueable URIs (albums, artists, playlists) are rejected with a @code{user-error}.  The command is bound to @samp{Q} in every track-list keymap and in the embark track map, and is available from the transient menu (which opens the timeline under @samp{Q}).
 
 @node Cache management
 @section Cache management
@@ -1186,7 +1228,7 @@ The function @code{spofy-ui-play-pause-icon} returns a play or pause icon string
 @node Pagination
 @subsection Pagination
 
-Browse views (album, artist, and playlist detail) fetch all pages of results asynchronously before rendering, so the buffer always shows the complete list of items with no pagination.  The shared helper @code{spofy-browse--fetch-all-pages} recursively follows the Spotify API's @code{next} URL until all pages are collected, then hands the complete list to the rendering function.  This is consistent with how the library cache pre-fetches all saved tracks and albums ().
+Browse views (album, artist, and playlist detail) fetch all pages of results asynchronously before rendering, so the buffer always shows the complete list of items with no pagination.  The shared helper @code{spofy-browse--fetch-all-pages} recursively follows the Spotify API's @code{next} URL until all pages are collected, then hands the complete list to the rendering function.  This is consistent with how the library cache pre-fetches all saved tracks and albums (@ref{Cache management}).
 
 Search results use a scroll-triggered pagination mechanism instead, since the total result set can be very large.  The function @code{spofy-ui--maybe-load-more} is registered on @code{window-scroll-functions} and triggers a fetch when the window end is within a few lines of the buffer end.  A @code{post-command-hook} complement ensures pagination fires reliably under @code{pixel-scroll-precision-mode}, which can miss @code{window-scroll-functions} events.  A guard variable (@code{spofy-ui--loading-more}) prevents duplicate requests while one is already in flight, and the URL is checked with @code{stringp} to avoid attempting a fetch when the JSON @code{:null} sentinel has not yet been normalized.  Each buffer stores a buffer-local handler (set by the module that created the buffer) that knows how to extract items and the next-page URL from the API response.  This keeps all pagination logic in one place in @samp{spofy-ui.el} while letting each module control its own entry formatting.  Both @code{spofy-api--extract-paged-results} and @code{spofy-ui-load-more} normalize JSON @code{:null} values to @code{nil}, so that a @code{null} next-page URL from the Spotify API is correctly treated as the end of results.
 
@@ -1277,7 +1319,7 @@ The command @code{spofy-embark-copy-uri} copies the Spotify URI of the target en
 
 In addition to single-target actions, @samp{spofy-embark.el} registers exporters for all four categories: @samp{spofy-track}, @samp{spofy-album}, @samp{spofy-artist}, and @samp{spofy-playlist}.  Calling @code{embark-export} from any Spofy consult command exports the visible candidates into a dedicated buffer with the usual Spofy keybindings.
 
-The behavior of the export depends on the source.  When exporting from a @strong{search} command (e.g., @code{consult-spofy-track}), the exporter creates a @code{spofy-search-mode} buffer with the scroll-triggered pagination handler wired up.  This means you can browse past the initial 20 search results by scrolling: the buffer automatically fetches the next page from the Spotify API as you approach the bottom.  This bridges the gap between consult's fixed candidate list and the unlimited pagination available in tabulated-list buffers ().
+The behavior of the export depends on the source.  When exporting from a @strong{search} command (e.g., @code{consult-spofy-track}), the exporter creates a @code{spofy-search-mode} buffer with the scroll-triggered pagination handler wired up.  This means you can browse past the initial 20 search results by scrolling: the buffer automatically fetches the next page from the Spotify API as you approach the bottom.  This bridges the gap between consult's fixed candidate list and the unlimited pagination available in tabulated-list buffers (@ref{Search}).
 
 When exporting from a @strong{library} command (e.g., @code{spofy-library-search-tracks}), the exporter renders a standard library browse buffer instead, since all items are already in memory from the cache.  This is useful when you want to filter your library with consult's narrowing and then explore or act on the results interactively rather than selecting a single item.
 
