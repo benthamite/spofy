@@ -308,14 +308,24 @@ Render section separators specially; delegate track rows to
                        (intern (substring id 5)))))
 
 (defun spofy-timeline--goto-now-playing ()
-  "Move point to the now-playing row and recenter if visible."
+  "Move point to the now-playing row and center it in every visible window.
+Centering every window (not only the selected one) keeps the
+current track anchored visually as the history and queue sections
+grow or shrink around it, so the row never drifts into the
+\"Up next\" area."
   (goto-char (point-min))
   (when-let* ((match (text-property-search-forward
                       'spofy-sep-section 'now t)))
-    (goto-char (prop-match-end match))
-    (when-let* ((win (get-buffer-window (current-buffer) 'visible))
-                ((eq win (selected-window))))
-      (recenter))))
+    (let ((now-pt (prop-match-end match)))
+      (goto-char now-pt)
+      (dolist (win (get-buffer-window-list (current-buffer) nil 'visible))
+        (spofy-timeline--recenter-window-on win now-pt)))))
+
+(defun spofy-timeline--recenter-window-on (win pt)
+  "Move WIN's point to PT and recenter WIN on that line."
+  (set-window-point win pt)
+  (with-selected-window win
+    (recenter)))
 
 (provide 'spofy-timeline)
 ;;; spofy-timeline.el ends here
