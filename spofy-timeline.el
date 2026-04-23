@@ -79,6 +79,13 @@
     map)
   "Keymap for `spofy-timeline-mode'.")
 
+;; Install remaps outside the `defvar', which skips reinitialization on
+;; reload, so the bindings reach a running Emacs when the file changes.
+(define-key spofy-timeline-mode-map [remap next-line]
+            #'spofy-timeline-next-line)
+(define-key spofy-timeline-mode-map [remap previous-line]
+            #'spofy-timeline-previous-line)
+
 (define-derived-mode spofy-timeline-mode tabulated-list-mode "Spofy Timeline"
   "Major mode for the combined history/now-playing/queue view."
   :group 'spofy
@@ -93,10 +100,6 @@
   (setq-local spofy-ui--entity-type 'track)
   (setq-local tabulated-list-printer #'spofy-timeline--printer)
   (setq-local spofy-ui--entry-formatter #'spofy-timeline--reformat-entry)
-  (add-hook 'pre-command-hook
-            #'spofy-timeline--remember-point nil t)
-  (add-hook 'post-command-hook
-            #'spofy-timeline--skip-separator-after-motion nil t)
   (tabulated-list-init-header))
 
 ;;;; Interactive commands
@@ -340,35 +343,46 @@ grow or shrink around it, so the row never drifts into the
   (with-selected-window win
     (recenter)))
 
-;;;; Separator-skipping navigation
+;;;; Track-row navigation
 
-(defvar-local spofy-timeline--point-before-command nil
-  "Point position recorded by `pre-command-hook' for direction detection.")
+(defun spofy-timeline-next-line (&optional n)
+  "Move to the Nth next track row, skipping section separators.
+N defaults to 1.  Negative N moves backwards.  Bound to remap
+`next-line' so every binding that normally calls `next-line'
+(C-n, <down>, etc.) also skips.  Non-motion commands, mouse
+clicks, and scroll commands keep their usual behavior — if they
+strand point on a separator, press `n' or `p' once to skip off."
+  (interactive "^p")
+  (spofy-timeline--move-by-tracks (or n 1)))
 
-(defun spofy-timeline--remember-point ()
-  "Record point before a command so we can tell which way it moved."
-  (setq spofy-timeline--point-before-command (point)))
+(defun spofy-timeline-previous-line (&optional n)
+  "Move to the Nth previous track row, skipping section separators.
+N defaults to 1.  Negative N moves forwards."
+  (interactive "^p")
+  (spofy-timeline--move-by-tracks (- (or n 1))))
 
-(defun spofy-timeline--skip-separator-after-motion ()
-  "Advance past section separators so `n'/`p' jump between tracks.
-If the last command moved point onto a non-track row — either the
-section header, its rule, or the blank line inserted between
-sections — continue in the same direction until a real track row
-is reached."
-  (when (and spofy-timeline--point-before-command
-             (/= spofy-timeline--point-before-command (point))
-             (spofy-timeline--on-non-track-row-p))
-    (spofy-timeline--skip-non-track-rows
-     (if (> (point) spofy-timeline--point-before-command) 1 -1))))
+(defun spofy-timeline--move-by-tracks (n)
+  "Move point N track rows down (up when N is negative).
+Skips section headers, horizontal rules, and the blank stub
+lines inserted between sections.  If the buffer edge is hit
+while still on a non-track row, reverse direction so point never
+ends up stranded on a separator."
+  (unless (zerop n)
+    (let ((step (if (> n 0) 1 -1))
+          (remaining (abs n)))
+      (while (> remaining 0)
+        (forward-line step)
+        (spofy-timeline--skip-non-track-rows step)
+        (setq remaining (1- remaining))))))
 
 (defun spofy-timeline--on-non-track-row-p ()
   "Return non-nil when the current row is a separator or a blank stub line."
   (null (tabulated-list-get-id)))
 
 (defun spofy-timeline--skip-non-track-rows (step)
-  "Move by STEP line(s) until point lands on a track row.
-If we hit a buffer edge while still on a non-track row, scan back
-in the opposite direction so we never leave point stranded on a
+  "Advance by STEP line(s) until point lands on a track row.
+If the buffer edge is hit while still on a non-track row, scan
+back in the opposite direction so point never lands on a
 separator."
   (while (and (spofy-timeline--on-non-track-row-p)
               (if (> step 0) (not (eobp)) (not (bobp))))
