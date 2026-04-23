@@ -937,10 +937,32 @@ If no tokens are available, prompts the user to authenticate."
     ("p" "Previous"         spofy-previous)
     ("f" "Seek forward   "  spofy-seek-forward :transient t)
     ("r" "Seek backward  "  spofy-seek-backward :transient t)
-    ("t" "Seek to"          spofy-seek-to)
-    ("Q" "Timeline"         spofy-view-timeline)
+    ("k" "Seek to"          spofy-seek-to)
     ""
-    "Volume"
+    "Now playing"
+    ("w s" "Save track"     spofy-save-current-track)
+    ("w u" "Unsave track"   spofy-unsave-current-track)
+    ("w j" "Jump to track"  spofy-jump-to-playing-track)
+    ("w w" "Track info"     spofy-wikipedia)
+    ("w t" "Timeline"       spofy-view-timeline)]
+   ["Search Spotify"
+    ("s t" "Tracks"         spofy-search-tracks)
+    ("s a" "Albums"         spofy-search-albums)
+    ("s p" "Playlists"      spofy-search-playlists)
+    ("s r" "Artists"        spofy-search-artists)
+    ""
+    "Search library"
+    ("l t" "Tracks"         spofy-library-search-tracks)
+    ("l a" "Albums"         spofy-library-search-albums)
+    ("l p" "Playlists"      spofy-library-search-playlists)
+    ("l c" "Context"        spofy-library-search-context)
+    ""
+    "Browse library"
+    ("b t" "Tracks"         spofy-library-browse-tracks)
+    ("b a" "Albums"         spofy-library-browse-albums)
+    ("b p" "Playlists"      spofy-library-browse-playlists)
+    ("b c" "Context"        spofy-library-browse-context)]
+   ["Volume"
     ("+" "Volume up"        spofy-volume-up :transient t)
     ("-" "Volume down"      spofy-volume-down :transient t)
     ("v" "Set volume"       spofy-volume-set)
@@ -951,35 +973,10 @@ If no tokens are available, prompts the user to authenticate."
     ("R"                    spofy-toggle-repeat
      :description spofy--repeat-description :transient t)
     ("S"                    spofy-toggle-shuffle
-     :description spofy--shuffle-description :transient t)]
-   ["Search Spotify"
-    ("s t" "Tracks"         spofy-search-tracks)
-    ("s a" "Albums"         spofy-search-albums)
-    ("s p" "Playlists"      spofy-search-playlists)
-    ("s r" "Artists"        spofy-search-artists)
-    ""
-    "Search Library"
-    ("l t" "Tracks"         spofy-library-search-tracks)
-    ("l a" "Albums"         spofy-library-search-albums)
-    ("l p" "Playlists"      spofy-library-search-playlists)
-    ("l c" "Context"        spofy-library-search-context)
-    ""
-    "Browse Library"
-    ("b t" "Tracks"         spofy-library-browse-tracks)
-    ("b a" "Albums"         spofy-library-browse-albums)
-    ("b p" "Playlists"      spofy-library-browse-playlists)
-    ("b c" "Context"        spofy-library-browse-context)]
-   [""
+     :description spofy--shuffle-description :transient t)
+    """"""""""
     ("/" "Dashboard"        spofy)
     ("d" "Devices"          spofy-select-device)
-    ("." "Jump to track"    spofy-jump-to-playing-track)
-    ""
-    "Now playing"
-    ("L" "Save track"       spofy-save-current-track)
-    ("U" "Unsave track"     spofy-unsave-current-track)
-    ("c" "Copy URL"         spofy-copy-url)
-    ("w" "Wikipedia"        spofy-wikipedia)
-    ""
     ("q" "Quit"             transient-quit-one)]])
 
 ;;;###autoload (autoload 'spofy-menu "spofy" nil t)
