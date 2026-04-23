@@ -858,5 +858,34 @@ Applies to all visible Spofy track-list windows.  Off by default."
       (when-let* ((pos (spofy-ui--find-track-position track-id)))
         (set-window-point window pos)))))
 
+;;;; Skip-aware line motion
+
+(defun spofy-ui-move-by-matching-lines (predicate n)
+  "Move point N lines forward (up when N is negative) to lines matching PREDICATE.
+PREDICATE is called with no arguments on each candidate line and
+should return non-nil for lines where point is allowed to land.
+If the buffer edge is hit before enough matching lines are found,
+point stops on the last matching line encountered rather than on
+a non-matching one."
+  (unless (zerop n)
+    (let ((step (if (> n 0) 1 -1))
+          (remaining (abs n)))
+      (while (> remaining 0)
+        (forward-line step)
+        (spofy-ui--skip-until-matching predicate step)
+        (setq remaining (1- remaining))))))
+
+(defun spofy-ui--skip-until-matching (predicate step)
+  "Advance by STEP line(s) until PREDICATE returns non-nil.
+If the buffer edge is hit while still on a non-matching line,
+reverse direction so point never ends up on a line where
+PREDICATE returns nil."
+  (while (and (not (funcall predicate))
+              (if (> step 0) (not (eobp)) (not (bobp))))
+    (forward-line step))
+  (while (and (not (funcall predicate))
+              (if (> step 0) (not (bobp)) (not (eobp))))
+    (forward-line (- step))))
+
 (provide 'spofy-ui)
 ;;; spofy-ui.el ends here

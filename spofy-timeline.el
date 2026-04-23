@@ -351,45 +351,22 @@ N defaults to 1.  Negative N moves backwards.  Bound to remap
 `next-line' so every binding that normally calls `next-line'
 (C-n, <down>, etc.) also skips.  Non-motion commands, mouse
 clicks, and scroll commands keep their usual behavior — if they
-strand point on a separator, press `n' or `p' once to skip off."
+strand point on a separator, press the motion key once to skip
+off."
   (interactive "^p")
-  (spofy-timeline--move-by-tracks (or n 1)))
+  (spofy-ui-move-by-matching-lines #'spofy-timeline--track-row-p
+                                   (or n 1)))
 
 (defun spofy-timeline-previous-line (&optional n)
   "Move to the Nth previous track row, skipping section separators.
 N defaults to 1.  Negative N moves forwards."
   (interactive "^p")
-  (spofy-timeline--move-by-tracks (- (or n 1))))
+  (spofy-ui-move-by-matching-lines #'spofy-timeline--track-row-p
+                                   (- (or n 1))))
 
-(defun spofy-timeline--move-by-tracks (n)
-  "Move point N track rows down (up when N is negative).
-Skips section headers, horizontal rules, and the blank stub
-lines inserted between sections.  If the buffer edge is hit
-while still on a non-track row, reverse direction so point never
-ends up stranded on a separator."
-  (unless (zerop n)
-    (let ((step (if (> n 0) 1 -1))
-          (remaining (abs n)))
-      (while (> remaining 0)
-        (forward-line step)
-        (spofy-timeline--skip-non-track-rows step)
-        (setq remaining (1- remaining))))))
-
-(defun spofy-timeline--on-non-track-row-p ()
-  "Return non-nil when the current row is a separator or a blank stub line."
-  (null (tabulated-list-get-id)))
-
-(defun spofy-timeline--skip-non-track-rows (step)
-  "Advance by STEP line(s) until point lands on a track row.
-If the buffer edge is hit while still on a non-track row, scan
-back in the opposite direction so point never lands on a
-separator."
-  (while (and (spofy-timeline--on-non-track-row-p)
-              (if (> step 0) (not (eobp)) (not (bobp))))
-    (forward-line step))
-  (while (and (spofy-timeline--on-non-track-row-p)
-              (if (> step 0) (not (bobp)) (not (eobp))))
-    (forward-line (- step))))
+(defun spofy-timeline--track-row-p ()
+  "Return non-nil when the current row is a track, not a separator."
+  (not (null (tabulated-list-get-id))))
 
 (provide 'spofy-timeline)
 ;;; spofy-timeline.el ends here

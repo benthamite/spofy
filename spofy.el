@@ -217,43 +217,21 @@ invokes `next-line' skip straight from one clickable line to
 the next, past the album art, progress bar, shuffle/repeat line,
 section headers, and blank spacer lines."
   (interactive "^p")
-  (spofy-dashboard--move-by-actionable-lines (or n 1)))
+  (spofy-ui-move-by-matching-lines #'spofy-dashboard--actionable-line-p
+                                   (or n 1)))
 
 (defun spofy-dashboard-previous-line (&optional n)
   "Move to the Nth previous actionable line in the dashboard.
 N defaults to 1; negative N moves forwards."
   (interactive "^p")
-  (spofy-dashboard--move-by-actionable-lines (- (or n 1))))
-
-(defun spofy-dashboard--move-by-actionable-lines (n)
-  "Move point N actionable lines down (up when N is negative).
-If the buffer edge is hit while still on a non-actionable line,
-reverse direction so point never ends up stranded."
-  (unless (zerop n)
-    (let ((step (if (> n 0) 1 -1))
-          (remaining (abs n)))
-      (while (> remaining 0)
-        (forward-line step)
-        (spofy-dashboard--skip-non-actionable-lines step)
-        (setq remaining (1- remaining))))))
+  (spofy-ui-move-by-matching-lines #'spofy-dashboard--actionable-line-p
+                                   (- (or n 1))))
 
 (defun spofy-dashboard--actionable-line-p ()
   "Return non-nil when the current line contains at least one button."
   (text-property-not-all (line-beginning-position)
                          (line-end-position)
                          'button nil))
-
-(defun spofy-dashboard--skip-non-actionable-lines (step)
-  "Advance by STEP line(s) until point lands on an actionable line.
-If the buffer edge is hit while still on a non-actionable line,
-scan back in the opposite direction so point never lands on a
-non-actionable line."
-  (while (and (not (spofy-dashboard--actionable-line-p))
-              (if (> step 0) (not (eobp)) (not (bobp))))
-    (forward-line step))
-  (while (and (not (spofy-dashboard--actionable-line-p))
-              (if (> step 0) (not (bobp)) (not (eobp))))
-    (forward-line (- step))))
 
 ;;;;; Dashboard: album art
 
