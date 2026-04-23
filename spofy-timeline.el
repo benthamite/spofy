@@ -242,8 +242,11 @@ alist (or nil)."
 
 (defun spofy-timeline--format-track (track section)
   "Format TRACK alist as a `tabulated-list-entries' entry.
-SECTION is `history', `now-playing', or `queue'.  The row's face
-reflects whether the track matches the currently playing one."
+SECTION is `history', `now-playing', or `queue' and fully
+determines whether the row gets the now-playing face.  A track
+that also appears in the history section is not highlighted just
+because its URI happens to match the currently playing one — only
+the authoritative `now-playing' row carries the indicator."
   (let* ((uri (alist-get 'uri track))
          (name (or (alist-get 'name track) ""))
          (artists (or (alist-get 'artists track) []))
@@ -252,9 +255,7 @@ reflects whether the track matches the currently playing one."
          (duration-ms (or (alist-get 'duration_ms track) 0))
          (artist-str (spofy-ui-format-artists artists))
          (duration-str (spofy-ui-format-duration-ms duration-ms))
-         (playing (or (eq section 'now-playing)
-                      (not (string-empty-p
-                            (spofy-ui-playing-indicator uri)))))
+         (playing (eq section 'now-playing))
          (indicator (if playing
                         (propertize "▶" 'face 'spofy-playing-icon)
                       " ")))
@@ -275,12 +276,20 @@ reflects whether the track matches the currently playing one."
 
 (defun spofy-timeline--reformat-entry (entity _idx)
   "Re-format ENTITY as a track row on track change.
-The correct section (history vs queue) is irrelevant here: the
-now-playing face is decided by whether ENTITY's URI matches the
-current track, which works across sections.  A full rerender via
-`spofy-timeline--refresh-if-visible' follows shortly afterwards to
-reshuffle the sections."
-  (spofy-timeline--format-track entity 'queue))
+Called before the async refresh has returned fresh data, so rows
+are still in their old sections.  Highlight whichever row's URI
+matches the just-updated current track; the full rerender via
+`spofy-timeline--refresh-if-visible' follows shortly afterwards
+and replaces this with the authoritative section layout."
+  (let ((section (if (spofy-timeline--current-uri-p
+                      (alist-get 'uri entity))
+                     'now-playing
+                   'queue)))
+    (spofy-timeline--format-track entity section)))
+
+(defun spofy-timeline--current-uri-p (uri)
+  "Return non-nil when URI belongs to the currently playing track."
+  (and uri (not (string-empty-p (spofy-ui-playing-indicator uri)))))
 
 (defun spofy-timeline--printer (id cols)
   "Custom tabulated-list printer.
