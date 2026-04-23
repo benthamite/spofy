@@ -195,10 +195,65 @@ Each element is a symbol naming a section.  Available sections:
     map)
   "Keymap for `spofy-dashboard-mode'.")
 
+;; Install remaps outside the `defvar', which skips reinitialization on
+;; reload, so the bindings reach a running Emacs when the file changes.
+(define-key spofy-dashboard-mode-map [remap next-line]
+            #'spofy-dashboard-next-line)
+(define-key spofy-dashboard-mode-map [remap previous-line]
+            #'spofy-dashboard-previous-line)
+
 (define-derived-mode spofy-dashboard-mode special-mode "Spofy"
   "Major mode for the Spofy dashboard buffer."
   :group 'spofy
   (setq-local mode-line-format spofy-ui-mode-line-format))
+
+(defun spofy-dashboard-next-line (&optional n)
+  "Move to the Nth next actionable line in the dashboard.
+An actionable line is one that contains at least one clickable
+button — a track, artist, album, playlist, or section link.
+N defaults to 1; negative N moves backwards.  Bound to remap
+`next-line' so C-n, <down>, and any other binding that normally
+invokes `next-line' skip straight from one clickable line to
+the next, past the album art, progress bar, shuffle/repeat line,
+section headers, and blank spacer lines."
+  (interactive "^p")
+  (spofy-dashboard--move-by-actionable-lines (or n 1)))
+
+(defun spofy-dashboard-previous-line (&optional n)
+  "Move to the Nth previous actionable line in the dashboard.
+N defaults to 1; negative N moves forwards."
+  (interactive "^p")
+  (spofy-dashboard--move-by-actionable-lines (- (or n 1))))
+
+(defun spofy-dashboard--move-by-actionable-lines (n)
+  "Move point N actionable lines down (up when N is negative).
+If the buffer edge is hit while still on a non-actionable line,
+reverse direction so point never ends up stranded."
+  (unless (zerop n)
+    (let ((step (if (> n 0) 1 -1))
+          (remaining (abs n)))
+      (while (> remaining 0)
+        (forward-line step)
+        (spofy-dashboard--skip-non-actionable-lines step)
+        (setq remaining (1- remaining))))))
+
+(defun spofy-dashboard--actionable-line-p ()
+  "Return non-nil when the current line contains at least one button."
+  (text-property-not-all (line-beginning-position)
+                         (line-end-position)
+                         'button nil))
+
+(defun spofy-dashboard--skip-non-actionable-lines (step)
+  "Advance by STEP line(s) until point lands on an actionable line.
+If the buffer edge is hit while still on a non-actionable line,
+scan back in the opposite direction so point never lands on a
+non-actionable line."
+  (while (and (not (spofy-dashboard--actionable-line-p))
+              (if (> step 0) (not (eobp)) (not (bobp))))
+    (forward-line step))
+  (while (and (not (spofy-dashboard--actionable-line-p))
+              (if (> step 0) (not (bobp)) (not (eobp))))
+    (forward-line (- step))))
 
 ;;;;; Dashboard: album art
 
