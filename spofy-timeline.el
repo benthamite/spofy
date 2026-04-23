@@ -93,6 +93,10 @@
   (setq-local spofy-ui--entity-type 'track)
   (setq-local tabulated-list-printer #'spofy-timeline--printer)
   (setq-local spofy-ui--entry-formatter #'spofy-timeline--reformat-entry)
+  (add-hook 'pre-command-hook
+            #'spofy-timeline--remember-point nil t)
+  (add-hook 'post-command-hook
+            #'spofy-timeline--skip-separator-after-motion nil t)
   (tabulated-list-init-header))
 
 ;;;; Interactive commands
@@ -335,6 +339,43 @@ grow or shrink around it, so the row never drifts into the
   (set-window-point win pt)
   (with-selected-window win
     (recenter)))
+
+;;;; Separator-skipping navigation
+
+(defvar-local spofy-timeline--point-before-command nil
+  "Point position recorded by `pre-command-hook' for direction detection.")
+
+(defun spofy-timeline--remember-point ()
+  "Record point before a command so we can tell which way it moved."
+  (setq spofy-timeline--point-before-command (point)))
+
+(defun spofy-timeline--skip-separator-after-motion ()
+  "Advance past section separators so `n'/`p' jump between tracks.
+If the last command moved point onto a non-track row — either the
+section header, its rule, or the blank line inserted between
+sections — continue in the same direction until a real track row
+is reached."
+  (when (and spofy-timeline--point-before-command
+             (/= spofy-timeline--point-before-command (point))
+             (spofy-timeline--on-non-track-row-p))
+    (spofy-timeline--skip-non-track-rows
+     (if (> (point) spofy-timeline--point-before-command) 1 -1))))
+
+(defun spofy-timeline--on-non-track-row-p ()
+  "Return non-nil when the current row is a separator or a blank stub line."
+  (null (tabulated-list-get-id)))
+
+(defun spofy-timeline--skip-non-track-rows (step)
+  "Move by STEP line(s) until point lands on a track row.
+If we hit a buffer edge while still on a non-track row, scan back
+in the opposite direction so we never leave point stranded on a
+separator."
+  (while (and (spofy-timeline--on-non-track-row-p)
+              (if (> step 0) (not (eobp)) (not (bobp))))
+    (forward-line step))
+  (while (and (spofy-timeline--on-non-track-row-p)
+              (if (> step 0) (not (bobp)) (not (eobp))))
+    (forward-line (- step))))
 
 (provide 'spofy-timeline)
 ;;; spofy-timeline.el ends here
