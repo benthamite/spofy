@@ -205,7 +205,8 @@ Each element is a symbol naming a section.  Available sections:
 (define-derived-mode spofy-dashboard-mode special-mode "Spofy"
   "Major mode for the Spofy dashboard buffer."
   :group 'spofy
-  (setq-local mode-line-format spofy-ui-mode-line-format))
+  (setq-local mode-line-format spofy-ui-mode-line-format)
+  (hl-line-mode 1))
 
 (defun spofy-dashboard-next-line (&optional n)
   "Move to the Nth next actionable line in the dashboard.
