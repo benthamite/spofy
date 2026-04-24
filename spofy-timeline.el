@@ -93,14 +93,16 @@
   (spofy-ui-set-format
    'library-track
    '((" "         2 nil)
-     ("Name"      :flex t)
-     ("Artist(s)" :flex t)
-     ("Album"     :flex t)
+     ("Name"      :flex nil)
+     ("Artist(s)" :flex nil)
+     ("Album"     :flex nil)
      ("Duration"  6 nil :right-align t)))
   (setq-local spofy-ui--entity-type 'track)
+  (setq-local spofy-ui--hide-header-line t)
   (setq-local tabulated-list-printer #'spofy-timeline--printer)
   (setq-local spofy-ui--entry-formatter #'spofy-timeline--reformat-entry)
-  (tabulated-list-init-header))
+  (tabulated-list-init-header)
+  (setq header-line-format nil))
 
 ;;;; Interactive commands
 

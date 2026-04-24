@@ -153,6 +153,11 @@ is the keyword `:flex', the column width is computed proportionally.")
   "Computed flex column widths for the current buffer.
 An alist (VIEW . (W0 W1 ...)) set by `spofy-ui-compute-format'.")
 
+(defvar-local spofy-ui--hide-header-line nil
+  "When non-nil, suppress the tabulated-list header line in this buffer.
+Resize recomputation re-clears `header-line-format' so the header stays
+hidden after each call to `tabulated-list-init-header'.")
+
 (defun spofy-ui-col (view n)
   "Return the Nth flex column width for VIEW.
 Uses the dynamically computed width when available, falling back
@@ -218,6 +223,8 @@ Also installs the Spofy buffer mode-line and common keybindings."
       (unless (equal new-format tabulated-list-format)
         (setq tabulated-list-format new-format)
         (tabulated-list-init-header)
+        (when spofy-ui--hide-header-line
+          (setq header-line-format nil))
         (tabulated-list-print t)))))
 
 (defun spofy-ui--handle-window-resize (frame)
