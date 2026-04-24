@@ -317,10 +317,8 @@ Render section separators specially; delegate track rows to
   (let* ((start (point))
          (title (alist-get id spofy-timeline--section-titles
                            nil nil #'equal))
-         (pad (make-string (or tabulated-list-padding 0) ?\s))
-         (width (max 40 (- (window-body-width) 6))))
+         (pad (make-string (or tabulated-list-padding 0) ?\s)))
     (insert pad (propertize title 'face 'spofy-header) "\n")
-    (insert pad (propertize (make-string width ?┈) 'face 'spofy-muted) "\n")
     (put-text-property start (point) 'spofy-sep-section
                        (intern (substring id 5)))))
 
