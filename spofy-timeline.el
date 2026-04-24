@@ -52,6 +52,7 @@
 (declare-function spofy-browse--cache-put "spofy-browse" (context-uri items))
 (declare-function spofy-browse--fetch-all-pages
                   "spofy-browse" (collected next-url callback))
+(declare-function spofy-player--poll-after-skip "spofy-player" (was-playing))
 
 ;;;; User options
 
@@ -141,6 +142,14 @@ just-issued successful play."
   :type 'number
   :group 'spofy)
 
+(defcustom spofy-timeline-skip-interval 0.2
+  "Seconds between sequential skip calls when advancing inside the queue.
+Spotify 403s rapid `next' requests while the player is still
+transitioning, so `spofy-timeline--skip-forward' waits this long
+between consecutive `POST /me/player/next' calls."
+  :type 'number
+  :group 'spofy)
+
 (defvar spofy-timeline--last-play-time nil
   "Time of the most recent `spofy-timeline-play-at-point' call, or nil.")
 
@@ -162,8 +171,46 @@ requests with 403 while the previous one is still transitioning."
       (message "spofy: please wait before triggering another play")
     (when-let* ((entity (spofy-timeline--entity-at-point)))
       (setq spofy-timeline--last-play-time (current-time))
-      (spofy-timeline--play-entity
-       entity (spofy-timeline--play-context entity)))))
+      (if (eq (spofy-timeline--section-at-point) 'queue)
+          (spofy-timeline--skip-to-queue-position
+           (spofy-timeline--queue-row-position))
+        (spofy-timeline--play-entity
+         entity (spofy-timeline--play-context entity))))))
+
+(defun spofy-timeline--queue-row-position ()
+  "Return the 0-indexed position of point within the \"Up next\" section.
+Counts track rows between the `:sep:queue' separator and point."
+  (save-excursion
+    (let ((target (line-beginning-position))
+          (count 0))
+      (goto-char (point-min))
+      (when (text-property-search-forward 'spofy-sep-section 'queue t)
+        (while (and (not (eobp))
+                    (< (line-beginning-position) target))
+          (when (tabulated-list-get-id)
+            (setq count (1+ count)))
+          (forward-line 1)))
+      count)))
+
+(defun spofy-timeline--skip-to-queue-position (n)
+  "Advance playback so the Nth queued track becomes the current track.
+Issues `N+1' sequential `POST /me/player/next' calls spaced by
+`spofy-timeline-skip-interval' seconds — preserves the existing
+queue instead of rebuilding a new one from a context, and the
+small delay between calls keeps Spotify from 403-ing on the
+transitional state of the previous skip."
+  (spofy-timeline--skip-forward (1+ n)))
+
+(defun spofy-timeline--skip-forward (count)
+  "Chain COUNT `POST /me/player/next' requests with brief delays between."
+  (when (> count 0)
+    (spofy-api-post
+     "me/player/next" nil
+     (lambda (_)
+       (if (= count 1)
+           (spofy-player--poll-after-skip t)
+         (run-at-time spofy-timeline-skip-interval nil
+                      #'spofy-timeline--skip-forward (1- count)))))))
 
 (defun spofy-timeline--play-debounced-p ()
   "Return non-nil when a play request should be swallowed as too soon."
