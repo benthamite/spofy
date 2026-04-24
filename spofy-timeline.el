@@ -122,16 +122,24 @@
 
 (defun spofy-timeline-play-at-point ()
   "Play the track at point.
-For tracks in the \"Up next\" section, preserves the current
+For \"Up next\" and \"Now playing\" rows, preserves the current
 playback context so the remainder of the queue stays intact.
-For history and now-playing rows, plays the bare track URI, since
-historical plays are often unrelated to the current context."
+For history rows, replays the track within the same context it
+was originally played in (captured from the recently-played
+API), so hitting RET on history doesn't collapse the queue into
+a single repeated URI."
   (interactive)
   (when-let* ((entity (spofy-timeline--entity-at-point))
               (uri (alist-get 'uri entity)))
-    (spofy-play-track
-     uri (when (eq (spofy-timeline--section-at-point) 'queue)
-           (alist-get 'context-uri spofy-player--current-state)))))
+    (spofy-play-track uri (spofy-timeline--play-context entity))))
+
+(defun spofy-timeline--play-context (entity)
+  "Return the context URI to play ENTITY in, based on its section."
+  (pcase (spofy-timeline--section-at-point)
+    ((or 'queue 'now)
+     (alist-get 'context-uri spofy-player--current-state))
+    ('history
+     (alist-get 'spofy-history-context-uri entity))))
 
 (defun spofy-timeline-view-album-at-point ()
   "View the album for the track at point."
@@ -240,10 +248,21 @@ alist (or nil)."
     (nreverse entries)))
 
 (defun spofy-timeline--history-tracks (history)
-  "Return HISTORY items as a list of track alists, oldest first."
+  "Return HISTORY items as a list of track alists, oldest first.
+Each track alist carries a synthesized `spofy-history-context-uri'
+key — the URI of the context (album, playlist, etc.) the track was
+originally played in, or nil when the play had no context.  Stored
+on the track so `spofy-timeline-play-at-point' can resume within
+that context and keep the queue coherent."
   (let ((tracks (cl-loop for item across history
                          for track = (alist-get 'track item)
-                         when track collect track)))
+                         for context = (alist-get 'context item)
+                         for context-uri = (and (listp context)
+                                                (alist-get 'uri context))
+                         when track
+                         collect (cons (cons 'spofy-history-context-uri
+                                             context-uri)
+                                       track))))
     (nreverse tracks)))
 
 (defun spofy-timeline--separator-entry (id)
