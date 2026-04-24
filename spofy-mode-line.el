@@ -1,4 +1,4 @@
-;;; spofy-mode-line.el --- Mode-line display for Spofy  -*- lexical-binding: t; -*-
+;;; spofy-mode-line.el --- Mode-line display for spofy  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026  Pablo Stafforini
 
@@ -23,7 +23,7 @@
 
 ;;; Commentary:
 
-;; Mode-line display for the Spofy Spotify client.  Shows the currently
+;; Mode-line display for the spofy Spotify client.  Shows the currently
 ;; playing track in the Emacs mode line with a configurable format string.
 ;; Enable `spofy-mode-line-mode' to activate.
 
@@ -37,7 +37,7 @@
 ;;;; Customization
 
 (defcustom spofy-mode-line-format "▶ %t — %a"
-  "Format string for the Spofy mode-line segment.
+  "Format string for the spofy mode-line segment.
 The following format specifiers are supported:
   %t  track name
   %a  artist name
@@ -49,14 +49,14 @@ The following format specifiers are supported:
   :group 'spofy)
 
 (defcustom spofy-mode-line-max-length 40
-  "Maximum length of the Spofy mode-line string.
+  "Maximum length of the spofy mode-line string.
 If the formatted string exceeds this length, it is truncated with an
 ellipsis."
   :type 'integer
   :group 'spofy)
 
 (defcustom spofy-mode-line-separator " "
-  "Separator inserted before the Spofy mode-line segment."
+  "Separator inserted before the spofy mode-line segment."
   :type 'string
   :group 'spofy)
 
@@ -67,7 +67,7 @@ ellipsis."
 
 (defvar spofy-mode-line--construct
   '(:eval (spofy-mode-line--render))
-  "Mode-line construct for the Spofy segment.")
+  "Mode-line construct for the spofy segment.")
 
 (put 'spofy-mode-line--construct 'risky-local-variable t)
 

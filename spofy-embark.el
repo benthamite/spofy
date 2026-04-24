@@ -1,4 +1,4 @@
-;;; spofy-embark.el --- Embark integration for Spofy  -*- lexical-binding: t; -*-
+;;; spofy-embark.el --- Embark integration for spofy  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026  Pablo Stafforini
 
@@ -84,8 +84,8 @@ treating TARGET as a URI directly."
     (if uri
         (progn
           (kill-new uri)
-          (message "Spofy: copied %s" uri))
-      (message "Spofy: no URI found."))))
+          (message "spofy: copied %s" uri))
+      (message "spofy: no URI found."))))
 
 ;;;; Track actions
 
@@ -203,7 +203,7 @@ treating TARGET as a URI directly."
          (format "playlists/%s/followers" playlist-id)
          nil
          (lambda (_)
-           (message "Spofy: unfollowed playlist.")))))))
+           (message "spofy: unfollowed playlist.")))))))
 
 (declare-function spofy-api-delete "spofy-api" (endpoint &optional data callback))
 
@@ -215,7 +215,7 @@ treating TARGET as a URI directly."
   (spofy-wikipedia-track target))
 
 (defvar-keymap spofy-embark-track-map
-  :doc "Embark keymap for Spofy tracks."
+  :doc "Embark keymap for spofy tracks."
   :parent embark-general-map
   "RET" #'spofy-embark-play-track
   "p"   #'spofy-embark-add-track-to-playlist
@@ -232,7 +232,7 @@ treating TARGET as a URI directly."
   (spofy-wikipedia-album target))
 
 (defvar-keymap spofy-embark-album-map
-  :doc "Embark keymap for Spofy albums."
+  :doc "Embark keymap for spofy albums."
   :parent embark-general-map
   "RET" #'spofy-embark-play-album
   "s"   #'spofy-embark-save-album
@@ -247,7 +247,7 @@ treating TARGET as a URI directly."
   (spofy-wikipedia-artist target))
 
 (defvar-keymap spofy-embark-artist-map
-  :doc "Embark keymap for Spofy artists."
+  :doc "Embark keymap for spofy artists."
   :parent embark-general-map
   "RET" #'spofy-embark-artist-play-top-tracks
   "v"   #'spofy-embark-artist-view-albums
@@ -257,7 +257,7 @@ treating TARGET as a URI directly."
   "W"   #'spofy-embark-copy-uri)
 
 (defvar-keymap spofy-embark-playlist-map
-  :doc "Embark keymap for Spofy playlists."
+  :doc "Embark keymap for spofy playlists."
   :parent embark-general-map
   "RET" #'spofy-embark-play-playlist
   "v"   #'spofy-embark-view-playlist
@@ -272,7 +272,7 @@ treating TARGET as a URI directly."
 (declare-function spofy-playlist--display-from-cache "spofy-playlist" (items))
 
 (defun spofy-embark-export-tracks (candidates)
-  "Export track CANDIDATES to a Spofy buffer.
+  "Export track CANDIDATES to a spofy buffer.
 When CANDIDATES originate from a search, create a paginated search
 buffer with infinite scroll.  Otherwise, render as saved tracks."
   (let ((entities (spofy-embark--extract-entities candidates))
@@ -284,7 +284,7 @@ buffer with infinite scroll.  Otherwise, render as saved tracks."
        (mapcar (lambda (e) `((track . ,e))) entities)))))
 
 (defun spofy-embark-export-albums (candidates)
-  "Export album CANDIDATES to a Spofy buffer.
+  "Export album CANDIDATES to a spofy buffer.
 When CANDIDATES originate from a search, create a paginated search
 buffer with infinite scroll.  Otherwise, render as saved albums."
   (let ((entities (spofy-embark--extract-entities candidates))
@@ -296,14 +296,14 @@ buffer with infinite scroll.  Otherwise, render as saved albums."
        (mapcar (lambda (e) `((album . ,e))) entities)))))
 
 (defun spofy-embark-export-artists (candidates)
-  "Export artist CANDIDATES to a Spofy search buffer with pagination."
+  "Export artist CANDIDATES to a spofy search buffer with pagination."
   (spofy-embark--export-as-search
    "artist"
    (spofy-embark--extract-entities candidates)
    (spofy-embark--get-search-state candidates)))
 
 (defun spofy-embark-export-playlists (candidates)
-  "Export playlist CANDIDATES to a Spofy buffer.
+  "Export playlist CANDIDATES to a spofy buffer.
 When CANDIDATES originate from a search, create a paginated search
 buffer with infinite scroll.  Otherwise, render as a playlist list."
   (let ((entities (spofy-embark--extract-entities candidates))

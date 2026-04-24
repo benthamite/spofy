@@ -1,4 +1,4 @@
-;;; spofy-org.el --- Org-mode link support for Spofy  -*- lexical-binding: t; -*-
+;;; spofy-org.el --- Org-mode link support for spofy  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026  Pablo Stafforini
 
@@ -24,7 +24,7 @@
 ;;; Commentary:
 
 ;; Org-mode link type for Spotify URIs.  Registers a `spotify:' link type
-;; that supports following (opening/playing), storing from Spofy buffers,
+;; that supports following (opening/playing), storing from spofy buffers,
 ;; and exporting to HTML with links to open.spotify.com.
 
 ;;; Code:
@@ -61,12 +61,12 @@ PATH is the part after \"spotify:\", e.g. \"track:abc123\"."
         ("album"    (spofy-view-album id))
         ("artist"   (spofy-view-artist id))
         ("playlist" (spofy-view-playlist id)))
-    (message "Spofy: unrecognized Spotify URI: spotify:%s" path)))
+    (message "spofy: unrecognized Spotify URI: spotify:%s" path)))
 
 ;;;; Store handler
 
 (defun spofy-org--entity-at-point ()
-  "Return the Spotify entity at point in any Spofy buffer."
+  "Return the Spotify entity at point in any spofy buffer."
   (spofy-ui-entity-at-point))
 
 (defun spofy-org--entity-type-from-uri (uri)
@@ -77,7 +77,7 @@ For example, \"spotify:track:1234\" returns \"track\"."
 
 (defun spofy-org-store ()
   "Store an org link to the Spotify entity at point.
-Works in any Spofy buffer (browse, search, library, playlist).
+Works in any spofy buffer (browse, search, library, playlist).
 Returns non-nil if a link was stored, nil otherwise."
   (when-let* ((entity (spofy-org--entity-at-point)))
     ;; The entity may be a playlist track wrapper with a `track' key.

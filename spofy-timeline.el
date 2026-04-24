@@ -60,7 +60,7 @@
   :type 'integer
   :group 'spofy)
 
-(defconst spofy-timeline--buffer-name "*Spofy Timeline*"
+(defconst spofy-timeline--buffer-name "*spofy Timeline*"
   "Name of the buffer that displays the unified timeline.")
 
 (defconst spofy-timeline--section-titles
@@ -97,7 +97,7 @@ overwrite any context annotation attached to the history entity.")
 (define-key spofy-timeline-mode-map [remap previous-line]
             #'spofy-timeline-previous-line)
 
-(define-derived-mode spofy-timeline-mode tabulated-list-mode "Spofy Timeline"
+(define-derived-mode spofy-timeline-mode tabulated-list-mode "spofy Timeline"
   "Major mode for the combined history/now-playing/queue view."
   :group 'spofy
   (setq tabulated-list-padding 2)

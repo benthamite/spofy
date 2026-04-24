@@ -25,7 +25,7 @@
 
 ;;; Commentary:
 
-;; Spofy is a full-featured Spotify client for Emacs, providing playback
+;; spofy is a full-featured Spotify client for Emacs, providing playback
 ;; control, search, browsing, library management, and playlist management
 ;; via the Spotify Web API.
 ;;
@@ -36,7 +36,7 @@
 ;; 4. Run `spofy' to open the dashboard.
 ;;
 ;; Enable `spofy-global-mode' for a global keybinding (default C-c s) that
-;; opens the Spofy transient popup.
+;; opens the spofy transient popup.
 
 ;;; Code:
 
@@ -44,7 +44,7 @@
 (require 'transient)
 (require 'spofy-ui)
 
-;;;; Declarations for functions from other Spofy modules
+;;;; Declarations for functions from other spofy modules
 
 ;; spofy-auth
 (declare-function spofy-auth-access-token "spofy-auth" ())
@@ -200,8 +200,8 @@ Each element is a symbol naming a section.  Available sections:
 (define-key spofy-dashboard-mode-map [remap previous-line]
             #'spofy-dashboard-previous-line)
 
-(define-derived-mode spofy-dashboard-mode special-mode "Spofy"
-  "Major mode for the Spofy dashboard buffer."
+(define-derived-mode spofy-dashboard-mode special-mode "spofy"
+  "Major mode for the spofy dashboard buffer."
   :group 'spofy
   (setq-local mode-line-format spofy-ui-mode-line-format)
   (spofy-ui-enable-line-highlight))
@@ -692,9 +692,9 @@ The last entry is a sentinel marking the end of the last section.")
   "Timer for updating the progress bar every second.")
 
 (defun spofy--dashboard-refresh-now-playing ()
-  "Refresh only the now-playing section in the *Spofy* buffer.
+  "Refresh only the now-playing section in the *spofy* buffer.
 Called from `spofy-player-state-changed-hook' and the progress timer."
-  (when-let* ((buf (get-buffer "*Spofy*")))
+  (when-let* ((buf (get-buffer "*spofy*")))
     (when (buffer-live-p buf)
       (with-current-buffer buf
         (when (and (markerp spofy--dashboard-now-playing-marker)
@@ -733,7 +733,7 @@ Called from `spofy-player-state-changed-hook' and the progress timer."
 
 (defun spofy--dashboard-refresh-section (section)
   "Re-fetch and re-render a single dashboard SECTION by name."
-  (when-let* ((buf (get-buffer "*Spofy*")))
+  (when-let* ((buf (get-buffer "*spofy*")))
     (when (buffer-live-p buf)
       (with-current-buffer buf
         (when-let* ((idx (cl-position section spofy-dashboard-sections))
@@ -848,20 +848,20 @@ Assumes the current buffer is in `spofy-dashboard-mode'."
 
 ;;;###autoload
 (cl-defun spofy ()
-  "Open the Spofy dashboard.
-The main entry point for the Spofy Spotify client.  Ensures
+  "Open the spofy dashboard.
+The main entry point for the spofy Spotify client.  Ensures
 authentication, starts polling, and displays the dashboard buffer."
   (interactive)
   ;; Ensure authenticated (with interactive prompt on first use)
   (require 'spofy-auth)
   (spofy-auth--load-tokens)
   (unless (spofy-auth-access-token)
-    (if (y-or-n-p "Spofy: not authenticated.  Authenticate now? ")
+    (if (y-or-n-p "spofy: not authenticated.  Authenticate now? ")
         (progn
           (spofy-authenticate)
-          (message "Spofy: complete authentication in your browser, then run `spofy' again.")
+          (message "spofy: complete authentication in your browser, then run `spofy' again.")
           (cl-return-from spofy))
-      (user-error "Spofy: authentication required")))
+      (user-error "spofy: authentication required")))
   ;; Enable global mode (starts polling, mode-line, tab-bar)
   (spofy--ensure-global-mode)
   ;; Hook up now-playing refresh on state changes
@@ -871,7 +871,7 @@ authentication, starts polling, and displays the dashboard buffer."
   ;; Start progress interpolation timer
   (spofy--dashboard-start-progress-timer)
   ;; Create and display the dashboard
-  (let ((buf (get-buffer-create "*Spofy*")))
+  (let ((buf (get-buffer-create "*spofy*")))
     (with-current-buffer buf
       (spofy-dashboard-mode)
       (add-hook 'kill-buffer-hook
@@ -887,7 +887,7 @@ authentication, starts polling, and displays the dashboard buffer."
     (pop-to-buffer buf)))
 
 (defun spofy-dashboard-refresh ()
-  "Refresh the Spofy dashboard."
+  "Refresh the spofy dashboard."
   (interactive)
   (require 'spofy-api)
   (require 'spofy-player)
@@ -905,11 +905,11 @@ If no tokens are available, prompts the user to authenticate."
   (require 'spofy-player)
   (spofy-auth--load-tokens)
   (unless (spofy-auth-access-token)
-    (if (y-or-n-p "Spofy: not authenticated.  Authenticate now? ")
+    (if (y-or-n-p "spofy: not authenticated.  Authenticate now? ")
         (progn
           (spofy-authenticate)
-          (user-error "Spofy: complete authentication in your browser, then try again"))
-      (user-error "Spofy: authentication required")))
+          (user-error "spofy: complete authentication in your browser, then try again"))
+      (user-error "spofy: authentication required")))
   (unless spofy-global-mode
     (spofy-global-mode 1))
   (add-hook 'spofy-player-track-changed-hook
@@ -927,8 +927,8 @@ If no tokens are available, prompts the user to authenticate."
   (let ((track-info (spofy-player-current-track)))
     (if track-info
         (let ((icon (if (spofy-player-playing-p) "⏸" "▶")))
-          (format "Spofy: %s %s — %s" icon (car track-info) (cdr track-info)))
-      "Spofy: no track playing")))
+          (format "spofy: %s %s — %s" icon (car track-info) (cdr track-info)))
+      "spofy: no track playing")))
 
 (defun spofy--repeat-description ()
   "Return a description string for the current repeat state."
@@ -951,7 +951,7 @@ If no tokens are available, prompts the user to authenticate."
     "Shuffle off"))
 
 (transient-define-prefix spofy--menu ()
-  "Spofy command popup (internal transient)."
+  "spofy command popup (internal transient)."
   [:description spofy--transient-description]
   [["Playback"
     ("SPC" "Play/Pause"     spofy-play-pause)
@@ -1002,8 +1002,8 @@ If no tokens are available, prompts the user to authenticate."
 
 ;;;###autoload (autoload 'spofy-menu "spofy" nil t)
 (defun spofy-menu ()
-  "Open the Spofy command popup.
-Ensures Spofy is initialized (polling, tab-bar, etc.) before
+  "Open the spofy command popup.
+Ensures spofy is initialized (polling, tab-bar, etc.) before
 showing the transient menu."
   (interactive)
   (spofy--ensure-global-mode)
@@ -1026,7 +1026,7 @@ unsupported (e.g., Spotify-generated radio or daily mixes)."
   (let ((context-uri (alist-get 'context-uri spofy-player--current-state))
         (context-type (alist-get 'context-type spofy-player--current-state)))
     (unless (and context-uri (member context-type '("album" "playlist")))
-      (user-error "Spofy: cannot browse this context"))
+      (user-error "spofy: cannot browse this context"))
     (let ((context-id (car (last (split-string context-uri ":")))))
       (pcase context-type
         ("album" (spofy-view-album context-id))
@@ -1036,7 +1036,7 @@ unsupported (e.g., Spotify-generated radio or daily mixes)."
 
 ;;;###autoload
 (defun spofy-stop ()
-  "Stop Spofy: disable polling and the global minor mode."
+  "Stop spofy: disable polling and the global minor mode."
   (interactive)
   (require 'spofy-player)
   (spofy-player-stop-polling)
@@ -1051,7 +1051,7 @@ unsupported (e.g., Spotify-generated radio or daily mixes)."
                #'spofy-ui--update-mode-lines)
   (when spofy-global-mode
     (spofy-global-mode -1))
-  (message "Spofy: stopped."))
+  (message "spofy: stopped."))
 
 ;;;; Global minor mode
 
@@ -1061,7 +1061,7 @@ The actual binding is set up when the mode is enabled.")
 
 ;;;###autoload
 (define-minor-mode spofy-global-mode
-  "Global minor mode for Spofy.
+  "Global minor mode for spofy.
 When enabled, binds `spofy-global-key' to `spofy-menu', starts
 polling, and optionally enables the mode-line display."
   :global t
@@ -1103,7 +1103,7 @@ polling, and optionally enables the mode-line display."
 ;; automatically on load.  This is deliberately passive: it loads tokens
 ;; from disk but never makes network requests (no token refresh, no API
 ;; calls).  If the token has expired, auto-start is silently skipped and
-;; the user can start Spofy manually via `spofy-menu' or `spofy'.
+;; the user can start spofy manually via `spofy-menu' or `spofy'.
 (when (and (or spofy-enable-mode-line spofy-enable-tab-bar)
            (not spofy-global-mode))
   (require 'spofy-auth)

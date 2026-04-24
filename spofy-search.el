@@ -1,4 +1,4 @@
-;;; spofy-search.el --- Search commands for Spofy  -*- lexical-binding: t; -*-
+;;; spofy-search.el --- Search commands for spofy  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026  Pablo Stafforini
 
@@ -22,7 +22,7 @@
 
 ;;; Commentary:
 
-;; Search commands for the Spofy Spotify client.  Provides interactive
+;; Search commands for the spofy Spotify client.  Provides interactive
 ;; search for tracks, albums, artists, and playlists, displaying results
 ;; in `tabulated-list-mode' buffers with pagination support.
 
@@ -72,8 +72,8 @@
     map)
   "Keymap for `spofy-search-mode'.")
 
-(define-derived-mode spofy-search-mode tabulated-list-mode "Spofy-Search"
-  "Major mode for Spofy search results.
+(define-derived-mode spofy-search-mode tabulated-list-mode "spofy-Search"
+  "Major mode for spofy search results.
 Derived from `tabulated-list-mode' with keybindings for playing,
 browsing, and managing Spotify entities."
   :group 'spofy)
@@ -221,7 +221,7 @@ TYPE is the search type (unused but reserved for future use)."
 (defun spofy-search--display-results (type query items next-url)
   "Display search ITEMS of TYPE for QUERY in a tabulated-list buffer.
 NEXT-URL is the URL for the next page of results, or nil."
-  (let ((buf-name (format "*Spofy Search: %s*" (spofy-search--type-plural type))))
+  (let ((buf-name (format "*spofy Search: %s*" (spofy-search--type-plural type))))
     (with-current-buffer (get-buffer-create buf-name)
       (spofy-search-mode)
       (setq spofy-search--query query)
@@ -270,7 +270,7 @@ NEXT-URL is the URL for the next page of results, or nil."
             (next-url (alist-get 'next section)))
        (if items
            (spofy-search--display-results type query items next-url)
-         (message "Spofy: no results for \"%s\"." query))))))
+         (message "spofy: no results for \"%s\"." query))))))
 
 (defun spofy-search--consult-available-p ()
   "Return non-nil when the Consult integration is available."
@@ -288,7 +288,7 @@ NEXT-URL is the URL for the next page of results, or nil."
    ((spofy-search--consult-available-p)
     (funcall consult-command))
    (t
-    (user-error "Spofy: Consult is unavailable; provide a search query"))))
+    (user-error "spofy: Consult is unavailable; provide a search query"))))
 
 ;;;; Interactive commands
 
@@ -358,7 +358,7 @@ play the context (all tracks from the beginning)."
               (alist-get 'id entity)))))
       (if album-id
           (spofy-view-album album-id)
-        (message "Spofy: no album for this item.")))))
+        (message "spofy: no album for this item.")))))
 
 (defun spofy-search-view-artist ()
   "View the artist for the item at point."
@@ -374,13 +374,13 @@ play the context (all tracks from the beginning)."
                   (alist-get 'id (aref artists 0))))))))
       (if artist-id
           (spofy-view-artist artist-id)
-        (message "Spofy: no artist for this item.")))))
+        (message "spofy: no artist for this item.")))))
 
 (defun spofy-search-add-to-playlist ()
   "Add the track at point to a playlist."
   (interactive)
   (if (not (string= spofy-search--type "track"))
-      (message "Spofy: can only add tracks to playlists.")
+      (message "spofy: can only add tracks to playlists.")
     (when-let* ((uri (spofy-search--uri-at-point)))
       (spofy-playlist-add-track uri))))
 

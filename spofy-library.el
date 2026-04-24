@@ -1,4 +1,4 @@
-;;; spofy-library.el --- Library management for Spofy  -*- lexical-binding: t; -*-
+;;; spofy-library.el --- Library management for spofy  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026  Pablo Stafforini
 
@@ -23,7 +23,7 @@
 
 ;;; Commentary:
 
-;; User library management for the Spofy Spotify client.  Provides
+;; User library management for the spofy Spotify client.  Provides
 ;; commands to list, save, and unsave tracks and albums in the user's
 ;; Spotify library, displayed in `tabulated-list-mode' buffers with
 ;; pagination support.
@@ -34,7 +34,7 @@
 (require 'spofy-ui)
 (require 'cl-lib)
 
-;; Functions and variables from other Spofy modules that may not be
+;; Functions and variables from other spofy modules that may not be
 ;; loaded yet.
 (defvar spofy-player--current-state)
 (declare-function spofy-play-pause "spofy-player" ())
@@ -93,7 +93,7 @@ Returns \"track\" or \"album\"."
   "Keymap for `spofy-library-tracks-mode'.")
 
 (define-derived-mode spofy-library-tracks-mode tabulated-list-mode
-  "Spofy Library Tracks"
+  "spofy Library Tracks"
   "Major mode for viewing saved tracks in the user's Spotify library."
   :group 'spofy
   (setq tabulated-list-padding 2)
@@ -140,11 +140,11 @@ _IDX is the entry position (unused)."
   (spofy-library--format-saved-track `((track . ,entity))))
 
 (defun spofy-library--render-tracks (response)
-  "Render saved tracks RESPONSE into the *Spofy Saved Tracks* buffer."
+  "Render saved tracks RESPONSE into the *spofy Saved Tracks* buffer."
   (let* ((paged (spofy-api--extract-paged-results response))
          (items (alist-get 'items paged))
          (next-url (alist-get 'next paged))
-         (buf-name "*Spofy Saved Tracks*"))
+         (buf-name "*spofy Saved Tracks*"))
     (spofy-ui-render-list
      buf-name #'spofy-library-tracks-mode
      (lambda ()
@@ -173,14 +173,14 @@ the /me/tracks endpoint with pagination."
                    #'spofy-library--render-tracks)))
 
 (defun spofy-library--render-tracks-from-cache (items)
-  "Render cached saved track ITEMS into the *Spofy Saved Tracks* buffer."
+  "Render cached saved track ITEMS into the *spofy Saved Tracks* buffer."
   (spofy-ui-render-list
-   "*Spofy Saved Tracks*" #'spofy-library-tracks-mode
+   "*spofy Saved Tracks*" #'spofy-library-tracks-mode
    (lambda ()
      (cl-loop for item in items
               collect (spofy-library--format-saved-track item)))
    nil)
-  (with-current-buffer "*Spofy Saved Tracks*"
+  (with-current-buffer "*spofy Saved Tracks*"
     (setq-local spofy-ui--entry-formatter
                 #'spofy-library--reformat-saved-track)))
 
@@ -243,7 +243,7 @@ the /me/tracks endpoint with pagination."
   "Keymap for `spofy-library-albums-mode'.")
 
 (define-derived-mode spofy-library-albums-mode tabulated-list-mode
-  "Spofy Library Albums"
+  "spofy Library Albums"
   "Major mode for viewing saved albums in the user's Spotify library."
   :group 'spofy
   (setq tabulated-list-padding 2)
@@ -275,11 +275,11 @@ ITEM is the wrapper alist from /me/albums which contains an `album' key."
                               'face 'spofy-muted)))))
 
 (defun spofy-library--render-albums (response)
-  "Render saved albums RESPONSE into the *Spofy Saved Albums* buffer."
+  "Render saved albums RESPONSE into the *spofy Saved Albums* buffer."
   (let* ((paged (spofy-api--extract-paged-results response))
          (items (alist-get 'items paged))
          (next-url (alist-get 'next paged))
-         (buf-name "*Spofy Saved Albums*"))
+         (buf-name "*spofy Saved Albums*"))
     (spofy-ui-render-list
      buf-name #'spofy-library-albums-mode
      (lambda ()
@@ -305,9 +305,9 @@ the /me/albums endpoint with pagination."
                    #'spofy-library--render-albums)))
 
 (defun spofy-library--render-albums-from-cache (items)
-  "Render cached saved album ITEMS into the *Spofy Saved Albums* buffer."
+  "Render cached saved album ITEMS into the *spofy Saved Albums* buffer."
   (spofy-ui-render-list
-   "*Spofy Saved Albums*" #'spofy-library-albums-mode
+   "*spofy Saved Albums*" #'spofy-library-albums-mode
    (lambda ()
      (cl-loop for item in items
               collect (spofy-library--format-saved-album item)))
@@ -368,7 +368,7 @@ Does nothing if TYPE is already cached or being fetched."
   (when (and (not (alist-get type spofy-library--cache))
              (not (memq type spofy-library--fetching)))
     (push type spofy-library--fetching)
-    (message "Spofy: fetching %ss..." type)
+    (message "spofy: fetching %ss..." type)
     (let ((all-items nil))
       (cl-labels
           ((fetch-page (url)
@@ -384,7 +384,7 @@ Does nothing if TYPE is already cached or being fetched."
                     (setq spofy-library--fetching
                           (delq type spofy-library--fetching))
                     (setf (alist-get type spofy-library--cache) all-items)
-                    (message "Spofy: fetched %d %ss" (length all-items) type)
+                    (message "spofy: fetched %d %ss" (length all-items) type)
                     (when callback
                       (funcall callback all-items))))))))
         (fetch-page (spofy-api--build-url endpoint '(("limit" . "50"))))))))
@@ -430,11 +430,11 @@ type string/symbol plus ID supplied separately."
                      ("album" "me/albums")
                      (_ nil))))
     (if (not endpoint)
-        (message "Spofy: cannot save entity of type \"%s\"." (or type "unknown"))
+        (message "spofy: cannot save entity of type \"%s\"." (or type "unknown"))
       (spofy-api-put endpoint `((ids . [,entity-id]))
                      (lambda (_response)
                        (spofy-library-invalidate-cache (intern type))
-                       (message "Spofy: saved %s to library." type))))))
+                       (message "spofy: saved %s to library." type))))))
 
 ;;;###autoload
 (defun spofy-library-unsave (uri-or-type &optional id)
@@ -451,11 +451,11 @@ type string/symbol plus ID supplied separately."
                      ("album" "me/albums")
                      (_ nil))))
     (if (not endpoint)
-        (message "Spofy: cannot unsave entity of type \"%s\"." (or type "unknown"))
+        (message "spofy: cannot unsave entity of type \"%s\"." (or type "unknown"))
       (spofy-api-delete endpoint `((ids . [,entity-id]))
                         (lambda (_response)
                           (spofy-library-invalidate-cache (intern type))
-                          (message "Spofy: removed %s from library." type))))))
+                          (message "spofy: removed %s from library." type))))))
 
 ;;;###autoload
 (defun spofy-save-current-track ()
@@ -476,7 +476,7 @@ Signals a `user-error' when no track is playing."
   (require 'spofy-player)
   (let ((track-id (alist-get 'track-id spofy-player--current-state)))
     (unless track-id
-      (user-error "Spofy: no track currently playing"))
+      (user-error "spofy: no track currently playing"))
     (funcall action type track-id)))
 
 ;;; ========================================================================
@@ -484,7 +484,7 @@ Signals a `user-error' when no track is playing."
 ;;; ========================================================================
 
 (defun spofy-library--artist-id-at-point ()
-  "Return the artist ID relevant to the current Spofy buffer or URI at point.
+  "Return the artist ID relevant to the current spofy buffer or URI at point.
 In an artist view buffer, uses the buffer context.  In list
 buffers whose rows are artists, uses the row ID.  Otherwise
 returns nil."
@@ -504,7 +504,7 @@ for an artist ID."
   (spofy-api-put (format "me/following?type=artist&ids=%s" artist-id)
                  nil
                  (lambda (_)
-                   (message "Spofy: now following artist %s" artist-id))))
+                   (message "spofy: now following artist %s" artist-id))))
 
 ;;;###autoload
 (defun spofy-unfollow-artist (artist-id)
@@ -517,7 +517,7 @@ for an artist ID."
   (spofy-api-delete (format "me/following?type=artist&ids=%s" artist-id)
                     nil
                     (lambda (_)
-                      (message "Spofy: unfollowed artist %s" artist-id))))
+                      (message "spofy: unfollowed artist %s" artist-id))))
 
 ;;; ========================================================================
 ;;;; Top tracks
@@ -537,7 +537,7 @@ for an artist ID."
   "Keymap for `spofy-top-tracks-mode'.")
 
 (define-derived-mode spofy-top-tracks-mode tabulated-list-mode
-  "Spofy Top Tracks"
+  "spofy Top Tracks"
   "Major mode for viewing top tracks."
   :group 'spofy
   (setq tabulated-list-padding 2)
@@ -587,7 +587,7 @@ TIME-RANGE is the time range string used for the query."
                   ("short_term" "4 weeks")
                   ("medium_term" "6 months")
                   ("long_term" "1 year")))
-         (buf-name (format "*Spofy Top Tracks (%s)*" label)))
+         (buf-name (format "*spofy Top Tracks (%s)*" label)))
     (spofy-ui-render-list
      buf-name #'spofy-top-tracks-mode
      (lambda ()
@@ -662,7 +662,7 @@ Defaults to \"medium_term\"."
   "Keymap for `spofy-top-artists-mode'.")
 
 (define-derived-mode spofy-top-artists-mode tabulated-list-mode
-  "Spofy Top Artists"
+  "spofy Top Artists"
   "Major mode for viewing top artists."
   :group 'spofy
   (setq tabulated-list-padding 2)
@@ -701,7 +701,7 @@ TIME-RANGE is the time range string used for the query."
                   ("short_term" "4 weeks")
                   ("medium_term" "6 months")
                   ("long_term" "1 year")))
-         (buf-name (format "*Spofy Top Artists (%s)*" label)))
+         (buf-name (format "*spofy Top Artists (%s)*" label)))
     (spofy-ui-render-list
      buf-name #'spofy-top-artists-mode
      (lambda ()
@@ -757,7 +757,7 @@ Defaults to \"medium_term\"."
   "Keymap for `spofy-new-releases-mode'.")
 
 (define-derived-mode spofy-new-releases-mode tabulated-list-mode
-  "Spofy New Releases"
+  "spofy New Releases"
   "Major mode for viewing new album releases."
   :group 'spofy
   (setq tabulated-list-padding 2)
@@ -790,7 +790,7 @@ Defaults to \"medium_term\"."
   (let* ((albums (alist-get 'albums response))
          (items (and albums (alist-get 'items albums)))
          (next-url (and albums (alist-get 'next albums)))
-         (buf-name "*Spofy New Releases*"))
+         (buf-name "*spofy New Releases*"))
     (spofy-ui-render-list
      buf-name #'spofy-new-releases-mode
      (lambda ()

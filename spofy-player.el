@@ -1,4 +1,4 @@
-;;; spofy-player.el --- Playback control for Spofy  -*- lexical-binding: t; -*-
+;;; spofy-player.el --- Playback control for spofy  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026  Pablo Stafforini
 
@@ -24,7 +24,7 @@
 ;;; Commentary:
 
 ;; Playback control, polling, device management, and volume control for
-;; the Spofy Spotify client.  All commands communicate with the Spotify
+;; the spofy Spotify client.  All commands communicate with the Spotify
 ;; Web API via `spofy-api.el'.
 
 ;;; Code:
@@ -170,7 +170,7 @@ latency."
                              (spofy-player--handle-poll-response data)
                            (spofy-player--reschedule-poll gen))))
       (error
-       (message "Spofy: poll error: %S" err)
+       (message "spofy: poll error: %S" err)
        (spofy-player--reschedule-poll gen)))))
 
 (defun spofy-player--handle-poll-response (data)
@@ -284,8 +284,8 @@ may have no cached state even when a device is already active."
          (devices (and data (alist-get 'devices data)))
          (names (mapcar (lambda (d) (alist-get 'name d)) devices)))
     (unless devices
-      (user-error "Spofy: no devices found"))
-    (let ((choice (completing-read "Spofy device: " names nil t)))
+      (user-error "spofy: no devices found"))
+    (let ((choice (completing-read "spofy device: " names nil t)))
       (when-let* ((device (cl-find choice devices
                                    :key (lambda (d) (alist-get 'name d))
                                    :test #'equal))
@@ -294,7 +294,7 @@ may have no cached state even when a device is already active."
                        `((device_ids . [,device-id])
                          (play . t))
                        (lambda (_)
-                         (message "Spofy: transferred playback to %s" choice)))))))
+                         (message "spofy: transferred playback to %s" choice)))))))
 
 ;;;; Playback commands
 
@@ -313,13 +313,13 @@ may have no cached state even when a device is already active."
                 (spofy-player-interpolated-progress))
           (spofy-player--update-state 'is-playing nil)
           (spofy-api-put "me/player/pause" nil
-                         (lambda (_) (message "Spofy: paused"))))
+                         (lambda (_) (message "spofy: paused"))))
       ;; Reset poll-time so interpolation starts fresh from stored progress
       (setf (alist-get 'poll-time spofy-player--current-state) (float-time))
       (spofy-player--update-state 'is-playing t)
       (spofy-api-put "me/player/play" nil
                      (lambda (_)
-                       (message "Spofy: playing")
+                       (message "spofy: playing")
                        ;; Re-poll to pick up any track change Spotify made on resume
                        (spofy-player--poll))))))
 
@@ -331,7 +331,7 @@ may have no cached state even when a device is already active."
   (let ((was-playing (spofy-player-playing-p)))
     (spofy-api-post "me/player/next" nil
                     (lambda (_)
-                      (message "Spofy: next track")
+                      (message "spofy: next track")
                       (spofy-player--poll-after-skip was-playing)))))
 
 ;;;###autoload
@@ -342,7 +342,7 @@ may have no cached state even when a device is already active."
   (let ((was-playing (spofy-player-playing-p)))
     (spofy-api-post "me/player/previous" nil
                     (lambda (_)
-                      (message "Spofy: previous track")
+                      (message "spofy: previous track")
                       (spofy-player--poll-after-skip was-playing)))))
 
 (defun spofy-player--poll-after-skip (was-playing)
@@ -370,7 +370,7 @@ poll catches a brief transitional pause."
          (duration (or (alist-get 'duration spofy-player--current-state) 0))
          (new-pos (min duration (+ progress (* spofy-seek-seconds 1000)))))
     (spofy-api-put (format "me/player/seek?position_ms=%d" new-pos) nil
-                   (lambda (_) (message "Spofy: seeked forward %ds" spofy-seek-seconds)))))
+                   (lambda (_) (message "spofy: seeked forward %ds" spofy-seek-seconds)))))
 
 ;;;###autoload
 (defun spofy-seek-backward ()
@@ -380,7 +380,7 @@ poll catches a brief transitional pause."
   (let* ((progress (or (spofy-player-interpolated-progress) 0))
          (new-pos (max 0 (- progress (* spofy-seek-seconds 1000)))))
     (spofy-api-put (format "me/player/seek?position_ms=%d" new-pos) nil
-                   (lambda (_) (message "Spofy: seeked backward %ds" spofy-seek-seconds)))))
+                   (lambda (_) (message "spofy: seeked backward %ds" spofy-seek-seconds)))))
 
 ;;;###autoload
 (defun spofy-volume-up ()
@@ -392,7 +392,7 @@ poll catches a brief transitional pause."
     (spofy-player--update-state 'volume new-vol)
     (setq spofy-player--volume-set-time (float-time))
     (spofy-api-put (format "me/player/volume?volume_percent=%d" new-vol) nil
-                   (lambda (_) (message "Spofy: volume %d%%" new-vol)))))
+                   (lambda (_) (message "spofy: volume %d%%" new-vol)))))
 
 ;;;###autoload
 (defun spofy-volume-down ()
@@ -404,7 +404,7 @@ poll catches a brief transitional pause."
     (spofy-player--update-state 'volume new-vol)
     (setq spofy-player--volume-set-time (float-time))
     (spofy-api-put (format "me/player/volume?volume_percent=%d" new-vol) nil
-                   (lambda (_) (message "Spofy: volume %d%%" new-vol)))))
+                   (lambda (_) (message "spofy: volume %d%%" new-vol)))))
 
 ;;;###autoload
 (defun spofy-volume-set (volume)
@@ -415,7 +415,7 @@ poll catches a brief transitional pause."
     (spofy-player--update-state 'volume vol)
     (setq spofy-player--volume-set-time (float-time))
     (spofy-api-put (format "me/player/volume?volume_percent=%d" vol) nil
-                   (lambda (_) (message "Spofy: volume set to %d%%" vol)))))
+                   (lambda (_) (message "spofy: volume set to %d%%" vol)))))
 
 ;;;###autoload
 (defun spofy-toggle-shuffle ()
@@ -428,7 +428,7 @@ poll catches a brief transitional pause."
                            (if new-state "true" "false"))
                    nil
                    (lambda (_)
-                     (message "Spofy: shuffle %s" (if new-state "on" "off"))))))
+                     (message "spofy: shuffle %s" (if new-state "on" "off"))))))
 
 ;;;###autoload
 (defun spofy-toggle-repeat ()
@@ -444,7 +444,7 @@ poll catches a brief transitional pause."
     (spofy-player--update-state 'repeat next)
     (spofy-api-put (format "me/player/repeat?state=%s" next) nil
                    (lambda (_)
-                     (message "Spofy: repeat %s" next)))))
+                     (message "spofy: repeat %s" next)))))
 
 ;;;; Playing context
 
@@ -461,7 +461,7 @@ have been relinked (common in compilation albums)."
   (spofy-api-put "me/player/play"
                  (spofy-player--play-body uri context-uri position)
                  (lambda (_)
-                   (message "Spofy: playing track")
+                   (message "spofy: playing track")
                    (spofy-player--poll-after-skip t))))
 
 (defun spofy-player--play-body (uri context-uri position)
@@ -486,7 +486,7 @@ context.  POSITION, when an integer, uses \"offset.position\" instead of
   (spofy-api-put "me/player/play"
                  `((context_uri . ,context-uri))
                  (lambda (_)
-                   (message "Spofy: playing context")
+                   (message "spofy: playing context")
                    (spofy-player--poll-after-skip t))))
 
 ;;;; Seek to timestamp
@@ -504,7 +504,7 @@ Accepts seconds (\"90\"), M:SS (\"1:30\"), or H:MM:SS (\"1:30:00\")."
                (* (string-to-number (nth 1 parts)) 60)
                (string-to-number (nth 2 parts)))
             1000))
-      (_ (user-error "Spofy: invalid timestamp format: %s" input)))))
+      (_ (user-error "spofy: invalid timestamp format: %s" input)))))
 
 ;;;###autoload
 (defun spofy-seek-to (timestamp)
@@ -522,7 +522,7 @@ TIMESTAMP is a string in M:SS, H:MM:SS, or plain seconds format."
     (setf (alist-get 'poll-time spofy-player--current-state) (float-time))
     (spofy-api-put (format "me/player/seek?position_ms=%d" clamped) nil
                    (lambda (_)
-                     (message "Spofy: seeked to %s"
+                     (message "spofy: seeked to %s"
                               (spofy-ui-format-duration-ms clamped))))))
 
 (provide 'spofy-player)

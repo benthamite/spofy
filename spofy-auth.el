@@ -1,4 +1,4 @@
-;;; spofy-auth.el --- OAuth2 authentication for Spofy  -*- lexical-binding: t; -*-
+;;; spofy-auth.el --- OAuth2 authentication for spofy  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026  Pablo Stafforini
 
@@ -22,7 +22,7 @@
 
 ;;; Commentary:
 
-;; OAuth2 authentication for the Spofy Spotify client.  Handles the
+;; OAuth2 authentication for the spofy Spotify client.  Handles the
 ;; authorization code flow: starts a local HTTP server, opens the
 ;; browser for authorization, exchanges the code for tokens, and
 ;; persists them in `spofy-token-file'.
@@ -87,7 +87,7 @@ key)."
     "playlist-modify-public"
     "playlist-modify-private"
     "streaming")
-  "OAuth2 scopes required by Spofy.")
+  "OAuth2 scopes required by spofy.")
 
 ;;;; Internal state
 
@@ -159,7 +159,7 @@ type, and a random state parameter."
                     (prin1 data (current-buffer)))))
             (set-default-file-modes saved-umask)))
       (error
-       (message "Spofy: failed to persist tokens to %s: %s" file
+       (message "spofy: failed to persist tokens to %s: %s" file
                 (error-message-string err))))))
 
 (defun spofy-auth--store-tokens (access-token refresh-token expires-in)
@@ -189,7 +189,7 @@ Returns non-nil if tokens were found."
                   (setq spofy-auth--token-expiry expiry))
                 (and spofy-auth--access-token spofy-auth--refresh-token))))
         (error
-         (message "Spofy: failed to read token file %s: %s"
+         (message "spofy: failed to read token file %s: %s"
                   file (error-message-string err))
          nil)))))
 
@@ -234,12 +234,12 @@ on success, or signals an error on failure."
        (let ((buf (current-buffer)))
          (unwind-protect
              (if (plist-get status :error)
-                 (message "Spofy: token exchange failed: %S" (plist-get status :error))
+                 (message "spofy: token exchange failed: %S" (plist-get status :error))
                (goto-char url-http-end-of-headers)
                (let* ((json (condition-case err
                                 (json-parse-buffer :object-type 'alist)
                               (error
-                               (message "Spofy: failed to parse token response: %s"
+                               (message "spofy: failed to parse token response: %s"
                                         (error-message-string err))
                                nil)))
                       (access-token (and json (alist-get 'access_token json)))
@@ -247,7 +247,7 @@ on success, or signals an error on failure."
                       (expires-in (and json (alist-get 'expires_in json))))
                  (if access-token
                      (funcall callback access-token refresh-token expires-in)
-                   (message "Spofy: token exchange returned no access token: %S" json))))
+                   (message "spofy: token exchange returned no access token: %S" json))))
            (kill-buffer buf)))))))
 
 ;;;; Token refresh
@@ -256,9 +256,9 @@ on success, or signals an error on failure."
   "Use the refresh token to obtain a new access token.
 Updates the stored tokens on success."
   (unless spofy-auth--refresh-token
-    (error "Spofy: no refresh token available; please re-authenticate with `spofy-authenticate'"))
+    (error "spofy: no refresh token available; please re-authenticate with `spofy-authenticate'"))
   (unless (and spofy-client-id spofy-client-secret)
-    (error "Spofy: `spofy-client-id' and `spofy-client-secret' must be set"))
+    (error "spofy: `spofy-client-id' and `spofy-client-secret' must be set"))
   (let ((url-request-method "POST")
         (url-request-extra-headers
          '(("Content-Type" . "application/x-www-form-urlencoded")))
@@ -283,7 +283,7 @@ Updates the stored tokens on success."
                   (spofy-auth--store-tokens access-token
                                             (or new-refresh spofy-auth--refresh-token)
                                             expires-in)
-                (message "Spofy: token refresh failed: %s"
+                (message "spofy: token refresh failed: %s"
                          (or (and json (alist-get 'error_description json))
                              (and json (alist-get 'error json))
                              "no access token in response")))))
@@ -349,13 +349,13 @@ the code for tokens, and sends an HTTP response to the browser."
       (spofy-auth--send-response proc 400
                                   "Authentication failed. You can close this window.")
       (spofy-auth--stop-server)
-      (message "Spofy: authentication denied by user: %s"
+      (message "spofy: authentication denied by user: %s"
                (alist-get 'error params)))
      ((not (equal (alist-get 'state params) spofy-auth--state))
       (spofy-auth--send-response proc 400
                                   "Invalid state parameter. You can close this window.")
       (spofy-auth--stop-server)
-      (message "Spofy: OAuth2 state mismatch — possible CSRF attack"))
+      (message "spofy: OAuth2 state mismatch — possible CSRF attack"))
      ((alist-get 'code params)
       (spofy-auth--send-response proc 200
                                   "Authentication successful! You can close this window.")
@@ -364,13 +364,13 @@ the code for tokens, and sends an HTTP response to the browser."
        (lambda (access-token refresh-token expires-in)
          (spofy-auth--store-tokens access-token refresh-token expires-in)
          (spofy-auth--stop-server)
-         (message "Spofy: authenticated successfully")
+         (message "spofy: authenticated successfully")
          (run-hooks 'spofy-authenticated-hook))))
      (t
       (spofy-auth--send-response proc 400
                                   "Missing authorization code. You can close this window.")
       (spofy-auth--stop-server)
-      (message "Spofy: callback received without authorization code")))))
+      (message "spofy: callback received without authorization code")))))
 
 (defun spofy-auth--send-response (proc status-code body)
   "Send an HTTP response to PROC with STATUS-CODE and BODY text."
@@ -395,12 +395,12 @@ Starts a local server, opens the browser to the authorization URL,
 and waits for the callback."
   (interactive)
   (unless spofy-client-id
-    (error "Spofy: `spofy-client-id' is not set; configure it first"))
+    (error "spofy: `spofy-client-id' is not set; configure it first"))
   (unless spofy-client-secret
-    (error "Spofy: `spofy-client-secret' is not set; configure it first"))
+    (error "spofy: `spofy-client-secret' is not set; configure it first"))
   (spofy-auth--start-server)
   (let ((url (spofy-auth--authorize-url)))
-    (message "Spofy: opening browser for authentication...")
+    (message "spofy: opening browser for authentication...")
     (browse-url url)))
 
 (provide 'spofy-auth)

@@ -1,4 +1,4 @@
-;;; spofy-queue.el --- Queue management for Spofy  -*- lexical-binding: t; -*-
+;;; spofy-queue.el --- Queue management for spofy  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026  Pablo Stafforini
 
@@ -45,11 +45,11 @@ interactively, uses the URI at point or prompts for one."
              (get-text-property (point) 'spofy-uri)
              (read-string "Spotify URI: "))))
   (unless (spofy-queue--queueable-uri-p uri)
-    (user-error "Spofy: %s is not a track or episode URI" uri))
+    (user-error "spofy: %s is not a track or episode URI" uri))
   (spofy-api-post
    (format "me/player/queue?uri=%s" (url-hexify-string uri))
    nil
-   (lambda (_) (message "Spofy: added to queue"))))
+   (lambda (_) (message "spofy: added to queue"))))
 
 (defun spofy-queue--queueable-uri-p (uri)
   "Return non-nil if URI is a Spotify track or episode URI."

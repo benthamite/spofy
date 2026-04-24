@@ -1,4 +1,4 @@
-;;; spofy-consult.el --- Consult integration for Spofy  -*- lexical-binding: t; -*-
+;;; spofy-consult.el --- Consult integration for spofy  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026  Pablo Stafforini
 
@@ -23,7 +23,7 @@
 
 ;;; Commentary:
 
-;; Consult completion sources for the Spofy Spotify client.  Provides seven
+;; Consult completion sources for the spofy Spotify client.  Provides seven
 ;; interactive commands for searching tracks, albums, artists, playlists,
 ;; devices, and current context tracks using the Consult async narrowing
 ;; framework.
@@ -78,7 +78,7 @@ appended as-is."
   (nth n (alist-get type spofy-consult-columns)))
 
 (defun spofy-consult--available-p ()
-  "Return non-nil when the Consult internals used by Spofy are loaded."
+  "Return non-nil when the Consult internals used by spofy are loaded."
   (and (featurep 'consult)
        (fboundp 'consult--read)
        (fboundp 'consult--dynamic-collection)
@@ -87,7 +87,7 @@ appended as-is."
 (defun spofy-consult--ensure-available ()
   "Signal a user-facing error when Consult is unavailable."
   (unless (spofy-consult--available-p)
-    (user-error "Spofy: Consult is not installed")))
+    (user-error "spofy: Consult is not installed")))
 
 ;;;; Helpers
 
@@ -258,7 +258,7 @@ STATE is a plist with :type, :query, and :next-url keys."
             ;; min-input 1 prevents an empty initial search.
             :debounce 0.3
             :min-input 1)
-           :prompt "Spofy track: "
+           :prompt "spofy track: "
            :category 'spofy-track
            :sort nil
            :require-match t
@@ -281,7 +281,7 @@ STATE is a plist with :type, :query, and :next-url keys."
              "album" #'spofy-consult--format-album)
             :debounce 0.3
             :min-input 1)
-           :prompt "Spofy album: "
+           :prompt "spofy album: "
            :category 'spofy-album
            :sort nil
            :require-match t
@@ -304,7 +304,7 @@ STATE is a plist with :type, :query, and :next-url keys."
              "artist" #'spofy-consult--format-artist)
             :debounce 0.3
             :min-input 1)
-           :prompt "Spofy artist: "
+           :prompt "spofy artist: "
            :category 'spofy-artist
            :sort nil
            :require-match t
@@ -327,7 +327,7 @@ STATE is a plist with :type, :query, and :next-url keys."
              "playlist" #'spofy-consult--format-playlist)
             :debounce 0.3
             :min-input 1)
-           :prompt "Spofy playlist: "
+           :prompt "spofy playlist: "
            :category 'spofy-playlist
            :sort nil
            :require-match t
@@ -351,7 +351,7 @@ starts an async fetch and signals a user error asking to retry."
   (let ((items (spofy-library-cache-get type)))
     (unless items
       (spofy-library--fetch-all-async endpoint type)
-      (user-error "Spofy: fetching %ss in the background, please try again shortly" type))
+      (user-error "spofy: fetching %ss in the background, please try again shortly" type))
     (cl-loop for item in items
              for entity = (if item-key (alist-get item-key item) item)
              unless (spofy-consult--null-p entity)
@@ -366,10 +366,10 @@ starts an async fetch and signals a user error asking to retry."
                      "me/tracks" 'track
                      #'spofy-consult--format-track 'track)))
     (unless candidates
-      (user-error "Spofy: no saved tracks found"))
+      (user-error "spofy: no saved tracks found"))
     (let ((selected
            (consult--read candidates
-            :prompt "Spofy saved track: "
+            :prompt "spofy saved track: "
             :category 'spofy-track
             :sort nil
             :require-match t
@@ -387,10 +387,10 @@ starts an async fetch and signals a user error asking to retry."
                      "me/albums" 'album
                      #'spofy-consult--format-album 'album)))
     (unless candidates
-      (user-error "Spofy: no saved albums found"))
+      (user-error "spofy: no saved albums found"))
     (let ((selected
            (consult--read candidates
-            :prompt "Spofy saved album: "
+            :prompt "spofy saved album: "
             :category 'spofy-album
             :sort nil
             :require-match t
@@ -408,10 +408,10 @@ starts an async fetch and signals a user error asking to retry."
                      "me/playlists" 'playlist
                      #'spofy-consult--format-playlist)))
     (unless candidates
-      (user-error "Spofy: no playlists found"))
+      (user-error "spofy: no playlists found"))
     (let ((selected
            (consult--read candidates
-            :prompt "Spofy my playlist: "
+            :prompt "spofy my playlist: "
             :category 'spofy-playlist
             :sort nil
             :require-match t
@@ -446,7 +446,7 @@ Results are fetched once and cached for subsequent calls."
            (consult--dynamic-collection
             (spofy-consult--device-collection)
             :min-input 0)
-           :prompt "Spofy device: "
+           :prompt "spofy device: "
            :category 'spofy-device
            :sort nil
            :require-match t
@@ -458,7 +458,7 @@ Results are fetched once and cached for subsequent calls."
                      `((device_ids . [,device-id])
                        (play . t))
                      (lambda (_)
-                       (message "Spofy: transferred playback to %s"
+                       (message "spofy: transferred playback to %s"
                                 device-name))))))
 
 ;;;; Context track source (jump to track in current playback)
@@ -481,7 +481,7 @@ radio or daily mixes)."
          (context-id (and context-uri
                           (car (last (split-string context-uri ":"))))))
     (unless (and context-id (member context-type '("album" "playlist")))
-      (user-error "Spofy: current tracks not available for this context"))
+      (user-error "spofy: current tracks not available for this context"))
     (let* ((raw-items (spofy-player--fetch-context-tracks context-type context-id))
            (playlist-p (equal context-type "playlist"))
            (candidates
@@ -490,7 +490,7 @@ radio or daily mixes)."
                        for track = (if playlist-p (alist-get 'track item) item)
                        when track collect (spofy-consult--format-track track)))))
       (unless candidates
-        (user-error "Spofy: current tracks not available for this context"))
+        (user-error "spofy: current tracks not available for this context"))
       (let ((selected
              (consult--read candidates
               :prompt "Jump to track: "

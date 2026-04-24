@@ -1,4 +1,4 @@
-;;; spofy-browse.el --- Album, artist, and playlist views for Spofy  -*- lexical-binding: t; -*-
+;;; spofy-browse.el --- Album, artist, and playlist views for spofy  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026  Pablo Stafforini
 
@@ -23,7 +23,7 @@
 
 ;;; Commentary:
 
-;; Album, artist, and playlist detail views for Spofy.  Each view fetches
+;; Album, artist, and playlist detail views for spofy.  Each view fetches
 ;; data from the Spotify Web API and displays it in a `tabulated-list-mode'
 ;; buffer with appropriate keybindings for playback and navigation.
 
@@ -33,7 +33,7 @@
 (require 'spofy-ui)
 (require 'cl-lib)
 
-;; Functions from other Spofy modules that may not be loaded yet.
+;; Functions from other spofy modules that may not be loaded yet.
 (declare-function spofy-play-track "spofy-player" (track-uri &optional context-uri))
 (declare-function spofy-play-context "spofy-player" (context-uri))
 (declare-function spofy-playlist-remove-track "spofy-playlist" (&optional playlist-id track-uri))
@@ -102,7 +102,7 @@ CALLBACK is called with the complete item list when done."
     map)
   "Keymap for `spofy-album-mode'.")
 
-(define-derived-mode spofy-album-mode tabulated-list-mode "Spofy Album"
+(define-derived-mode spofy-album-mode tabulated-list-mode "spofy Album"
   "Major mode for viewing a Spotify album's tracks."
   :group 'spofy
   (setq tabulated-list-padding 2)
@@ -172,7 +172,7 @@ pages asynchronously before rendering."
          (uri (alist-get 'uri album))
          (album-id (alist-get 'id album))
          (artist-str (if artists (spofy-ui-format-artists artists) "Unknown"))
-         (buf-name (format "*Spofy Album: %s*" name))
+         (buf-name (format "*spofy Album: %s*" name))
          (cached (spofy-browse--cache-get uri)))
     (cond
      (cached
@@ -303,7 +303,7 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
     map)
   "Keymap for `spofy-artist-mode'.")
 
-(define-derived-mode spofy-artist-mode tabulated-list-mode "Spofy Artist"
+(define-derived-mode spofy-artist-mode tabulated-list-mode "spofy Artist"
   "Major mode for viewing a Spotify artist's albums."
   :group 'spofy
   (setq tabulated-list-padding 2)
@@ -364,7 +364,7 @@ ARTIST is the artist API object."
          (genres-str (if (and genres (> (length genres) 0))
                          (mapconcat #'identity genres ", ")
                        "None listed"))
-         (buf-name (format "*Spofy Artist: %s*" name)))
+         (buf-name (format "*spofy Artist: %s*" name)))
     (with-current-buffer (get-buffer-create buf-name)
       (let ((inhibit-read-only t))
         (erase-buffer))
@@ -455,7 +455,7 @@ Fetches artist info and albums, then displays in a tabulated-list buffer."
   "Keymap for `spofy-artist-top-tracks-mode'.")
 
 (define-derived-mode spofy-artist-top-tracks-mode tabulated-list-mode
-  "Spofy Top Tracks"
+  "spofy Top Tracks"
   "Major mode for viewing an artist's top tracks."
   :group 'spofy
   (setq tabulated-list-padding 2)
@@ -490,7 +490,7 @@ Fetches artist info and albums, then displays in a tabulated-list buffer."
 (defun spofy-top-tracks--render (artist-id artist-name tracks)
   "Render top TRACKS for artist ARTIST-NAME in a buffer.
 ARTIST-ID is kept for refresh."
-  (let ((buf-name (format "*Spofy Top Tracks: %s*" artist-name)))
+  (let ((buf-name (format "*spofy Top Tracks: %s*" artist-name)))
     (with-current-buffer (get-buffer-create buf-name)
       (let ((inhibit-read-only t))
         (erase-buffer))
@@ -576,7 +576,7 @@ Uses cached tracks when available."
   "Keymap for `spofy-playlist-view-mode'.")
 
 (define-derived-mode spofy-playlist-view-mode tabulated-list-mode
-  "Spofy Playlist"
+  "spofy Playlist"
   "Major mode for viewing a Spotify playlist's tracks."
   :group 'spofy
   (setq tabulated-list-padding 2)
@@ -642,7 +642,7 @@ pages asynchronously before rendering."
                      (and (stringp n) n)))
          (uri (alist-get 'uri playlist))
          (playlist-id (alist-get 'id playlist))
-         (buf-name (format "*Spofy Playlist: %s*" name))
+         (buf-name (format "*spofy Playlist: %s*" name))
          (cached (spofy-browse--cache-get uri)))
     (cond
      (cached

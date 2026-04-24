@@ -1,4 +1,4 @@
-;;; spofy-wikipedia.el --- Wikipedia lookup for Spofy  -*- lexical-binding: t; -*-
+;;; spofy-wikipedia.el --- Wikipedia lookup for spofy  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026  Pablo Stafforini
 
@@ -23,7 +23,7 @@
 
 ;;; Commentary:
 
-;; Wikipedia lookup for the currently playing track in Spofy.  For
+;; Wikipedia lookup for the currently playing track in spofy.  For
 ;; non-classical music, searches the Wikipedia API directly for the album
 ;; article.  For classical music, uses an LLM (via gptel) to identify the
 ;; underlying musical work.  Results are cached in a SQLite database.
@@ -110,7 +110,7 @@ Symphony No. 5 (Beethoven)"
 Return the database handle."
   (unless (sqlitep spofy-wikipedia--db)
     (unless (fboundp 'sqlite-open)
-      (user-error "Spofy: Emacs was built without SQLite support"))
+      (user-error "spofy: Emacs was built without SQLite support"))
     (setq spofy-wikipedia--db (sqlite-open spofy-wikipedia-db-file))
     (sqlite-execute
      spofy-wikipedia--db
@@ -256,7 +256,7 @@ CALLBACK receives a list of result bindings, or nil on failure."
          (url-request-extra-headers
           ;; Wikidata requires a descriptive User-Agent per their API policy.
           '(("Accept" . "application/sparql-results+json")
-            ("User-Agent" . "Spofy/0.1 (Emacs; spofy-wikipedia.el)")))
+            ("User-Agent" . "spofy/0.1 (Emacs; spofy-wikipedia.el)")))
          (url-show-status nil))
     (url-retrieve
      url
@@ -462,7 +462,7 @@ Call CALLBACK with (RESOLVED-TITLE . URL) or nil."
   "Use an LLM to identify the musical work for TRACK on ALBUM by ARTIST.
 Call CALLBACK with the Wikipedia article title string, or nil on failure."
   (unless (require 'gptel nil t)
-    (user-error "Spofy: gptel is required for classical music Wikipedia lookup"))
+    (user-error "spofy: gptel is required for classical music Wikipedia lookup"))
   (let* ((resolved (spofy-wikipedia--resolve-backend-and-model))
          (gptel-backend (car resolved))
          (gptel-model (cdr resolved))
@@ -473,7 +473,7 @@ Call CALLBACK with the Wikipedia article title string, or nil on failure."
       (lambda (response info)
         (if (not response)
             (progn
-              (message "Spofy: LLM request failed: %s"
+              (message "spofy: LLM request failed: %s"
                        (plist-get info :status))
               (funcall callback nil))
           (funcall callback (string-trim response)))))))
@@ -518,7 +518,7 @@ passed through for the artist fallback.  Call CALLBACK with
                     (funcall callback result))
                 (spofy-wikipedia--fallback-or-error
                  artist artist-id
-                 (format "Spofy: no Wikipedia article found for album \"%s\"" album)
+                 (format "spofy: no Wikipedia article found for album \"%s\"" album)
                  callback))))))))))
 
 (defun spofy-wikipedia--lookup-work (track album artist artist-id callback)
@@ -535,7 +535,7 @@ with (WIKI-TITLE . WIKI-URL) or signal an error."
          (if (not llm-title)
              (spofy-wikipedia--fallback-or-error
               artist artist-id
-              "Spofy: LLM failed to identify the musical work" callback)
+              "spofy: LLM failed to identify the musical work" callback)
            (spofy-wikipedia--validate-title
             llm-title
             (lambda (result)
@@ -547,7 +547,7 @@ with (WIKI-TITLE . WIKI-URL) or signal an error."
                     (funcall callback result))
                 (spofy-wikipedia--fallback-or-error
                  artist artist-id
-                 (format "Spofy: Wikipedia article \"%s\" not found" llm-title)
+                 (format "spofy: Wikipedia article \"%s\" not found" llm-title)
                  callback))))))))))
 
 (defun spofy-wikipedia--lookup-artist (artist artist-id callback)
@@ -576,7 +576,7 @@ with (WIKI-TITLE . WIKI-URL) or signal an error."
                     (spofy-wikipedia--cache-store
                      "" "" artist "artist" "" (car result) (cdr result))
                     (funcall callback result))
-                (user-error "Spofy: no Wikipedia article found for artist \"%s\""
+                (user-error "spofy: no Wikipedia article found for artist \"%s\""
                             (spofy-wikipedia--first-artist artist)))))))))))
 
 ;;;; Interactive command
@@ -595,9 +595,9 @@ with (WIKI-TITLE . WIKI-URL) or signal an error."
          (artist (alist-get 'artist state))
          (artist-id (alist-get 'artist-id state)))
     (unless track
-      (user-error "Spofy: no track currently playing"))
+      (user-error "spofy: no track currently playing"))
     (unless artist-id
-      (user-error "Spofy: no artist information available"))
+      (user-error "spofy: no artist information available"))
     (spofy-wikipedia--classify-artist
      artist-id track
      (lambda (classical)

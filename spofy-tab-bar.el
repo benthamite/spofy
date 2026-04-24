@@ -1,4 +1,4 @@
-;;; spofy-tab-bar.el --- Tab-bar display for Spofy  -*- lexical-binding: t; -*-
+;;; spofy-tab-bar.el --- Tab-bar display for spofy  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026  Pablo Stafforini
 
@@ -23,7 +23,7 @@
 
 ;;; Commentary:
 
-;; Tab-bar display for the Spofy Spotify client.  Shows the currently
+;; Tab-bar display for the spofy Spotify client.  Shows the currently
 ;; playing track in the Emacs tab bar with a configurable format string.
 ;; Enable `spofy-tab-bar-mode' to activate.
 
@@ -39,7 +39,7 @@
 ;;;; Customization
 
 (defcustom spofy-tab-bar-format "%t %a %s%r %G"
-  "Format string for the Spofy tab-bar segment.
+  "Format string for the spofy tab-bar segment.
 The following format specifiers are supported:
   %t  track name
   %a  artist name
@@ -59,7 +59,7 @@ Only used when the format string contains %G."
   :group 'spofy)
 
 (defcustom spofy-tab-bar-max-length nil
-  "Optional upper bound on the Spofy tab-bar string length.
+  "Optional upper bound on the spofy tab-bar string length.
 The segment is always truncated dynamically to fit the available
 frame width.  When this option is non-nil, the segment is further
 capped at this many columns even when more space is available."
@@ -67,7 +67,7 @@ capped at this many columns even when more space is available."
   :group 'spofy)
 
 (defcustom spofy-tab-bar-alignment 'left
-  "Alignment of the Spofy segment in the tab bar.
+  "Alignment of the spofy segment in the tab bar.
 When `left', the segment is placed before any right-aligned entries.
 When `right', the segment is placed after
 `tab-bar-format-align-right', inserting it if necessary."
@@ -169,7 +169,7 @@ Returns TEXT unchanged when it already fits."
 (defun spofy-tab-bar--apply-string-fade (string)
   "Apply a fade-out gradient to the last 3 characters of STRING.
 Blend each character's foreground toward the `tab-bar' face
-background, producing the same truncation indicator used in Spofy
+background, producing the same truncation indicator used in spofy
 list buffers but encoded directly as text properties rather than
 overlays."
   (let* ((len (length string))
@@ -203,7 +203,7 @@ LEVEL is 1, 2, or 3 (25%, 50%, 75% blend toward background)."
 ;;;; Available width computation
 
 (defun spofy-tab-bar--available-width ()
-  "Return the display columns available for the Spofy segment.
+  "Return the display columns available for the spofy segment.
 Measure the combined width of all other tab-bar items and subtract
 from the frame width."
   (let ((other-width 0))
@@ -249,7 +249,7 @@ Respects `spofy-tab-bar-alignment'."
       ('right (spofy-tab-bar--insert-right)))))
 
 (defun spofy-tab-bar--insert-left ()
-  "Insert the Spofy segment before any right-aligned entries."
+  "Insert the spofy segment before any right-aligned entries."
   (if-let* ((tail (memq 'tab-bar-format-align-right tab-bar-format))
             (pos (- (length tab-bar-format) (length tail))))
       (setq tab-bar-format
@@ -260,7 +260,7 @@ Respects `spofy-tab-bar-alignment'."
           (append tab-bar-format '(tab-bar-format-spofy)))))
 
 (defun spofy-tab-bar--insert-right ()
-  "Insert the Spofy segment at the end, adding alignment if needed."
+  "Insert the spofy segment at the end, adding alignment if needed."
   (unless (memq 'tab-bar-format-align-right tab-bar-format)
     (setq tab-bar-format
           (append tab-bar-format '(tab-bar-format-align-right)))

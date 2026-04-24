@@ -1,4 +1,4 @@
-;;; spofy-api.el --- Spotify Web API client for Spofy  -*- lexical-binding: t; -*-
+;;; spofy-api.el --- Spotify Web API client for spofy  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026  Pablo Stafforini
 
@@ -120,10 +120,10 @@ Patterns are matched as regexps against the URL.")
 
 ;;;###autoload
 (defun spofy-clear-cache ()
-  "Clear the Spofy API response cache."
+  "Clear the spofy API response cache."
   (interactive)
   (clrhash spofy-api--cache)
-  (message "Spofy: API cache cleared."))
+  (message "spofy: API cache cleared."))
 
 ;;;; Response parsing
 
@@ -157,7 +157,7 @@ or not valid JSON."
           (condition-case err
               (json-parse-string body :object-type 'alist :array-type 'array)
             (json-parse-error
-             (message "Spofy: failed to parse JSON response: %s"
+             (message "spofy: failed to parse JSON response: %s"
                       (error-message-string err))
              nil)))))))
 
@@ -225,7 +225,7 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
             (let ((last (gethash full-url spofy-api--last-error-times 0)))
               (when (> (- (float-time) last) spofy-api--error-cooldown)
                 (puthash full-url (float-time) spofy-api--last-error-times)
-                (message "Spofy: no valid access token; try M-x spofy-authenticate"))
+                (message "spofy: no valid access token; try M-x spofy-authenticate"))
               (when callback
                 (funcall callback nil)))
           (let* ((url-request-method method)
@@ -256,7 +256,7 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
                          (condition-case err
                              (spofy-auth-refresh-token)
                            (error
-                            (message "Spofy: token refresh failed: %s"
+                            (message "spofy: token refresh failed: %s"
                                      (error-message-string err))))
                          (spofy-api--request-with-retries
                           method url params data callback retry-count t))
@@ -280,13 +280,13 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
                         ((and (eql status-code 404)
                               (string-match-p "me/player" full-url))
                          (spofy-api--log-error full-url
-                          "Spofy: no active device found; please open Spotify on a device")
+                          "spofy: no active device found; please open Spotify on a device")
                          (when callback
                            (funcall callback nil)))
                         ;; All retries exhausted or unrecoverable error
                         (t
                          (spofy-api--log-error full-url
-                          "Spofy: API request failed (HTTP %s): %s %s"
+                          "spofy: API request failed (HTTP %s): %s %s"
                           (or status-code "?") method full-url)
                          (when callback
                            (funcall callback nil))))))

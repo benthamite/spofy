@@ -1,4 +1,4 @@
-;;; spofy-ui.el --- Shared UI utilities for Spofy  -*- lexical-binding: t; -*-
+;;; spofy-ui.el --- Shared UI utilities for spofy  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026  Pablo Stafforini
 
@@ -24,7 +24,7 @@
 ;;; Commentary:
 
 ;; Shared faces, customization group, and UI helper functions used across
-;; all Spofy modules.
+;; all spofy modules.
 
 ;;; Code:
 
@@ -40,7 +40,7 @@
 ;;;; Faces
 
 (defgroup spofy-faces nil
-  "Faces for Spofy."
+  "Faces for spofy."
   :group 'spofy
   :group 'faces)
 
@@ -207,7 +207,7 @@ fill the window.  Flex columns consume weights in order of appearance."
 Stores the recipe for resize recomputation, sets the format,
 and suppresses `tabulated-list-mode'\\='s built-in ellipsis so that
 only the fade effect from `spofy-ui-truncate' indicates truncation.
-Also installs the Spofy buffer mode-line and common keybindings."
+Also installs the spofy buffer mode-line and common keybindings."
   (setq-local spofy-ui--format-view view)
   (setq-local spofy-ui--format-columns columns)
   (setq-local truncate-string-ellipsis "")
@@ -216,7 +216,7 @@ Also installs the Spofy buffer mode-line and common keybindings."
   (setq-local mode-line-format spofy-ui-mode-line-format))
 
 (defun spofy-ui--recompute-columns ()
-  "Recompute column widths for the current Spofy buffer after resize."
+  "Recompute column widths for the current spofy buffer after resize."
   (when (and spofy-ui--format-view spofy-ui--format-columns)
     (let ((new-format (spofy-ui-compute-format
                        spofy-ui--format-view spofy-ui--format-columns)))
@@ -228,7 +228,7 @@ Also installs the Spofy buffer mode-line and common keybindings."
         (tabulated-list-print t)))))
 
 (defun spofy-ui--handle-window-resize (frame)
-  "Recompute column widths in Spofy buffers displayed in FRAME."
+  "Recompute column widths in spofy buffers displayed in FRAME."
   (dolist (window (window-list frame 'no-minibuf))
     (when (buffer-local-value 'spofy-ui--format-view (window-buffer window))
       (with-selected-window window
@@ -239,7 +239,7 @@ Also installs the Spofy buffer mode-line and common keybindings."
 ;;;; Current-line highlight
 
 (defun spofy-ui-enable-line-highlight ()
-  "Enable current-line highlighting for the current Spofy buffer.
+  "Enable current-line highlighting for the current spofy buffer.
 Prefers `lin-mode' when available so the face matches the user's
 configured style for list buffers; otherwise falls back to plain
 `hl-line-mode'."
@@ -347,14 +347,14 @@ without an abrupt ellipsis."
                 (setq pos (1+ pos))))))))))
 
 (defun spofy-ui--refresh-fades (&rest _)
-  "Recompute fade overlays in all Spofy buffers.
+  "Recompute fade overlays in all spofy buffers.
 Intended for `enable-theme-functions'.  The playing-line border
 also updates its color, though vertical borders may not render
 correctly until the buffer is refreshed with `g'."
   (spofy-ui--refresh-track-highlights)
   (dolist (buf (buffer-list))
     (with-current-buffer buf
-      (when (and (string-prefix-p "*Spofy" (buffer-name))
+      (when (and (string-prefix-p "*spofy" (buffer-name))
                  (not tabulated-list-entries))
         (spofy-ui--apply-buffer-fades)))))
 
@@ -440,7 +440,7 @@ is a list of `tabulated-list-entries' items and NEXT-URL is the URL
 for the following page, or nil.")
 
 (defvar-local spofy-ui--buffer-context nil
-  "Alist of context data for the current Spofy buffer.")
+  "Alist of context data for the current spofy buffer.")
 
 (defvar-local spofy-ui--buffer-entity-name nil
   "Name of the entity displayed in this buffer, shown in the mode line.")
@@ -507,16 +507,16 @@ events under `pixel-scroll-precision-mode'."
   (when-let* ((window (selected-window))
               (buf (window-buffer window)))
     (when (and (buffer-local-value 'spofy-ui--load-more-handler buf)
-               (string-prefix-p "*Spofy" (buffer-name buf)))
+               (string-prefix-p "*spofy" (buffer-name buf)))
       (spofy-ui--maybe-load-more window nil))))
 
 (add-hook 'post-command-hook #'spofy-ui--maybe-load-more-post-command)
 
 (defun spofy-ui--after-tabulated-list-print (&rest _)
-  "Post-process Spofy tabulated-list buffers after printing.
+  "Post-process spofy tabulated-list buffers after printing.
 Apply truncation fade overlays and the playing-line border.
 Added as :after advice on `tabulated-list-print'."
-  (when (string-prefix-p "*Spofy" (buffer-name))
+  (when (string-prefix-p "*spofy" (buffer-name))
     (spofy-ui--apply-buffer-fades)
     (spofy-ui--apply-playing-line-overlay)))
 
@@ -526,7 +526,7 @@ Added as :after advice on `tabulated-list-print'."
 
 (defvar-local spofy-ui--entities nil
   "Hash table mapping entity URIs/IDs to their full API alists.
-Buffer-local in every Spofy list buffer.")
+Buffer-local in every spofy list buffer.")
 
 (defun spofy-ui-store-entity (key entity)
   "Store ENTITY alist under KEY in the buffer-local entity table."
@@ -573,7 +573,7 @@ malformed."
 ;;;###autoload
 (defun spofy-copy-url ()
   "Copy the Spotify URL of the entity at point or the current track.
-In a Spofy list buffer, copies the URL of the row at point.
+In a spofy list buffer, copies the URL of the row at point.
 Otherwise, copies the URL of the currently playing track.  Adds
 the URL to the kill ring."
   (interactive)
@@ -582,7 +582,7 @@ the URL to the kill ring."
     (unless url
       (user-error "No Spotify entity at point or currently playing"))
     (kill-new url)
-    (message "Spofy: copied %s" url)))
+    (message "spofy: copied %s" url)))
 
 (defun spofy-ui--row-uri ()
   "Return the Spotify URI of the tabulated-list row at point, or nil."
@@ -675,7 +675,7 @@ POSITION is 1-based.  Return nil if the track is not here."
     "  "
     mode-line-misc-info
     mode-line-end-spaces)
-  "Mode-line format for Spofy tabulated-list buffers.")
+  "Mode-line format for spofy tabulated-list buffers.")
 
 (defun spofy-ui--mode-line-entity-name ()
   "Return the entity name for the mode line, or empty string."
@@ -719,7 +719,7 @@ content."
     ""))
 
 (defun spofy-ui--update-mode-lines ()
-  "Force mode-line update in all Spofy buffers."
+  "Force mode-line update in all spofy buffers."
   (dolist (buf (buffer-list))
     (when (buffer-local-value 'spofy-ui--format-view buf)
       (with-current-buffer buf
@@ -755,7 +755,7 @@ pass `switch-to-buffer' for browse views."
 ;;;; Track highlight auto-refresh
 
 (defun spofy-ui--refresh-track-highlights ()
-  "Re-render playing indicators in all Spofy list buffers.
+  "Re-render playing indicators in all spofy list buffers.
 Intended for `spofy-player-track-changed-hook'.  Saves and
 restores window points around the reprint, since
 `tabulated-list-print' erases the buffer and invalidates
@@ -808,7 +808,7 @@ window-point markers."
 ;;;###autoload
 (define-minor-mode spofy-cursor-follows-playback-mode
   "When enabled, scroll to the playing track on track changes.
-Applies to all visible Spofy track-list windows.  Off by default."
+Applies to all visible spofy track-list windows.  Off by default."
   :global t
   :group 'spofy
   (if spofy-cursor-follows-playback-mode
@@ -818,14 +818,14 @@ Applies to all visible Spofy track-list windows.  Off by default."
                  #'spofy-ui--follow-playing-track)))
 
 (defun spofy-ui--follow-playing-track ()
-  "Scroll to the playing track in all visible Spofy windows."
+  "Scroll to the playing track in all visible spofy windows."
   (when-let* ((current-id (and (fboundp 'spofy-player-current-track-id)
                                 (spofy-player-current-track-id))))
     (dolist (window (window-list nil 'no-minibuf))
       (spofy-ui--maybe-follow-in-window window current-id))))
 
 (defun spofy-ui--maybe-follow-in-window (window track-id)
-  "In WINDOW, scroll to TRACK-ID if the buffer is a Spofy track list."
+  "In WINDOW, scroll to TRACK-ID if the buffer is a spofy track list."
   (with-current-buffer (window-buffer window)
     (when (and spofy-ui--entry-formatter
                (bound-and-true-p tabulated-list-entries))
