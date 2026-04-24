@@ -253,7 +253,7 @@ SECTION is `history', `now-playing', or `queue' and fully
 determines whether the row gets the now-playing face.  A track
 that also appears in the history section is not highlighted just
 because its URI happens to match the currently playing one — only
-the authoritative `now-playing' row carries the indicator."
+the authoritative `now-playing' row carries the bold styling."
   (let* ((uri (alist-get 'uri track))
          (name (or (alist-get 'name track) ""))
          (artists (or (alist-get 'artists track) []))
@@ -263,9 +263,7 @@ the authoritative `now-playing' row carries the indicator."
          (artist-str (spofy-ui-format-artists artists))
          (duration-str (spofy-ui-format-duration-ms duration-ms))
          (playing (eq section 'now-playing))
-         (indicator (if playing
-                        (propertize "▶" 'face 'spofy-playing-icon)
-                      " ")))
+         (indicator " "))
     (spofy-ui-store-entity uri track)
     (list uri
           (vector indicator

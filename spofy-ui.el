@@ -357,32 +357,35 @@ correctly until the buffer is refreshed with `g'."
   "Overlay highlighting the full line of the currently playing track.")
 
 (defun spofy-ui--apply-playing-line-overlay ()
-  "Place a border overlay on the line of the currently playing track."
+  "Place a border overlay on the line of the currently playing track.
+Skipped in `spofy-timeline-mode', whose now-playing row already
+sits in its own labeled section and needs no extra emphasis."
   (when spofy-ui--playing-line-overlay
     (delete-overlay spofy-ui--playing-line-overlay)
     (setq spofy-ui--playing-line-overlay nil))
   (spofy-ui--remove-playing-line-padding)
-  (let ((current-id (and (fboundp 'spofy-player-current-track-id)
-                         (spofy-player-current-track-id))))
-    (when current-id
-      (save-excursion
-        (goto-char (point-min))
-        (while (not (eobp))
-          (let ((entry-id (tabulated-list-get-id)))
-            (when (and entry-id (string-match-p (regexp-quote current-id) entry-id))
-              (let* ((color (face-foreground 'default nil t))
-                     (end-col (save-excursion (end-of-line) (current-column)))
-                     (padding (max 0 (- (window-body-width) end-col -2))))
-                (with-silent-modifications
-                  (save-excursion
-                    (end-of-line)
-                    (insert (propertize (make-string padding ?\s) 'spofy-padding t))))
-                (let ((ov (make-overlay (line-beginning-position) (line-end-position))))
-                  (overlay-put ov 'face
-                               `(:box (:line-width (-1 . -1) :color ,color)))
-                  (setq spofy-ui--playing-line-overlay ov))
-                (goto-char (point-max))))
-            (forward-line 1)))))))
+  (unless (derived-mode-p 'spofy-timeline-mode)
+    (let ((current-id (and (fboundp 'spofy-player-current-track-id)
+                           (spofy-player-current-track-id))))
+      (when current-id
+        (save-excursion
+          (goto-char (point-min))
+          (while (not (eobp))
+            (let ((entry-id (tabulated-list-get-id)))
+              (when (and entry-id (string-match-p (regexp-quote current-id) entry-id))
+                (let* ((color (face-foreground 'default nil t))
+                       (end-col (save-excursion (end-of-line) (current-column)))
+                       (padding (max 0 (- (window-body-width) end-col -2))))
+                  (with-silent-modifications
+                    (save-excursion
+                      (end-of-line)
+                      (insert (propertize (make-string padding ?\s) 'spofy-padding t))))
+                  (let ((ov (make-overlay (line-beginning-position) (line-end-position))))
+                    (overlay-put ov 'face
+                                 `(:box (:line-width (-1 . -1) :color ,color)))
+                    (setq spofy-ui--playing-line-overlay ov))
+                  (goto-char (point-max))))
+              (forward-line 1))))))))
 
 (defun spofy-ui-progress-bar-only (progress-ms duration-ms width)
   "Build a text progress bar for PROGRESS-MS out of DURATION-MS.
