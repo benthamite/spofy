@@ -65,7 +65,6 @@ Commands
 
 Tracking the playing position
 
-* Jump to playing track::
 * Cursor follows playback::
 * Buffer mode-line::
 
@@ -444,10 +443,9 @@ WIDTH is the keyword ‘:flex’, the column width is computed
 proportionally from ‘spofy-columns’.  The convenience function
 ‘spofy-ui-set-format’ calls ‘spofy-ui-compute-format’ and stores the
 recipe so that column widths are recomputed on window resize.  It also
-installs the custom buffer mode-line (*note Buffer mode-line::) and
-binds ‘.’ to ‘spofy-jump-to-playing-track’ (*note Jump to playing
-track::).  The function ‘spofy-ui-col’ returns the computed width for a
-given view and flex column index.
+installs the custom buffer mode-line (*note Buffer mode-line::).  The
+function ‘spofy-ui-col’ returns the computed width for a given view and
+flex column index.
 
 
 File: spofy.info,  Node: Commands,  Next: Functions,  Prev: User options,  Up: Top
@@ -511,17 +509,15 @@ opens the ‘*Spofy*’ dashboard buffer.  The dashboard always shows a *now
 playing* section at the top (track name, artist, and album with release
 year each on its own line, then a progress bar, then shuffle/repeat
 state on the left with elapsed/total timestamps right-aligned to the
-progress bar).  The three title lines are clickable: clicking the track
-name jumps to the currently playing track via
-‘spofy-jump-to-playing-track’, clicking an artist name opens that artist
-via ‘spofy-view-artist’, and clicking the album line opens that album
-via ‘spofy-view-album’.  Below it, a configurable list of sections is
-displayed according to ‘spofy-dashboard-sections’ (*note Global options:
-Global key and mode-line activation.).  By default, the dashboard shows
-recently played tracks and user playlists.  Each section includes a
-"View all" link that opens the full list in a tabulated-list buffer.
-Use the transient popup (*note Transient popup::) to discover available
-keybindings.
+progress bar).  The artist and album lines are clickable: clicking an
+artist name opens that artist via ‘spofy-view-artist’, and clicking the
+album line opens that album via ‘spofy-view-album’.  Below it, a
+configurable list of sections is displayed according to
+‘spofy-dashboard-sections’ (*note Global options: Global key and
+mode-line activation.).  By default, the dashboard shows recently played
+tracks and user playlists.  Each section includes a "View all" link that
+opens the full list in a tabulated-list buffer.  Use the transient popup
+(*note Transient popup::) to discover available keybindings.
 
    The now-playing section refreshes automatically when the player state
 changes.  A 1-second timer interpolates the progress bar between polls
@@ -539,13 +535,12 @@ stop all background activity.
    The dashboard keymap provides these bindings:
 
 Key     Command
-----------------------------------------
+------------------------------------
 ‘SPC’   ‘spofy-play-pause’
 ‘n’     ‘spofy-next’
 ‘p’     ‘spofy-previous’
 ‘/’     ‘spofy-menu’
 ‘g’     ‘spofy-dashboard-refresh’
-‘.’     ‘spofy-jump-to-playing-track’
 ‘q’     ‘quit-window’
 
 
@@ -684,37 +679,17 @@ File: spofy.info,  Node: Tracking the playing position,  Next: Polling,  Prev: P
 
 When listening to a long playlist—especially in shuffle mode—it is easy
 to lose track of which item in the list is currently playing.  Spofy
-provides three complementary mechanisms to address this.
+provides two complementary mechanisms to address this.
 
 * Menu:
 
-* Jump to playing track::
 * Cursor follows playback::
 * Buffer mode-line::
 
 
-File: spofy.info,  Node: Jump to playing track,  Next: Cursor follows playback,  Up: Tracking the playing position
+File: spofy.info,  Node: Cursor follows playback,  Next: Buffer mode-line,  Up: Tracking the playing position
 
-3.6.1 Jump to playing track
----------------------------
-
-The command ‘spofy-jump-to-playing-track’ navigates to the currently
-playing track.  It searches the current buffer first, then other open
-Spofy buffers, and finally opens the playing context (album or playlist)
-from the API if no buffer contains the track.  When the context must be
-fetched, the command uses the browse cache (*note Browse cache::) to
-avoid refetching previously loaded playlists.
-
-   The command is bound to ‘.’ in all Spofy buffers—both tabulated-list
-views and the dashboard—via ‘spofy-ui-set-format’.  It is also available
-in the transient popup (*note Transient popup::) under ‘.’.  After
-jumping, the echo area displays the track's position (e.g.  "Spofy:
-track 47/213").
-
-
-File: spofy.info,  Node: Cursor follows playback,  Next: Buffer mode-line,  Prev: Jump to playing track,  Up: Tracking the playing position
-
-3.6.2 Cursor follows playback
+3.6.1 Cursor follows playback
 -----------------------------
 
 The command ‘spofy-cursor-follows-playback-mode’ toggles a global minor
@@ -732,7 +707,7 @@ the entries with updated playing indicators.
 
 File: spofy.info,  Node: Buffer mode-line,  Prev: Cursor follows playback,  Up: Tracking the playing position
 
-3.6.3 Buffer mode-line
+3.6.2 Buffer mode-line
 ----------------------
 
 All Spofy tabulated-list buffers and the dashboard use a custom
@@ -795,9 +770,8 @@ current track belongs to a different album.  During state extraction,
 Spofy detects this mismatch by comparing the context album ID with the
 track's actual album ID and corrects the context URI to point to the
 track's own album.  This ensures that all context-dependent
-commands—~spofy-jump-to-playing-track~ (*note Jump to playing track::),
-‘spofy-library-browse-context’, ~spofy-library-search-context~—navigate
-to the correct album.
+commands—~spofy-library-browse-context~,
+~spofy-library-search-context~—navigate to the correct album.
 
 
 File: spofy.info,  Node: Device management,  Next: Search,  Prev: Polling,  Up: Commands
@@ -908,16 +882,15 @@ and the highlight updates automatically when the track changes.  Column
 widths are controlled by the ‘spofy-columns’ user option (*note Column
 widths::).
 
-Key     Command                         Action
-----------------------------------------------------------------------
-‘RET’   ‘spofy-album-play-track’        Play track in album context
-‘a’     ‘spofy-album-play’              Play the entire album
-‘A’     ‘spofy-album-view-artist’       View the artist
-‘s’     ‘spofy-album-save’              Save album to library
-‘SPC’   ‘spofy-play-pause’              Toggle play/pause
-‘g’     ‘spofy-album-refresh’           Refresh
-‘.’     ‘spofy-jump-to-playing-track’   Jump to playing track
-‘q’     ‘quit-window’                   Close
+Key     Command                     Action
+------------------------------------------------------------------
+‘RET’   ‘spofy-album-play-track’    Play track in album context
+‘a’     ‘spofy-album-play’          Play the entire album
+‘A’     ‘spofy-album-view-artist’   View the artist
+‘s’     ‘spofy-album-save’          Save album to library
+‘SPC’   ‘spofy-play-pause’          Toggle play/pause
+‘g’     ‘spofy-album-refresh’       Refresh
+‘q’     ‘quit-window’               Close
 
 
 File: spofy.info,  Node: Artist view,  Next: Playlist detail view,  Prev: Album view,  Up: Browsing
@@ -957,7 +930,6 @@ Key     Command                                Action
 ‘s’     ‘spofy-artist-top-tracks-save’         Save track to library
 ‘SPC’   ‘spofy-play-pause’                     Toggle play/pause
 ‘g’     ‘spofy-artist-top-tracks-refresh’      Refresh
-‘.’     ‘spofy-jump-to-playing-track’          Jump to playing track
 ‘q’     ‘quit-window’                          Close
 
 
@@ -985,7 +957,6 @@ Key     Command                              Action
 ‘f’     ‘spofy-playlist-view-follow’         Follow playlist
 ‘SPC’   ‘spofy-play-pause’                   Toggle play/pause
 ‘g’     ‘spofy-playlist-view-refresh’        Refresh
-‘.’     ‘spofy-jump-to-playing-track’        Jump to playing track
 ‘q’     ‘quit-window’                        Close
 
 
@@ -1248,12 +1219,10 @@ is keyed by context URI (e.g.  ‘spotify:playlist:ID’,
 ‘spotify:artist:ID:albums’, ‘spotify:artist:ID:top-tracks’).
 
    The first time a browse view is opened, all pages of items are
-fetched from the API and stored in the cache.  Subsequent
-opens—including those triggered by ‘spofy-jump-to-playing-track’ (*note
-Jump to playing track::)—serve items from the cache instantly, skipping
-the multi-page API fetch.  This is particularly noticeable for large
-playlists (hundreds or thousands of tracks) where the initial fetch may
-take several seconds.
+fetched from the API and stored in the cache.  Subsequent opens serve
+items from the cache instantly, skipping the multi-page API fetch.  This
+is particularly noticeable for large playlists (hundreds or thousands of
+tracks) where the initial fetch may take several seconds.
 
    The cache is invalidated automatically when the user presses ‘g’
 (refresh) in any browse buffer, or when a playlist mutation occurs
@@ -1975,10 +1944,6 @@ File: spofy.info,  Node: Function index,  Next: Variable index,  Up: Indices
 * spofy-follow-artist:                   Library management.   (line  6)
 * spofy-follow-playlist:                 Playlist management.  (line  6)
 * spofy-global-mode:                     Global minor mode.    (line  6)
-* spofy-jump-to-playing-track:           Tracking the playing position.
-                                                               (line  6)
-* spofy-jump-to-playing-track <1>:       Jump to playing track.
-                                                               (line  6)
 * spofy-library-browse-albums:           Library management.   (line  6)
 * spofy-library-browse-context:          Library management.   (line  6)
 * spofy-library-browse-playlists:        Playlist management.  (line  6)
@@ -2161,59 +2126,58 @@ File: spofy.info,  Node: Variable index,  Prev: Function index,  Up: Indices
 
 Tag Table:
 Node: Top199
-Node: Overview1754
-Node: Getting started4923
-Node: User options6245
-Node: Authentication (1)6506
-Node: Playback8075
-Node: Mode-line8899
-Node: Tab-bar10014
-Node: Global key and mode-line activation12166
-Node: Column widths15415
-Node: Commands17398
-Node: Authentication17805
-Node: Dashboard and global control19030
-Node: Transient popup21449
-Node: Global minor mode23184
-Node: Playback control24638
-Node: Tracking the playing position28300
-Node: Jump to playing track28771
-Node: Cursor follows playback29663
-Node: Buffer mode-line30422
-Node: Polling31807
-Node: Device management34089
-Node: Search34752
-Node: Navigating search results36251
-Node: Browsing37367
-Node: Album view37557
-Node: Artist view39063
-Node: Playlist detail view41232
-Node: Playlist management42753
-Node: Library management45472
-Node: Timeline50981
-Node: Cache management53194
-Node: Browse cache55472
-Node: Functions56687
-Node: Player state accessors56938
-Node: Entity access in buffers58050
-Node: API client58648
-Node: Authentication helpers60225
-Node: Formatting utilities61344
-Node: Pagination64900
-Node: Entity storage and list rendering66753
-Node: Consult integration69313
-Node: Embark integration73724
-Node: Org-mode integration76857
-Node: Wikipedia integration78102
-Node: Wikipedia user options81750
-Node: Faces83429
-Node: Hooks85550
-Node: Mode-line display86761
-Node: Tab-bar display87689
-Node: Development89008
-Node: Indices89225
-Node: Function index89362
-Node: Variable index100909
+Node: Overview1728
+Node: Getting started4897
+Node: User options6219
+Node: Authentication (1)6480
+Node: Playback8049
+Node: Mode-line8873
+Node: Tab-bar9988
+Node: Global key and mode-line activation12140
+Node: Column widths15389
+Node: Commands17285
+Node: Authentication17692
+Node: Dashboard and global control18917
+Node: Transient popup21192
+Node: Global minor mode22927
+Node: Playback control24381
+Node: Tracking the playing position28043
+Node: Cursor follows playback28486
+Node: Buffer mode-line29215
+Node: Polling30600
+Node: Device management32815
+Node: Search33478
+Node: Navigating search results34977
+Node: Browsing36093
+Node: Album view36283
+Node: Artist view37683
+Node: Playlist detail view39775
+Node: Playlist management41221
+Node: Library management43940
+Node: Timeline49449
+Node: Cache management51662
+Node: Browse cache53940
+Node: Functions55056
+Node: Player state accessors55307
+Node: Entity access in buffers56419
+Node: API client57017
+Node: Authentication helpers58594
+Node: Formatting utilities59713
+Node: Pagination63269
+Node: Entity storage and list rendering65122
+Node: Consult integration67682
+Node: Embark integration72093
+Node: Org-mode integration75226
+Node: Wikipedia integration76471
+Node: Wikipedia user options80119
+Node: Faces81798
+Node: Hooks83919
+Node: Mode-line display85130
+Node: Tab-bar display86058
+Node: Development87377
+Node: Indices87594
+Node: Function index87731
+Node: Variable index98996
 
 End Tag Table
 

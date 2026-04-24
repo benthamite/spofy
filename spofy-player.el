@@ -525,55 +525,5 @@ TIMESTAMP is a string in M:SS, H:MM:SS, or plain seconds format."
                      (message "Spofy: seeked to %s"
                               (spofy-ui-format-duration-ms clamped))))))
 
-;;;; Jump to track
-
-;;;###autoload
-(defun spofy-jump-to-playing-track ()
-  "Jump to the currently playing track.
-Search the current buffer first, then other Spofy buffers.
-If no buffer contains the track, open the playing context."
-  (interactive)
-  (let ((track-id (spofy-player-current-track-id)))
-    (unless track-id
-      (user-error "Spofy: no track playing"))
-    (cond
-     ((spofy-jump-to-playing-track--in-current-buffer track-id))
-     ((spofy-jump-to-playing-track--in-other-buffer track-id))
-     (t (spofy-jump-to-playing-track--open-context track-id)))))
-
-(defun spofy-jump-to-playing-track--in-current-buffer (track-id)
-  "Try to jump to TRACK-ID in the current buffer.
-Return non-nil on success."
-  (when (and (bound-and-true-p spofy-ui--entry-formatter)
-             (spofy-ui--goto-playing-track track-id))
-    (spofy-jump-to-playing-track--message)
-    t))
-
-(defun spofy-jump-to-playing-track--in-other-buffer (track-id)
-  "Try to jump to TRACK-ID in another Spofy buffer.
-Return non-nil on success."
-  (when-let* ((buf (spofy-ui--find-buffer-with-track track-id)))
-    (switch-to-buffer buf)
-    (spofy-ui--goto-playing-track track-id)
-    (spofy-jump-to-playing-track--message)
-    t))
-
-(defun spofy-jump-to-playing-track--open-context (track-id)
-  "Open the playing context and arrange to jump to TRACK-ID."
-  (let ((context-uri (alist-get 'context-uri spofy-player--current-state))
-        (context-type (alist-get 'context-type spofy-player--current-state)))
-    (unless (and context-uri (member context-type '("album" "playlist")))
-      (user-error "Spofy: cannot browse this context"))
-    (setq spofy-ui--pending-jump-track-id track-id)
-    (let ((context-id (car (last (split-string context-uri ":")))))
-      (pcase context-type
-        ("album" (spofy-view-album context-id))
-        ("playlist" (spofy-view-playlist context-id))))))
-
-(defun spofy-jump-to-playing-track--message ()
-  "Display the playing track position in the echo area."
-  (when-let* ((pos (spofy-ui--playing-track-position)))
-    (message "Spofy: track %d/%d" (car pos) (cdr pos))))
-
 (provide 'spofy-player)
 ;;; spofy-player.el ends here

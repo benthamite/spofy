@@ -208,8 +208,7 @@ Also installs the Spofy buffer mode-line and common keybindings."
   (setq-local truncate-string-ellipsis "")
   (setq-local cursor-type nil)
   (setq tabulated-list-format (spofy-ui-compute-format view columns))
-  (setq-local mode-line-format spofy-ui-mode-line-format)
-  (local-set-key (kbd ".") #'spofy-jump-to-playing-track))
+  (setq-local mode-line-format spofy-ui-mode-line-format))
 
 (defun spofy-ui--recompute-columns ()
   "Recompute column widths for the current Spofy buffer after resize."
@@ -497,30 +496,11 @@ events under `pixel-scroll-precision-mode'."
 
 (defun spofy-ui--after-tabulated-list-print (&rest _)
   "Post-process Spofy tabulated-list buffers after printing.
-Apply truncation fade overlays, playing-line border, and pending
-jump-to-track navigation.  Added as :after advice on
-`tabulated-list-print'."
+Apply truncation fade overlays and the playing-line border.
+Added as :after advice on `tabulated-list-print'."
   (when (string-prefix-p "*Spofy" (buffer-name))
     (spofy-ui--apply-buffer-fades)
-    (spofy-ui--apply-playing-line-overlay)
-    (spofy-ui--maybe-jump-to-pending-track)))
-
-(defun spofy-ui--maybe-jump-to-pending-track ()
-  "Schedule a jump to the pending track after the render completes.
-Deferred to the next event loop tick so that the render
-function's `goto-char' and `switch-to-buffer' finish first."
-  (when spofy-ui--pending-jump-track-id
-    (let ((id spofy-ui--pending-jump-track-id)
-          (buf (current-buffer)))
-      (setq spofy-ui--pending-jump-track-id nil)
-      (run-with-timer 0 nil
-                      #'spofy-ui--execute-pending-jump buf id))))
-
-(defun spofy-ui--execute-pending-jump (buf track-id)
-  "Jump to TRACK-ID in BUF if the buffer is still live."
-  (when (buffer-live-p buf)
-    (with-current-buffer buf
-      (spofy-ui--goto-playing-track track-id))))
+    (spofy-ui--apply-playing-line-overlay)))
 
 (advice-add 'tabulated-list-print :after #'spofy-ui--after-tabulated-list-print)
 
@@ -555,7 +535,6 @@ play request.  Returns nil when point is not on a row."
 
 (defvar spofy-player--current-state)
 (declare-function spofy-player-current-track-id "spofy-player" ())
-(declare-function spofy-jump-to-playing-track "spofy-player" ())
 
 (defun spofy-ui-extract-id (uri)
   "Extract the Spotify ID from URI (e.g. \"spotify:track:xyz\" -> \"xyz\")."
@@ -639,9 +618,6 @@ Shows a play icon if TRACK-URI matches the currently playing track."
 
 ;;;; Playing track navigation
 
-(defvar spofy-ui--pending-jump-track-id nil
-  "Track ID to jump to after the next buffer render.")
-
 (defun spofy-ui--find-track-position (track-id)
   "Return buffer position of the row matching TRACK-ID, or nil."
   (save-excursion
@@ -653,19 +629,6 @@ Shows a play icon if TRACK-URI matches the currently playing track."
             (throw 'found (point))))
         (forward-line 1))
       nil)))
-
-(defun spofy-ui--goto-playing-track (&optional track-id)
-  "Move point to the row of the currently playing track.
-If TRACK-ID is non-nil, use it instead of the current player
-state.  Return non-nil if found."
-  (when-let* ((id (or track-id
-                      (and (fboundp 'spofy-player-current-track-id)
-                           (spofy-player-current-track-id))))
-              (pos (spofy-ui--find-track-position id)))
-    (goto-char pos)
-    (when (get-buffer-window (current-buffer))
-      (recenter))
-    t))
 
 (defun spofy-ui--playing-track-position ()
   "Return (POSITION . TOTAL) for the playing track in this buffer.
@@ -683,16 +646,6 @@ POSITION is 1-based.  Return nil if the track is not here."
           (setq pos (1+ idx)))
         (cl-incf idx))
       (when pos (cons pos total)))))
-
-(defun spofy-ui--find-buffer-with-track (track-id)
-  "Return a Spofy buffer containing TRACK-ID, or nil."
-  (cl-find-if
-   (lambda (buf)
-     (with-current-buffer buf
-       (and spofy-ui--entry-formatter
-            (bound-and-true-p tabulated-list-entries)
-            (spofy-ui--find-track-position track-id))))
-   (buffer-list)))
 
 ;;;; Buffer mode-line
 

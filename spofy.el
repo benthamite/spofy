@@ -77,7 +77,6 @@
 (declare-function spofy-player--ensure-device "spofy-player" ())
 (declare-function spofy-player--poll-sync "spofy-player" ())
 (declare-function spofy-seek-to "spofy-player" ())
-(declare-function spofy-jump-to-playing-track "spofy-player" ())
 
 ;; spofy-search
 (declare-function spofy-search-tracks "spofy-search" (query))
@@ -190,7 +189,6 @@ Each element is a symbol naming a section.  Available sections:
     (define-key map (kbd "p")   #'spofy-previous)
     (define-key map (kbd "/")   #'spofy-menu)
     (define-key map (kbd "g")   #'spofy-dashboard-refresh)
-    (define-key map (kbd ".")   #'spofy-jump-to-playing-track)
     (define-key map (kbd "q")   #'quit-window)
     map)
   "Keymap for `spofy-dashboard-mode'.")
@@ -312,7 +310,6 @@ The next 1-second progress timer tick will pick up the new image."
   (let* ((state (and (boundp 'spofy-player--current-state)
                      spofy-player--current-state))
          (track (and state (alist-get 'track state)))
-         (track-id (and state (alist-get 'track-id state)))
          (artist (and state (alist-get 'artist state)))
          (artists (and state (alist-get 'artists state)))
          (album (and state (alist-get 'album state)))
@@ -329,7 +326,7 @@ The next 1-second progress timer tick will pick up the new image."
                 spofy--album-art-image nil)
           (insert (propertize "  No track playing" 'face 'spofy-muted) "\n"))
       (insert "  ")
-      (spofy--dashboard-insert-now-playing-track track track-id)
+      (spofy--dashboard-insert-now-playing-track track)
       (insert "\n  ")
       (spofy--dashboard-insert-now-playing-artists artists artist)
       (insert "\n  ")
@@ -364,19 +361,10 @@ The next 1-second progress timer tick will pick up the new image."
                     time-str
                     "\n")))))))
 
-(defun spofy--dashboard-insert-now-playing-track (track track-id)
-  "Insert the TRACK title as a clickable link when TRACK-ID is non-nil.
-Clicking invokes `spofy-jump-to-playing-track' to reveal the track in its
-playing context."
-  (let ((text (spofy--dashboard-truncate
-               (propertize track 'face 'spofy-now-playing-track))))
-    (if track-id
-        (insert-text-button text
-                            'action (lambda (_btn)
-                                      (require 'spofy-player)
-                                      (spofy-jump-to-playing-track))
-                            'follow-link t)
-      (insert text))))
+(defun spofy--dashboard-insert-now-playing-track (track)
+  "Insert the TRACK title in the dashboard now-playing section."
+  (insert (spofy--dashboard-truncate
+           (propertize track 'face 'spofy-now-playing-track))))
 
 (defun spofy--dashboard-insert-now-playing-artists (artists fallback)
   "Insert ARTISTS as clickable links, or FALLBACK when unavailable.
@@ -976,7 +964,6 @@ If no tokens are available, prompts the user to authenticate."
     "Now playing"
     ("w s" "Save track"     spofy-save-current-track)
     ("w u" "Unsave track"   spofy-unsave-current-track)
-    ("w j" "Jump to track"  spofy-jump-to-playing-track)
     ("w w" "Track info"     spofy-wikipedia)
     ("w t" "Timeline"       spofy-view-timeline)]
    ["Search Spotify"

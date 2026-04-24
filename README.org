@@ -204,7 +204,7 @@ Variable-width columns are sized dynamically so that all columns together fill t
 | =playlist-track=  | Name (30), Artist(s) (20), Album (20)        |
 | =playlist-list=   | Name (35), Owner (20)                        |
 
-The function ~spofy-ui-compute-format~ takes a view symbol and a list of column specs, where each spec is =(NAME WIDTH SORT . PROPS)=.  When WIDTH is the keyword =:flex=, the column width is computed proportionally from ~spofy-columns~.  The convenience function ~spofy-ui-set-format~ calls ~spofy-ui-compute-format~ and stores the recipe so that column widths are recomputed on window resize.  It also installs the custom buffer mode-line ([[#h:buffer-mode-line][Buffer mode-line]]) and binds =.= to ~spofy-jump-to-playing-track~ ([[#h:jump-to-playing-track][Jump to playing track]]).  The function ~spofy-ui-col~ returns the computed width for a given view and flex column index.
+The function ~spofy-ui-compute-format~ takes a view symbol and a list of column specs, where each spec is =(NAME WIDTH SORT . PROPS)=.  When WIDTH is the keyword =:flex=, the column width is computed proportionally from ~spofy-columns~.  The convenience function ~spofy-ui-set-format~ calls ~spofy-ui-compute-format~ and stores the recipe so that column widths are recomputed on window resize.  It also installs the custom buffer mode-line ([[#h:buffer-mode-line][Buffer mode-line]]).  The function ~spofy-ui-col~ returns the computed width for a given view and flex column index.
 
 * Commands
 :PROPERTIES:
@@ -233,7 +233,7 @@ Any Spofy command that requires an active session will prompt for authentication
 #+findex: spofy-dashboard-refresh
 #+findex: spofy-stop
 
-The command ~spofy~ is the main entry point.  It ensures that the user is authenticated (prompting if not), starts player state polling, and opens the =*Spofy*= dashboard buffer.  The dashboard always shows a *now playing* section at the top (track name, artist, and album with release year each on its own line, then a progress bar, then shuffle/repeat state on the left with elapsed/total timestamps right-aligned to the progress bar).  The three title lines are clickable: clicking the track name jumps to the currently playing track via ~spofy-jump-to-playing-track~, clicking an artist name opens that artist via ~spofy-view-artist~, and clicking the album line opens that album via ~spofy-view-album~.  Below it, a configurable list of sections is displayed according to ~spofy-dashboard-sections~ ([[#h:user-options-global][Global options]]).  By default, the dashboard shows recently played tracks and user playlists.  Each section includes a "View all" link that opens the full list in a tabulated-list buffer.  Use the transient popup ([[#h:transient-popup][Transient popup]]) to discover available keybindings.
+The command ~spofy~ is the main entry point.  It ensures that the user is authenticated (prompting if not), starts player state polling, and opens the =*Spofy*= dashboard buffer.  The dashboard always shows a *now playing* section at the top (track name, artist, and album with release year each on its own line, then a progress bar, then shuffle/repeat state on the left with elapsed/total timestamps right-aligned to the progress bar).  The artist and album lines are clickable: clicking an artist name opens that artist via ~spofy-view-artist~, and clicking the album line opens that album via ~spofy-view-album~.  Below it, a configurable list of sections is displayed according to ~spofy-dashboard-sections~ ([[#h:user-options-global][Global options]]).  By default, the dashboard shows recently played tracks and user playlists.  Each section includes a "View all" link that opens the full list in a tabulated-list buffer.  Use the transient popup ([[#h:transient-popup][Transient popup]]) to discover available keybindings.
 
 The now-playing section refreshes automatically when the player state changes.  A 1-second timer interpolates the progress bar between polls so it animates smoothly.  The recently-played section refreshes automatically when the current track changes.  Because the Spotify API takes a few seconds to register a finished track in the =me/player/recently-played= endpoint, the refresh is delayed by ~spofy-poll-interval~ seconds to avoid fetching stale data.  The command ~spofy-dashboard-refresh~ forces a full refresh of the entire dashboard.
 
@@ -248,7 +248,6 @@ The dashboard keymap provides these bindings:
 | =p=   | ~spofy-previous~          |
 | =/=   | ~spofy-menu~              |
 | =g=   | ~spofy-dashboard-refresh~ |
-| =.=   | ~spofy-jump-to-playing-track~ |
 | =q=   | ~quit-window~             |
 
 ** Transient popup
@@ -329,20 +328,9 @@ The command ~spofy-copy-url~ copies the =https://open.spotify.com= URL of the en
 :CUSTOM_ID: h:tracking-playback
 :END:
 
-#+findex: spofy-jump-to-playing-track
 #+findex: spofy-cursor-follows-playback-mode
 
-When listening to a long playlist—especially in shuffle mode—it is easy to lose track of which item in the list is currently playing.  Spofy provides three complementary mechanisms to address this.
-
-*** Jump to playing track
-:PROPERTIES:
-:CUSTOM_ID: h:jump-to-playing-track
-:END:
-
-#+findex: spofy-jump-to-playing-track
-The command ~spofy-jump-to-playing-track~ navigates to the currently playing track.  It searches the current buffer first, then other open Spofy buffers, and finally opens the playing context (album or playlist) from the API if no buffer contains the track.  When the context must be fetched, the command uses the browse cache ([[#h:browse-cache][Browse cache]]) to avoid refetching previously loaded playlists.
-
-The command is bound to =.= in all Spofy buffers—both tabulated-list views and the dashboard—via ~spofy-ui-set-format~.  It is also available in the transient popup ([[#h:transient-popup][Transient popup]]) under =.=.  After jumping, the echo area displays the track's position (e.g. "Spofy: track 47/213").
+When listening to a long playlist—especially in shuffle mode—it is easy to lose track of which item in the list is currently playing.  Spofy provides two complementary mechanisms to address this.
 
 *** Cursor follows playback
 :PROPERTIES:
@@ -387,7 +375,7 @@ When the player state changes, Spofy runs ~spofy-player-state-changed-hook~.  Wh
 
 The command ~spofy-player-stop-polling~ cancels the polling timer.  Polling is started automatically by the ~spofy~ command and ~spofy-global-mode~, and stopped by ~spofy-stop~.  All HTTP response buffers created by API requests are cleaned up via ~unwind-protect~, so transient errors cannot leak buffers.
 
-When Spotify's autoplay continues beyond an album, the API may still report the original album as the playback context even though the current track belongs to a different album.  During state extraction, Spofy detects this mismatch by comparing the context album ID with the track's actual album ID and corrects the context URI to point to the track's own album.  This ensures that all context-dependent commands—~spofy-jump-to-playing-track~ ([[#h:jump-to-playing-track][Jump to playing track]]), ~spofy-library-browse-context~, ~spofy-library-search-context~—navigate to the correct album.
+When Spotify's autoplay continues beyond an album, the API may still report the original album as the playback context even though the current track belongs to a different album.  During state extraction, Spofy detects this mismatch by comparing the context album ID with the track's actual album ID and corrects the context URI to point to the track's own album.  This ensures that all context-dependent commands—~spofy-library-browse-context~, ~spofy-library-search-context~—navigate to the correct album.
 
 ** Device management
 :PROPERTIES:
@@ -480,7 +468,6 @@ The command ~spofy-view-album~ displays the tracks of a Spotify album in a =*Spo
 | =s=   | ~spofy-album-save~         | Save album to library          |
 | =SPC= | ~spofy-play-pause~         | Toggle play/pause              |
 | =g=   | ~spofy-album-refresh~      | Refresh                        |
-| =.=   | ~spofy-jump-to-playing-track~ | Jump to playing track  |
 | =q=   | ~quit-window~              | Close                          |
 
 *** Artist view
@@ -513,7 +500,6 @@ The function ~spofy-view-artist-top-tracks~ fetches the artist's top tracks (as 
 | =s=   | ~spofy-artist-top-tracks-save~       | Save track to library       |
 | =SPC= | ~spofy-play-pause~                   | Toggle play/pause           |
 | =g=   | ~spofy-artist-top-tracks-refresh~    | Refresh                     |
-| =.=   | ~spofy-jump-to-playing-track~        | Jump to playing track       |
 | =q=   | ~quit-window~                        | Close                       |
 
 *** Playlist detail view
@@ -536,7 +522,6 @@ The command ~spofy-view-playlist~ displays the tracks of a playlist in a =*Spofy
 | =f=   | ~spofy-playlist-view-follow~       | Follow playlist                |
 | =SPC= | ~spofy-play-pause~                 | Toggle play/pause              |
 | =g=   | ~spofy-playlist-view-refresh~      | Refresh                        |
-| =.=   | ~spofy-jump-to-playing-track~      | Jump to playing track    |
 | =q=   | ~quit-window~                      | Close                          |
 
 ** Playlist management
@@ -720,7 +705,7 @@ The library cache is invalidated automatically when items are saved or unsaved v
 
 In addition to the API response cache and library cache, Spofy maintains a *browse cache* that stores the complete list of items for each album, artist, and playlist that has been opened in a browse view.  The cache is keyed by context URI (e.g. =spotify:playlist:ID=, =spotify:album:ID=) or a synthetic key for artist views (e.g. =spotify:artist:ID:albums=, =spotify:artist:ID:top-tracks=).
 
-The first time a browse view is opened, all pages of items are fetched from the API and stored in the cache.  Subsequent opens—including those triggered by ~spofy-jump-to-playing-track~ ([[#h:jump-to-playing-track][Jump to playing track]])—serve items from the cache instantly, skipping the multi-page API fetch.  This is particularly noticeable for large playlists (hundreds or thousands of tracks) where the initial fetch may take several seconds.
+The first time a browse view is opened, all pages of items are fetched from the API and stored in the cache.  Subsequent opens serve items from the cache instantly, skipping the multi-page API fetch.  This is particularly noticeable for large playlists (hundreds or thousands of tracks) where the initial fetch may take several seconds.
 
 The cache is invalidated automatically when the user presses =g= (refresh) in any browse buffer, or when a playlist mutation occurs (adding, removing, or reordering tracks).  It is not persisted to disk; a new Emacs session starts with an empty cache.
 
