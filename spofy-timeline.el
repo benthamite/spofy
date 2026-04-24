@@ -102,7 +102,8 @@
   (setq-local tabulated-list-printer #'spofy-timeline--printer)
   (setq-local spofy-ui--entry-formatter #'spofy-timeline--reformat-entry)
   (tabulated-list-init-header)
-  (setq header-line-format nil))
+  (setq header-line-format nil)
+  (spofy-ui-enable-line-highlight))
 
 ;;;; Interactive commands
 

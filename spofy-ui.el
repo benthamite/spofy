@@ -236,6 +236,17 @@ Also installs the Spofy buffer mode-line and common keybindings."
 
 (add-hook 'window-size-change-functions #'spofy-ui--handle-window-resize)
 
+;;;; Current-line highlight
+
+(defun spofy-ui-enable-line-highlight ()
+  "Enable current-line highlighting for the current Spofy buffer.
+Prefers `lin-mode' when available so the face matches the user's
+configured style for list buffers; otherwise falls back to plain
+`hl-line-mode'."
+  (if (fboundp 'lin-mode)
+      (lin-mode 1)
+    (hl-line-mode 1)))
+
 ;;;; Utilities
 
 (defun spofy-ui-format-duration-ms (ms)
