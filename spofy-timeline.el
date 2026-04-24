@@ -36,6 +36,7 @@
 ;;; Code:
 
 (require 'spofy-api)
+(require 'spofy-browse)
 (require 'spofy-ui)
 (require 'cl-lib)
 
@@ -47,6 +48,10 @@
 (declare-function spofy-view-artist "spofy-browse" (artist-id))
 (declare-function spofy-library-save "spofy-library" (uri-or-type &optional id))
 (declare-function spofy-add-to-queue "spofy-queue" (uri))
+(declare-function spofy-browse--cache-get "spofy-browse" (context-uri))
+(declare-function spofy-browse--cache-put "spofy-browse" (context-uri items))
+(declare-function spofy-browse--fetch-all-pages
+                  "spofy-browse" (collected next-url callback))
 
 ;;;; User options
 
@@ -133,11 +138,84 @@ playback context so the remainder of the queue stays intact.
 For history rows, replays the track within the same context it
 was originally played in (captured from the recently-played
 API), so hitting RET on history doesn't collapse the queue into
-a single repeated URI."
+a single repeated URI.  Album and playlist contexts are resolved
+to a track position first, since Spotify rejects `offset.uri'
+with HTTP 403 whenever the track has been relinked."
   (interactive)
   (when-let* ((entity (spofy-timeline--entity-at-point))
               (uri (alist-get 'uri entity)))
-    (spofy-play-track uri (spofy-timeline--play-context entity))))
+    (spofy-timeline--play-uri uri (spofy-timeline--play-context entity))))
+
+(defun spofy-timeline--play-uri (uri context-uri)
+  "Play URI within CONTEXT-URI, resolving position for album/playlist contexts."
+  (cond
+   ((spofy-timeline--album-context-p context-uri)
+    (spofy-timeline--play-in-context uri context-uri "albums"
+                                     #'identity))
+   ((spofy-timeline--playlist-context-p context-uri)
+    (spofy-timeline--play-in-context uri context-uri "playlists"
+                                     (lambda (item)
+                                       (alist-get 'track item))))
+   (t (spofy-play-track uri context-uri))))
+
+(defun spofy-timeline--album-context-p (context-uri)
+  "Return non-nil when CONTEXT-URI is an album URI."
+  (and context-uri (string-prefix-p "spotify:album:" context-uri)))
+
+(defun spofy-timeline--playlist-context-p (context-uri)
+  "Return non-nil when CONTEXT-URI is a playlist URI."
+  (and context-uri (string-prefix-p "spotify:playlist:" context-uri)))
+
+(defun spofy-timeline--play-in-context (uri context-uri endpoint track-fn)
+  "Play URI within CONTEXT-URI, resolving its 0-indexed position first.
+ENDPOINT is the API subpath (`albums' or `playlists') whose
+`.../tracks' route returns the context's items.  TRACK-FN extracts
+the track alist from each item (identity for albums; `(alist-get
+\\='track item)' for playlists).  Falls back to bare URI play when
+the URI is not found in the fetched list — e.g. after a relink —
+so the request still succeeds, even if it loses queue context."
+  (spofy-timeline--fetch-context-tracks
+   context-uri endpoint
+   (lambda (tracks)
+     (let ((position (spofy-timeline--position-of uri tracks track-fn)))
+       (if position
+           (spofy-play-track uri context-uri position)
+         (spofy-play-track uri))))))
+
+(defun spofy-timeline--fetch-context-tracks (context-uri endpoint callback)
+  "Fetch all tracks for CONTEXT-URI from ENDPOINT, then call CALLBACK with them.
+Uses `spofy-browse' track cache to avoid refetching on repeated plays."
+  (if-let* ((cached (spofy-browse--cache-get context-uri)))
+      (funcall callback cached)
+    (let* ((id (spofy-timeline--uri-id context-uri))
+           (path (format "%s/%s/tracks" endpoint id)))
+      (spofy-api-get
+       path '(("limit" . "50"))
+       (lambda (response)
+         (let* ((first (append (alist-get 'items response) nil))
+                (next (let ((n (alist-get 'next response)))
+                        (and (stringp n) n))))
+           (if next
+               (spofy-browse--fetch-all-pages
+                first next
+                (lambda (all)
+                  (spofy-browse--cache-put context-uri all)
+                  (funcall callback all)))
+             (spofy-browse--cache-put context-uri first)
+             (funcall callback first))))))))
+
+(defun spofy-timeline--uri-id (context-uri)
+  "Return the ID part of CONTEXT-URI (everything after the last colon)."
+  (substring context-uri (1+ (or (cl-position ?: context-uri :from-end t) -1))))
+
+(defun spofy-timeline--position-of (uri tracks track-fn)
+  "Return the 0-indexed position of URI in TRACKS, or nil when absent.
+TRACK-FN pulls the track alist out of each item in TRACKS."
+  (cl-loop for item in tracks
+           for index from 0
+           for track = (funcall track-fn item)
+           when (and track (equal (alist-get 'uri track) uri))
+           return index))
 
 (defun spofy-timeline--play-context (entity)
   "Return the context URI to play ENTITY in, based on its section."
