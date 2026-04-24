@@ -251,14 +251,18 @@ alist (or nil)."
   "Return HISTORY items as a list of track alists, oldest first.
 Each track alist carries a synthesized `spofy-history-context-uri'
 key — the URI of the context (album, playlist, etc.) the track was
-originally played in, or nil when the play had no context.  Stored
-on the track so `spofy-timeline-play-at-point' can resume within
-that context and keep the queue coherent."
+originally played in, falling back to the track's album URI when
+the play had no context.  A context is essential: playing a bare
+URI leaves Spotify without anything to fill the queue from, so it
+repeats the played track and visibly scrambles \"Up next\"."
   (let ((tracks (cl-loop for item across history
                          for track = (alist-get 'track item)
                          for context = (alist-get 'context item)
-                         for context-uri = (and (listp context)
-                                                (alist-get 'uri context))
+                         for original-uri = (and (listp context)
+                                                 (alist-get 'uri context))
+                         for album-uri = (alist-get 'uri
+                                                    (alist-get 'album track))
+                         for context-uri = (or original-uri album-uri)
                          when track
                          collect (cons (cons 'spofy-history-context-uri
                                              context-uri)
