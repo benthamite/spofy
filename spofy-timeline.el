@@ -131,6 +131,19 @@ overwrite any context annotation attached to the history entity.")
          (spofy-timeline--render buf history queue currently))))
     (pop-to-buffer buf)))
 
+(defcustom spofy-timeline-play-debounce 1.5
+  "Seconds to ignore repeated `spofy-timeline-play-at-point' presses.
+Spotify returns HTTP 403 \"Restriction violated\" when a new play
+request arrives before the player has finished transitioning from
+the previous one.  Swallowing presses inside this window keeps
+rapid RET taps from stacking failed requests on top of a
+just-issued successful play."
+  :type 'number
+  :group 'spofy)
+
+(defvar spofy-timeline--last-play-time nil
+  "Time of the most recent `spofy-timeline-play-at-point' call, or nil.")
+
 (defun spofy-timeline-play-at-point ()
   "Play the track at point.
 For \"Up next\" and \"Now playing\" rows, preserves the current
@@ -140,11 +153,23 @@ was originally played in (captured from the recently-played
 API), so hitting RET on history doesn't collapse the queue into
 a single repeated URI.  Album and playlist contexts are resolved
 to a track position first, since Spotify rejects `offset.uri'
-with HTTP 403 whenever the track has been relinked."
+with HTTP 403 whenever the track has been relinked.  Presses
+within `spofy-timeline-play-debounce' seconds of a previous play
+are ignored, since Spotify also rejects rapid successive play
+requests with 403 while the previous one is still transitioning."
   (interactive)
-  (when-let* ((entity (spofy-timeline--entity-at-point)))
-    (spofy-timeline--play-entity
-     entity (spofy-timeline--play-context entity))))
+  (if (spofy-timeline--play-debounced-p)
+      (message "spofy: please wait before triggering another play")
+    (when-let* ((entity (spofy-timeline--entity-at-point)))
+      (setq spofy-timeline--last-play-time (current-time))
+      (spofy-timeline--play-entity
+       entity (spofy-timeline--play-context entity)))))
+
+(defun spofy-timeline--play-debounced-p ()
+  "Return non-nil when a play request should be swallowed as too soon."
+  (and spofy-timeline--last-play-time
+       (< (float-time (time-since spofy-timeline--last-play-time))
+          spofy-timeline-play-debounce)))
 
 (defun spofy-timeline--play-entity (entity context-uri)
   "Play ENTITY within CONTEXT-URI, resolving album/playlist positions first.
