@@ -1,6 +1,6 @@
 # `spofy`: Spotify player for Emacs
 
-`spofy` is a full-featured Spotify client that runs entirely inside Emacs. It communicates with the [Spotify Web API](https://developer.spotify.com/documentation/web-api) to let you control playback, search for music, browse albums and artists, manage playlists, and curate your library — all without leaving the editor.
+`spofy` is a full-featured Spotify client that runs entirely inside Emacs. It communicates with the [Spotify Web API](https://developer.spotify.com/documentation/web-api) to let you control playback, search for music, browse albums and artists, manage playlists, and curate your library — all without leaving your trusty editor.
 
 ![dashboard](dashboard.png)
 ![menu](menu.png)
