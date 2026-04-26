@@ -45,9 +45,7 @@
 (declare-function spofy-library-unsave "spofy-library" (uri-or-type &optional id))
 (declare-function spofy-follow-playlist "spofy-playlist" (playlist-id-or-uri))
 
-;;; ========================================================================
 ;;;; Track item cache
-;;; ========================================================================
 
 (defvar spofy-browse--track-cache (make-hash-table :test 'equal)
   "Cache mapping context URIs to complete track item lists.
@@ -66,9 +64,7 @@ Invalidated on refresh or mutation (add/remove/reorder).")
   "Remove CONTEXT-URI from the track cache."
   (remhash context-uri spofy-browse--track-cache))
 
-;;; ========================================================================
 ;;;; Shared helpers
-;;; ========================================================================
 
 (defun spofy-browse--fetch-all-pages (collected next-url callback)
   "Fetch all remaining pages starting from NEXT-URL.
@@ -85,9 +81,7 @@ CALLBACK is called with the complete item list when done."
            (spofy-browse--fetch-all-pages all next callback)
          (funcall callback all))))))
 
-;;; ========================================================================
 ;;;; Album view
-;;; ========================================================================
 
 (defvar spofy-album-mode-map
   (let ((map (make-sparse-keymap)))
@@ -287,9 +281,7 @@ Fetches album data from the API and displays it in a tabulated-list buffer."
   (when-let* ((album-id (alist-get 'album-id spofy-ui--buffer-context)))
     (spofy-view-album album-id)))
 
-;;; ========================================================================
 ;;;; Artist view
-;;; ========================================================================
 
 (defvar spofy-artist-mode-map
   (let ((map (make-sparse-keymap)))
@@ -440,9 +432,7 @@ Fetches artist info and albums, then displays in a tabulated-list buffer."
      (format "spotify:artist:%s:albums" artist-id))
     (spofy-view-artist artist-id)))
 
-;;; ========================================================================
 ;;;; Artist top tracks
-;;; ========================================================================
 
 (defvar spofy-artist-top-tracks-mode-map
   (let ((map (make-sparse-keymap)))
@@ -557,9 +547,7 @@ Uses cached tracks when available."
      (format "spotify:artist:%s:top-tracks" artist-id))
     (spofy-view-artist-top-tracks artist-id artist-name)))
 
-;;; ========================================================================
 ;;;; Playlist detail view
-;;; ========================================================================
 
 (defvar spofy-playlist-view-mode-map
   (let ((map (make-sparse-keymap)))

@@ -73,9 +73,7 @@ For example, \"spotify:track:1234\" returns \"track\"."
 Returns \"track\" or \"album\"."
   (symbol-name (or spofy-ui--entity-type 'track)))
 
-;;; ========================================================================
 ;;;; Saved tracks
-;;; ========================================================================
 
 (defvar spofy-library-tracks-mode-map
   (let ((map (make-sparse-keymap)))
@@ -225,9 +223,7 @@ the /me/tracks endpoint with pagination."
   (interactive)
   (spofy-library-browse-tracks))
 
-;;; ========================================================================
 ;;;; Saved albums
-;;; ========================================================================
 
 (defvar spofy-library-albums-mode-map
   (let ((map (make-sparse-keymap)))
@@ -347,9 +343,7 @@ the /me/albums endpoint with pagination."
   (interactive)
   (spofy-library-browse-albums))
 
-;;; ========================================================================
 ;;;; Library cache
-;;; ========================================================================
 
 (defvar spofy-library--cache nil
   "Alist mapping entity type symbols to cached library items.
@@ -411,9 +405,7 @@ search commands have data ready when the user invokes them."
   (spofy-library--fetch-all-async "me/albums" 'album)
   (spofy-library--fetch-all-async "me/playlists" 'playlist))
 
-;;; ========================================================================
 ;;;; Save / unsave commands
-;;; ========================================================================
 
 ;;;###autoload
 (defun spofy-library-save (uri-or-type &optional id)
@@ -479,9 +471,7 @@ Signals a `user-error' when no track is playing."
       (user-error "spofy: No track currently playing"))
     (funcall action type track-id)))
 
-;;; ========================================================================
 ;;;; Follow / unfollow artists
-;;; ========================================================================
 
 (defun spofy-library--artist-id-at-point ()
   "Return the artist ID relevant to the current spofy buffer or URI at point.
@@ -519,9 +509,7 @@ for an artist ID."
                     (lambda (_)
                       (message "spofy: unfollowed artist %s" artist-id))))
 
-;;; ========================================================================
 ;;;; Top tracks
-;;; ========================================================================
 
 (defvar spofy-top-tracks-mode-map
   (let ((map (make-sparse-keymap)))
@@ -647,9 +635,7 @@ Defaults to \"medium_term\"."
   (interactive)
   (spofy-list-top-tracks spofy-top-tracks--time-range))
 
-;;; ========================================================================
 ;;;; Top artists
-;;; ========================================================================
 
 (defvar spofy-top-artists-mode-map
   (let ((map (make-sparse-keymap)))
@@ -741,9 +727,7 @@ Defaults to \"medium_term\"."
   (interactive)
   (spofy-list-top-artists spofy-top-artists--time-range))
 
-;;; ========================================================================
 ;;;; New releases
-;;; ========================================================================
 
 (defvar spofy-new-releases-mode-map
   (let ((map (make-sparse-keymap)))
