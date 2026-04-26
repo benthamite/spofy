@@ -416,11 +416,11 @@ type string/symbol plus ID supplied separately."
    (list (or (tabulated-list-get-id)
              (read-string "Spotify URI: "))))
   (pcase-let* ((`(,type . ,entity-id)
-                 (spofy-library--resolve-entity uri-or-type id))
-         (endpoint (pcase type
-                     ("track" "me/tracks")
-                     ("album" "me/albums")
-                     (_ nil))))
+                (spofy-library--resolve-entity uri-or-type id))
+               (endpoint (pcase type
+			   ("track" "me/tracks")
+			   ("album" "me/albums")
+			   (_ nil))))
     (if (not endpoint)
         (message "spofy: cannot save entity of type \"%s\"." (or type "unknown"))
       (spofy-api-put endpoint `((ids . [,entity-id]))
