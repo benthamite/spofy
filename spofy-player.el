@@ -284,7 +284,7 @@ may have no cached state even when a device is already active."
          (devices (and data (alist-get 'devices data)))
          (names (mapcar (lambda (d) (alist-get 'name d)) devices)))
     (unless devices
-      (user-error "spofy: no devices found"))
+      (user-error "spofy: No devices found"))
     (let ((choice (completing-read "spofy device: " names nil t)))
       (when-let* ((device (cl-find choice devices
                                    :key (lambda (d) (alist-get 'name d))
@@ -504,7 +504,7 @@ Accepts seconds (\"90\"), M:SS (\"1:30\"), or H:MM:SS (\"1:30:00\")."
                (* (string-to-number (nth 1 parts)) 60)
                (string-to-number (nth 2 parts)))
             1000))
-      (_ (user-error "spofy: invalid timestamp format: %s" input)))))
+      (_ (user-error "spofy: Invalid timestamp format: %s" input)))))
 
 ;;;###autoload
 (defun spofy-seek-to (timestamp)

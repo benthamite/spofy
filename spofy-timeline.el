@@ -39,6 +39,7 @@
 (require 'spofy-browse)
 (require 'spofy-ui)
 (require 'cl-lib)
+(require 'text-property-search)
 
 (defvar spofy-player--current-state)
 (declare-function spofy-play-pause "spofy-player" ())
@@ -254,7 +255,7 @@ ENDPOINT is the API subpath (`albums' or `playlists') whose
 the track alist from each item (identity for albums; `(alist-get
 \\='track item)' for playlists).  Tries URI match first; falls back
 to disc/track-number match for relinked URIs; passes nil position
-(i.e. `offset.uri') when neither matches, so the play still issues
+\(i.e. `offset.uri') when neither matches, so the play still issues
 against the context instead of collapsing to a bare URI."
   (let ((uri (alist-get 'uri entity)))
     (spofy-timeline--fetch-context-tracks
@@ -567,11 +568,10 @@ grow or shrink around it, so the row never drifts into the
 (defun spofy-timeline-next-line (&optional n)
   "Move to the Nth next track row, skipping section separators.
 N defaults to 1.  Negative N moves backwards.  Bound to remap
-`next-line' so every binding that normally calls `next-line'
-(C-n, <down>, etc.) also skips.  Non-motion commands, mouse
-clicks, and scroll commands keep their usual behavior — if they
-strand point on a separator, press the motion key once to skip
-off."
+`next-line' so every key that normally invokes `next-line' also
+skips.  Non-motion commands, mouse clicks, and scroll commands
+keep their usual behavior — if they strand point on a separator,
+press the motion key once to skip off."
   (interactive "^p")
   (spofy-ui-move-by-matching-lines #'spofy-timeline--track-row-p
                                    (or n 1)))

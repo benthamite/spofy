@@ -476,7 +476,7 @@ Signals a `user-error' when no track is playing."
   (require 'spofy-player)
   (let ((track-id (alist-get 'track-id spofy-player--current-state)))
     (unless track-id
-      (user-error "spofy: no track currently playing"))
+      (user-error "spofy: No track currently playing"))
     (funcall action type track-id)))
 
 ;;; ========================================================================

@@ -289,9 +289,9 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
                           "spofy: API request failed (HTTP %s): %s %s"
                           (or status-code "?") method full-url)
                          (when callback
-                           (funcall callback nil))))))
+                           (funcall callback nil)))))
                    (when (buffer-live-p buf)
-                     (kill-buffer buf)))))))))))
+                     (kill-buffer buf))))))))))))
 
 ;;;; High-level helpers
 

@@ -135,7 +135,8 @@ Return the database handle."
 ;;;; Cache operations
 
 (defun spofy-wikipedia--cache-lookup (track album artist entity-type)
-  "Look up a cached Wikipedia entry.
+  "Look up a cached Wikipedia entry for TRACK on ALBUM by ARTIST.
+ENTITY-TYPE selects which kind of cached entry to return.
 Return an alist with keys `wiki-title', `wiki-url', `work', or nil."
   (let* ((db (spofy-wikipedia--ensure-db))
          (rows (sqlite-select
@@ -152,7 +153,9 @@ Return an alist with keys `wiki-title', `wiki-url', `work', or nil."
 
 (defun spofy-wikipedia--cache-store (track album artist entity-type
                                            work wiki-title wiki-url)
-  "Store a Wikipedia lookup result in the cache."
+  "Store a Wikipedia lookup result in the cache.
+The entry records WIKI-TITLE and WIKI-URL (and optional WORK) for
+TRACK on ALBUM by ARTIST under the given ENTITY-TYPE."
   (let ((db (spofy-wikipedia--ensure-db)))
     (sqlite-execute
      db
@@ -214,7 +217,7 @@ Return an alist with keys `wiki-title', `wiki-url', `work', or nil."
   "Regexp matching common classical music markers in track names.")
 
 (defun spofy-wikipedia--classical-genre-p (genres)
-  "Return non-nil if GENRES (a vector of strings) contains a classical genre."
+  "Return non-nil if GENRES (a vector of strings) include a classical genre."
   (cl-some (lambda (genre)
              (let ((g (downcase genre)))
                (cl-some (lambda (pattern)
@@ -223,7 +226,7 @@ Return an alist with keys `wiki-title', `wiki-url', `work', or nil."
            genres))
 
 (defun spofy-wikipedia--classical-track-p (track-name)
-  "Return non-nil if TRACK-NAME contains classical music markers."
+  "Return non-nil if TRACK-NAME has classical music markers."
   (and track-name
        (string-match-p spofy-wikipedia--classical-track-patterns track-name)))
 
@@ -390,7 +393,7 @@ artists have no infobox at all."
            (funcall callback nil)))))))
 
 (defun spofy-wikipedia--validate-infobox (title template callback)
-  "Check if Wikipedia article TITLE uses TEMPLATE.
+  "Check whether Wikipedia article TITLE includes TEMPLATE.
 Call CALLBACK with (TITLE . URL) if valid, nil otherwise."
   (spofy-wikipedia--api-get
    `(("action" . "query")
@@ -462,7 +465,7 @@ Call CALLBACK with (RESOLVED-TITLE . URL) or nil."
   "Use an LLM to identify the musical work for TRACK on ALBUM by ARTIST.
 Call CALLBACK with the Wikipedia article title string, or nil on failure."
   (unless (require 'gptel nil t)
-    (user-error "spofy: gptel is required for classical music Wikipedia lookup"))
+    (user-error "spofy: Gptel is required for classical music Wikipedia lookup"))
   (let* ((resolved (spofy-wikipedia--resolve-backend-and-model))
          (gptel-backend (car resolved))
          (gptel-model (cdr resolved))
@@ -576,7 +579,7 @@ with (WIKI-TITLE . WIKI-URL) or signal an error."
                     (spofy-wikipedia--cache-store
                      "" "" artist "artist" "" (car result) (cdr result))
                     (funcall callback result))
-                (user-error "spofy: no Wikipedia article found for artist \"%s\""
+                (user-error "spofy: No Wikipedia article found for artist \"%s\""
                             (spofy-wikipedia--first-artist artist)))))))))))
 
 ;;;; Interactive command
@@ -595,9 +598,9 @@ with (WIKI-TITLE . WIKI-URL) or signal an error."
          (artist (alist-get 'artist state))
          (artist-id (alist-get 'artist-id state)))
     (unless track
-      (user-error "spofy: no track currently playing"))
+      (user-error "spofy: No track currently playing"))
     (unless artist-id
-      (user-error "spofy: no artist information available"))
+      (user-error "spofy: No artist information available"))
     (spofy-wikipedia--classify-artist
      artist-id track
      (lambda (classical)

@@ -38,7 +38,9 @@
 (declare-function consult--dynamic-collection "ext:consult")
 (declare-function consult--lookup-member "ext:consult")
 
-(declare-function spofy-play-track "spofy-player" (uri &optional context-uri))
+(declare-function spofy-play-track "spofy-player" (uri &optional context-uri position))
+(declare-function spofy-library-cache-get "spofy-library" (type))
+(declare-function spofy-library--fetch-all-async "spofy-library" (endpoint type &optional callback))
 (declare-function spofy-play-context "spofy-player" (context-uri))
 (declare-function spofy-player--ensure-device "spofy-player" ())
 (declare-function spofy-player--poll-sync "spofy-player" ())
@@ -341,17 +343,17 @@ STATE is a plist with :type, :query, and :next-url keys."
 (declare-function spofy-library--fetch-all "spofy-library" (endpoint type))
 
 (defun spofy-consult--fetch-library-candidates (endpoint type format-fn &optional item-key)
-  "Return formatted candidates for a library endpoint.
+  "Return formatted candidates for the library ENDPOINT.
 TYPE is the cache key symbol, FORMAT-FN formats each item.
 When ITEM-KEY is non-nil, extract that key from each wrapper
 alist before formatting (e.g., \\='track for /me/tracks).
-Returns candidates from cache if available.  If not cached,
-starts an async fetch and signals a user error asking to retry."
+Return candidates from cache if available.  If not cached,
+start an async fetch and signal a user error asking to retry."
   (require 'spofy-library)
   (let ((items (spofy-library-cache-get type)))
     (unless items
       (spofy-library--fetch-all-async endpoint type)
-      (user-error "spofy: fetching %ss in the background, please try again shortly" type))
+      (user-error "spofy: Fetching %ss in the background, please try again shortly" type))
     (cl-loop for item in items
              for entity = (if item-key (alist-get item-key item) item)
              unless (spofy-consult--null-p entity)
@@ -366,7 +368,7 @@ starts an async fetch and signals a user error asking to retry."
                      "me/tracks" 'track
                      #'spofy-consult--format-track 'track)))
     (unless candidates
-      (user-error "spofy: no saved tracks found"))
+      (user-error "spofy: No saved tracks found"))
     (let ((selected
            (consult--read candidates
             :prompt "spofy saved track: "
@@ -387,7 +389,7 @@ starts an async fetch and signals a user error asking to retry."
                      "me/albums" 'album
                      #'spofy-consult--format-album 'album)))
     (unless candidates
-      (user-error "spofy: no saved albums found"))
+      (user-error "spofy: No saved albums found"))
     (let ((selected
            (consult--read candidates
             :prompt "spofy saved album: "
@@ -408,7 +410,7 @@ starts an async fetch and signals a user error asking to retry."
                      "me/playlists" 'playlist
                      #'spofy-consult--format-playlist)))
     (unless candidates
-      (user-error "spofy: no playlists found"))
+      (user-error "spofy: No playlists found"))
     (let ((selected
            (consult--read candidates
             :prompt "spofy my playlist: "
@@ -481,7 +483,7 @@ radio or daily mixes)."
          (context-id (and context-uri
                           (car (last (split-string context-uri ":"))))))
     (unless (and context-id (member context-type '("album" "playlist")))
-      (user-error "spofy: current tracks not available for this context"))
+      (user-error "spofy: Current tracks not available for this context"))
     (let* ((raw-items (spofy-player--fetch-context-tracks context-type context-id))
            (playlist-p (equal context-type "playlist"))
            (candidates
@@ -490,7 +492,7 @@ radio or daily mixes)."
                        for track = (if playlist-p (alist-get 'track item) item)
                        when track collect (spofy-consult--format-track track)))))
       (unless candidates
-        (user-error "spofy: current tracks not available for this context"))
+        (user-error "spofy: Current tracks not available for this context"))
       (let ((selected
              (consult--read candidates
               :prompt "Jump to track: "

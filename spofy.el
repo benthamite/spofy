@@ -208,13 +208,13 @@ Each element is a symbol naming a section.  Available sections:
 
 (defun spofy-dashboard-next-line (&optional n)
   "Move to the Nth next actionable line in the dashboard.
-An actionable line is one that contains at least one clickable
+An actionable line is one that includes at least one clickable
 button — a track, artist, album, playlist, or section link.
 N defaults to 1; negative N moves backwards.  Bound to remap
-`next-line' so C-n, <down>, and any other binding that normally
-invokes `next-line' skip straight from one clickable line to
-the next, past the album art, progress bar, shuffle/repeat line,
-section headers, and blank spacer lines."
+`next-line' so every key that normally invokes `next-line' skips
+straight from one clickable line to the next, past the album art,
+progress bar, shuffle/repeat line, section headers, and blank
+spacer lines."
   (interactive "^p")
   (spofy-ui-move-by-matching-lines #'spofy-dashboard--actionable-line-p
                                    (or n 1)))
@@ -227,7 +227,7 @@ N defaults to 1; negative N moves forwards."
                                    (- (or n 1))))
 
 (defun spofy-dashboard--actionable-line-p ()
-  "Return non-nil when the current line contains at least one button."
+  "Return non-nil when the current line includes at least one button."
   (text-property-not-all (line-beginning-position)
                          (line-end-position)
                          'button nil))
@@ -856,12 +856,12 @@ authentication, starts polling, and displays the dashboard buffer."
   (require 'spofy-auth)
   (spofy-auth--load-tokens)
   (unless (spofy-auth-access-token)
-    (if (y-or-n-p "spofy: not authenticated.  Authenticate now? ")
+    (if (y-or-n-p "spofy: Not authenticated.  Authenticate now? ")
         (progn
           (spofy-authenticate)
           (message "spofy: complete authentication in your browser, then run `spofy' again.")
           (cl-return-from spofy))
-      (user-error "spofy: authentication required")))
+      (user-error "spofy: Authentication required")))
   ;; Enable global mode (starts polling, mode-line, tab-bar)
   (spofy--ensure-global-mode)
   ;; Hook up now-playing refresh on state changes
@@ -905,11 +905,11 @@ If no tokens are available, prompts the user to authenticate."
   (require 'spofy-player)
   (spofy-auth--load-tokens)
   (unless (spofy-auth-access-token)
-    (if (y-or-n-p "spofy: not authenticated.  Authenticate now? ")
+    (if (y-or-n-p "spofy: Not authenticated.  Authenticate now? ")
         (progn
           (spofy-authenticate)
-          (user-error "spofy: complete authentication in your browser, then try again"))
-      (user-error "spofy: authentication required")))
+          (user-error "spofy: Complete authentication in your browser, then try again"))
+      (user-error "spofy: Authentication required")))
   (unless spofy-global-mode
     (spofy-global-mode 1))
   (add-hook 'spofy-player-track-changed-hook
@@ -1026,7 +1026,7 @@ unsupported (e.g., Spotify-generated radio or daily mixes)."
   (let ((context-uri (alist-get 'context-uri spofy-player--current-state))
         (context-type (alist-get 'context-type spofy-player--current-state)))
     (unless (and context-uri (member context-type '("album" "playlist")))
-      (user-error "spofy: cannot browse this context"))
+      (user-error "spofy: Cannot browse this context"))
     (let ((context-id (car (last (split-string context-uri ":")))))
       (pcase context-type
         ("album" (spofy-view-album context-id))

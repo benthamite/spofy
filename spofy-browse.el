@@ -34,7 +34,8 @@
 (require 'cl-lib)
 
 ;; Functions from other spofy modules that may not be loaded yet.
-(declare-function spofy-play-track "spofy-player" (track-uri &optional context-uri))
+(declare-function spofy-play-track "spofy-player" (uri &optional context-uri position))
+(declare-function spofy-play-pause "spofy-player" ())
 (declare-function spofy-play-context "spofy-player" (context-uri))
 (declare-function spofy-playlist-remove-track "spofy-playlist" (&optional playlist-id track-uri))
 (declare-function spofy-library-save "spofy-library" (uri-or-type &optional id))
@@ -114,9 +115,10 @@ CALLBACK is called with the complete item list when done."
      ("Duration"  6 nil :right-align t)))
   (tabulated-list-init-header))
 
-(defun spofy-album--format-track (track album-uri multi-disc-p)
+(defun spofy-album--format-track (track _album-uri multi-disc-p)
   "Format TRACK alist as a tabulated-list entry.
-ALBUM-URI is the album context URI for playback.
+Accepts but ignores the album context URI; kept in the signature so
+that closures captured by open buffers remain compatible.
 When MULTI-DISC-P is non-nil, show disc.track numbering."
   (let* ((uri (alist-get 'uri track))
          (name (or (alist-get 'name track) ""))

@@ -30,6 +30,8 @@
 
 (require 'cl-lib)
 
+(defvar spofy-ui-mode-line-format)
+
 ;;;; Customization group
 
 (defgroup spofy nil
@@ -756,10 +758,10 @@ pass `switch-to-buffer' for browse views."
 
 (defun spofy-ui--refresh-track-highlights ()
   "Re-render playing indicators in all spofy list buffers.
-Intended for `spofy-player-track-changed-hook'.  Saves and
-restores window points around the reprint, since
+Intended for `spofy-player-track-changed-hook'.  Save and
+restore window points around the reprint, since
 `tabulated-list-print' erases the buffer and invalidates
-window-point markers."
+`window-point' markers."
   (dolist (buf (buffer-list))
     (when (buffer-live-p buf)
       (with-current-buffer buf
@@ -850,10 +852,10 @@ a non-matching one."
         (setq remaining (1- remaining))))))
 
 (defun spofy-ui--skip-until-matching (predicate step)
-  "Advance by STEP line(s) until PREDICATE returns non-nil.
+  "Advance by STEP line(s) until PREDICATE yields non-nil.
 If the buffer edge is hit while still on a non-matching line,
 reverse direction so point never ends up on a line where
-PREDICATE returns nil."
+PREDICATE yields nil."
   (while (and (not (funcall predicate))
               (if (> step 0) (not (eobp)) (not (bobp))))
     (forward-line step))

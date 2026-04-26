@@ -84,10 +84,10 @@ When `right', the segment is placed after
 
 (defun spofy-tab-bar--construct-string ()
   "Build the tab-bar string from `spofy-tab-bar-format' and current state.
-Returns nil if no player state is available.  The text portion
-(track, artist, album) is truncated with a fade-out gradient when
+Return nil if no player state is available.  The text portion
+\(track, artist, album) is truncated with a fade-out gradient when
 it would cause the tab bar to exceed the frame width; the status
-portion (indicators, progress bar) is never truncated."
+portion \(indicators, progress bar) is never truncated."
   (when-let* ((state spofy-player--current-state)
               (track (or (alist-get 'track state) ""))
               (artist (or (alist-get 'artist state) ""))

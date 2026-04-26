@@ -256,7 +256,7 @@ on success, or signals an error on failure."
   "Use the refresh token to obtain a new access token.
 Updates the stored tokens on success."
   (unless spofy-auth--refresh-token
-    (error "spofy: no refresh token available; please re-authenticate with `spofy-authenticate'"))
+    (error "spofy: No refresh token available; please re-authenticate with `spofy-authenticate'"))
   (unless (and spofy-client-id spofy-client-secret)
     (error "spofy: `spofy-client-id' and `spofy-client-secret' must be set"))
   (let ((url-request-method "POST")
