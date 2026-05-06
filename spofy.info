@@ -769,9 +769,9 @@ report the original album as the playback context even though the
 current track belongs to a different album.  During state extraction,
 spofy detects this mismatch by comparing the context album ID with the
 track's actual album ID and corrects the context URI to point to the
-track's own album.  This ensures that all context-dependent
-commands—~spofy-library-browse-context~,
-~spofy-library-search-context~—navigate to the correct album.
+track's own album.  This ensures that all context-dependent commands
+(‘spofy-library-browse-context’, ‘spofy-library-search-context’)
+navigate to the correct album.
 
 
 File: spofy.info,  Node: Device management,  Next: Search,  Prev: Polling,  Up: Commands
@@ -788,6 +788,10 @@ transfers playback to the selected device.
    Any playback command that requires an active device will
 automatically call ‘spofy-select-device’ if none is found, so you never
 need to select a device manually before issuing a command.
+
+   If device discovery fails because Spotify returns an API error, such
+as an authentication problem or rate limit response, spofy reports that
+API error instead of treating it as an empty device list.
 
 
 File: spofy.info,  Node: Search,  Next: Browsing,  Prev: Device management,  Up: Commands
@@ -2145,39 +2149,39 @@ Node: Tracking the playing position28043
 Node: Cursor follows playback28486
 Node: Buffer mode-line29215
 Node: Polling30600
-Node: Device management32815
-Node: Search33478
-Node: Navigating search results34977
-Node: Browsing36093
-Node: Album view36283
-Node: Artist view37683
-Node: Playlist detail view39775
-Node: Playlist management41221
-Node: Library management43940
-Node: Timeline49449
-Node: Cache management51662
-Node: Browse cache53940
-Node: Functions55056
-Node: Player state accessors55307
-Node: Entity access in buffers56419
-Node: API client57017
-Node: Authentication helpers58594
-Node: Formatting utilities59713
-Node: Pagination63269
-Node: Entity storage and list rendering65122
-Node: Consult integration67682
-Node: Embark integration72093
-Node: Org-mode integration75226
-Node: Wikipedia integration76471
-Node: Wikipedia user options80119
-Node: Faces81798
-Node: Hooks83919
-Node: Mode-line display85130
-Node: Tab-bar display86058
-Node: Development87377
-Node: Indices87594
-Node: Function index87731
-Node: Variable index98996
+Node: Device management32821
+Node: Search33687
+Node: Navigating search results35186
+Node: Browsing36302
+Node: Album view36492
+Node: Artist view37892
+Node: Playlist detail view39984
+Node: Playlist management41430
+Node: Library management44149
+Node: Timeline49658
+Node: Cache management51871
+Node: Browse cache54149
+Node: Functions55265
+Node: Player state accessors55516
+Node: Entity access in buffers56628
+Node: API client57226
+Node: Authentication helpers58803
+Node: Formatting utilities59922
+Node: Pagination63478
+Node: Entity storage and list rendering65331
+Node: Consult integration67891
+Node: Embark integration72302
+Node: Org-mode integration75435
+Node: Wikipedia integration76680
+Node: Wikipedia user options80328
+Node: Faces82007
+Node: Hooks84128
+Node: Mode-line display85339
+Node: Tab-bar display86267
+Node: Development87586
+Node: Indices87803
+Node: Function index87940
+Node: Variable index99205
 
 End Tag Table
 
