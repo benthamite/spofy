@@ -145,5 +145,36 @@
     (should-not (alist-get 'track-id state))
     (should-not (alist-get 'album-id state))))
 
+;;;; Device management
+
+(ert-deftest spofy-player-test-select-device-signals-on-empty-device-list ()
+  "An empty device array reports that no devices are available."
+  (cl-letf (((symbol-function 'spofy-api-get-sync-or-error)
+             (lambda (&rest _) '((devices . [])))))
+    (let ((err (should-error (spofy-select-device) :type 'user-error)))
+      (should (string= "spofy: No devices found"
+                       (error-message-string err))))))
+
+(ert-deftest spofy-player-test-select-device-transfers-selected-device ()
+  "Selecting a device transfers playback to its ID."
+  (let (request)
+    (cl-letf (((symbol-function 'spofy-api-get-sync-or-error)
+               (lambda (&rest _)
+                 '((devices . [((id . "device-1")
+                                (name . "Speaker"))]))))
+              ((symbol-function 'completing-read)
+               (lambda (_prompt collection &rest _)
+                 (should (equal '("Speaker") collection))
+                 "Speaker"))
+              ((symbol-function 'spofy-api-put)
+               (lambda (endpoint data &optional callback)
+                 (setq request (list endpoint data))
+                 (when callback
+                   (funcall callback nil)))))
+      (spofy-select-device)
+      (should (equal "me/player" (car request)))
+      (should (equal '((device_ids . ["device-1"]) (play . t))
+                     (cadr request))))))
+
 (provide 'spofy-player-test)
 ;;; spofy-player-test.el ends here

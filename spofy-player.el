@@ -280,10 +280,10 @@ may have no cached state even when a device is already active."
 (defun spofy-select-device ()
   "List available Spotify devices and transfer playback to the selected one."
   (interactive)
-  (let* ((data (spofy-api-get-sync "me/player/devices"))
+  (let* ((data (spofy-api-get-sync-or-error "me/player/devices"))
          (devices (and data (alist-get 'devices data)))
          (names (mapcar (lambda (d) (alist-get 'name d)) devices)))
-    (unless devices
+    (when (or (null devices) (zerop (length devices)))
       (user-error "spofy: No devices found"))
     (let ((choice (completing-read "spofy device: " names nil t)))
       (when-let* ((device (cl-find choice devices

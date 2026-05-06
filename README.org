@@ -388,6 +388,8 @@ The Spotify Web API can control playback on any device logged into the user's ac
 
 Any playback command that requires an active device will automatically call ~spofy-select-device~ if none is found, so you never need to select a device manually before issuing a command.
 
+If device discovery fails because Spotify returns an API error, such as an authentication problem or rate limit response, spofy reports that API error instead of treating it as an empty device list.
+
 ** Search
 :PROPERTIES:
 :CUSTOM_ID: h:search
@@ -1076,4 +1078,3 @@ make compile  # byte-compile all source files
 :INDEX: vr
 :CUSTOM_ID: h:variable-index
 :END:
-

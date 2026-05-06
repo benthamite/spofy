@@ -316,20 +316,78 @@ scope to accept from_token) must not use this helper."
 (defun spofy-api-get-sync (endpoint &optional params)
   "Synchronously GET ENDPOINT with optional query PARAMS.
 Return the parsed JSON response, or nil on error."
-  (when-let* ((token (spofy-auth-access-token)))
-    (let* ((url (spofy-api--build-url endpoint params))
-           (url-request-method "GET")
-           (url-request-extra-headers
-            `(("Authorization" . ,(concat "Bearer " token))))
-           (url-show-status nil)
-           (buf (url-retrieve-synchronously url t nil 5)))
-      (when buf
-        (unwind-protect
-            (with-current-buffer buf
-              (let ((status (spofy-api--response-status)))
-                (when (and status (>= status 200) (< status 300))
-                  (spofy-api--parse-response))))
-          (kill-buffer buf))))))
+  (spofy-api--get-sync endpoint params nil))
+
+(defun spofy-api-get-sync-or-error (endpoint &optional params)
+  "Synchronously GET ENDPOINT with PARAMS or signal a user error."
+  (spofy-api--get-sync endpoint params t))
+
+(defun spofy-api--get-sync (endpoint params signal-errors &optional refreshed-p)
+  "Synchronously GET ENDPOINT with PARAMS.
+When SIGNAL-ERRORS is non-nil, signal a user error instead of
+silently returning nil.  REFRESHED-P records whether token refresh
+has already been attempted."
+  (if-let* ((token (spofy-auth-access-token)))
+      (let* ((url (spofy-api--build-url endpoint params))
+             (url-request-method "GET")
+             (url-request-extra-headers
+              `(("Authorization" . ,(concat "Bearer " token))))
+             (url-show-status nil)
+             (buf (url-retrieve-synchronously url t nil 5)))
+        (if buf
+            (unwind-protect
+                (with-current-buffer buf
+                  (spofy-api--handle-sync-response endpoint params
+                                                  signal-errors
+                                                  refreshed-p))
+              (kill-buffer buf))
+          (spofy-api--sync-fail
+           signal-errors "spofy: API request timed out: GET %s" endpoint)))
+    (spofy-api--sync-fail
+     signal-errors "spofy: no valid access token; try M-x spofy-authenticate")))
+
+(defun spofy-api--handle-sync-response (endpoint params signal-errors refreshed-p)
+  "Handle a synchronous response for ENDPOINT with PARAMS.
+SIGNAL-ERRORS and REFRESHED-P have the same meaning as in
+`spofy-api--get-sync'."
+  (let ((status (spofy-api--response-status)))
+    (cond
+     ((and status (>= status 200) (< status 300))
+      (spofy-api--parse-response))
+     ((and (eql status 401) (not refreshed-p))
+      (spofy-api--refresh-and-retry-sync endpoint params signal-errors))
+     ((eql status 429)
+      (spofy-api--sync-fail
+       signal-errors
+       "spofy: Spotify API rate limit exceeded; retry after %s seconds"
+       (spofy-api--parse-retry-after)))
+     (status
+      (spofy-api--sync-fail
+       signal-errors "spofy: API request failed (HTTP %s): GET %s"
+       status endpoint))
+     (t
+      (spofy-api--sync-fail
+       signal-errors "spofy: API request failed without an HTTP status")))))
+
+(defun spofy-api--refresh-and-retry-sync (endpoint params signal-errors)
+  "Refresh the access token and retry the synchronous GET request.
+ENDPOINT, PARAMS, and SIGNAL-ERRORS have the same meaning as in
+`spofy-api--get-sync'."
+  (condition-case err
+      (progn
+        (spofy-auth-refresh-token)
+        (spofy-api--get-sync endpoint params signal-errors t))
+    (error
+     (spofy-api--sync-fail
+      signal-errors "spofy: token refresh failed: %s"
+      (error-message-string err)))))
+
+(defun spofy-api--sync-fail (signal-errors format-string &rest args)
+  "Return nil or signal a user error built from FORMAT-STRING and ARGS.
+SIGNAL-ERRORS controls whether an error is signaled."
+  (when signal-errors
+    (apply #'user-error format-string args))
+  nil)
 
 (defun spofy-api-put (endpoint &optional data callback)
   "Send a PUT request to ENDPOINT with optional JSON body DATA.

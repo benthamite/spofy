@@ -431,10 +431,10 @@ Results are fetched once and cached for subsequent calls."
     (lambda (_input)
       (or cache
           (setq cache
-                (let* ((data (spofy-api-get-sync
+                (let* ((data (spofy-api-get-sync-or-error
                               "me/player/devices" nil))
                        (devices (alist-get 'devices data)))
-                  (when devices
+                  (when (and devices (> (length devices) 0))
                     (mapcar #'spofy-consult--format-device
                             (append devices nil)))))))))
 

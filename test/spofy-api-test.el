@@ -232,6 +232,32 @@ HEADERS is an alist of extra headers to include."
       (should (equal "GET" captured-method))
       (should (equal "https://api.spotify.com/v1/me/playlists" captured-url)))))
 
+(ert-deftest spofy-api-test-get-sync-returns-nil-on-rate-limit ()
+  "The permissive synchronous helper keeps returning nil on HTTP errors."
+  (cl-letf (((symbol-function 'spofy-auth-access-token)
+             (lambda () "test-token"))
+            ((symbol-function 'url-retrieve-synchronously)
+             (lambda (&rest _)
+               (spofy-api-test--mock-response
+                429 "Too many requests" '(("Retry-After" . "7"))))))
+    (should-not (spofy-api-get-sync "me/player/devices"))))
+
+(ert-deftest spofy-api-test-get-sync-or-error-signals-rate-limit ()
+  "The strict synchronous helper reports HTTP 429 accurately."
+  (cl-letf (((symbol-function 'spofy-auth-access-token)
+             (lambda () "test-token"))
+            ((symbol-function 'url-retrieve-synchronously)
+             (lambda (&rest _)
+               (spofy-api-test--mock-response
+                429 "Too many requests" '(("Retry-After" . "7"))))))
+    (let ((err (should-error
+                (spofy-api-get-sync-or-error "me/player/devices")
+                :type 'user-error)))
+      (should (string-match-p "rate limit exceeded"
+                              (error-message-string err)))
+      (should (string-match-p "7 seconds"
+                              (error-message-string err))))))
+
 (ert-deftest spofy-api-test-api-put-constructs-url ()
   "spofy-api-put constructs the correct URL and uses PUT."
   (let ((captured-method nil)
