@@ -147,6 +147,38 @@
 
 ;;;; Device management
 
+(ert-deftest spofy-player-test-poll-sync-preserves-state-during-rate-limit ()
+  "Synchronous polling does not clear state while rate-limited."
+  (let ((spofy-player--current-state '((track . "Track")
+                                       (device . "Speaker"))))
+    (cl-letf (((symbol-function 'spofy-api-get-sync)
+               (lambda (&rest _) nil))
+              ((symbol-function 'spofy-api-rate-limit-remaining)
+               (lambda () 7)))
+      (spofy-player--poll-sync)
+      (should (equal spofy-player--current-state
+                     '((track . "Track") (device . "Speaker")))))))
+
+(ert-deftest spofy-player-test-ensure-device-stops-during-rate-limit ()
+  "Device checks signal before polling while a cooldown is active."
+  (let ((spofy-player--current-state nil)
+        polled
+        selected)
+    (cl-letf (((symbol-function 'spofy-api-rate-limit-remaining)
+               (lambda () 7))
+              ((symbol-function 'spofy-player--poll-sync)
+               (lambda () (setq polled t)))
+              ((symbol-function 'spofy-select-device)
+               (lambda () (setq selected t))))
+      (let ((err (should-error (spofy-player--ensure-device)
+                               :type 'user-error)))
+        (should (string-match-p "rate limit exceeded"
+                                (error-message-string err)))
+        (should (string-match-p "7 seconds"
+                                (error-message-string err))))
+      (should-not polled)
+      (should-not selected))))
+
 (ert-deftest spofy-player-test-select-device-signals-on-empty-device-list ()
   "An empty device array reports that no devices are available."
   (cl-letf (((symbol-function 'spofy-api-get-sync-or-error)

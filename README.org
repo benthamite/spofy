@@ -762,7 +762,7 @@ The API client in =spofy-api.el= provides five high-level functions for interact
 - ~spofy-api-post~ sends a POST request with an optional JSON body.
 - ~spofy-api-delete~ sends a DELETE request with an optional JSON body.
 
-All five accept an endpoint path (relative to =https://api.spotify.com/v1/=), optional data, and---for the asynchronous variants---a callback function that receives the parsed JSON response.  They handle authentication headers, token refresh, rate limiting (429 responses), transient error retry, and response buffer cleanup automatically.  If no valid access token is available, the request is skipped and a message suggesting =M-x spofy-authenticate= is shown instead of sending a malformed request.
+All five accept an endpoint path (relative to =https://api.spotify.com/v1/=), optional data, and---for the asynchronous variants---a callback function that receives the parsed JSON response.  They handle authentication headers, token refresh, rate limiting (429 responses), transient error retry, and response buffer cleanup automatically.  When Spotify returns HTTP 429, spofy records the =Retry-After= value as a shared cooldown and blocks non-cached API requests until that cooldown expires, before token lookup or network I/O.  If no valid access token is available, the request is skipped and a message suggesting =M-x spofy-authenticate= is shown instead of sending a malformed request.
 
 These functions are the building blocks for all of spofy's features.  Advanced users who want to extend spofy with custom API calls can use them directly.
 

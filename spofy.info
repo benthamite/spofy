@@ -1310,9 +1310,12 @@ interacting with the Spotify Web API:
 variants--a callback function that receives the parsed JSON response.
 They handle authentication headers, token refresh, rate limiting (429
 responses), transient error retry, and response buffer cleanup
-automatically.  If no valid access token is available, the request is
-skipped and a message suggesting ‘M-x spofy-authenticate’ is shown
-instead of sending a malformed request.
+automatically.  When Spotify returns HTTP 429, spofy records the
+‘Retry-After’ value as a shared cooldown and blocks non-cached API
+requests until that cooldown expires, before token lookup or network
+I/O.  If no valid access token is available, the request is skipped and
+a message suggesting ‘M-x spofy-authenticate’ is shown instead of
+sending a malformed request.
 
    These functions are the building blocks for all of spofy's features.
 Advanced users who want to extend spofy with custom API calls can use
@@ -2165,23 +2168,23 @@ Node: Functions55265
 Node: Player state accessors55516
 Node: Entity access in buffers56628
 Node: API client57226
-Node: Authentication helpers58803
-Node: Formatting utilities59922
-Node: Pagination63478
-Node: Entity storage and list rendering65331
-Node: Consult integration67891
-Node: Embark integration72302
-Node: Org-mode integration75435
-Node: Wikipedia integration76680
-Node: Wikipedia user options80328
-Node: Faces82007
-Node: Hooks84128
-Node: Mode-line display85339
-Node: Tab-bar display86267
-Node: Development87586
-Node: Indices87803
-Node: Function index87940
-Node: Variable index99205
+Node: Authentication helpers58998
+Node: Formatting utilities60117
+Node: Pagination63673
+Node: Entity storage and list rendering65526
+Node: Consult integration68086
+Node: Embark integration72497
+Node: Org-mode integration75630
+Node: Wikipedia integration76875
+Node: Wikipedia user options80523
+Node: Faces82202
+Node: Hooks84323
+Node: Mode-line display85534
+Node: Tab-bar display86462
+Node: Development87781
+Node: Indices87998
+Node: Function index88135
+Node: Variable index99400
 
 End Tag Table
 

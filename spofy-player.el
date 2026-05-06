@@ -215,7 +215,8 @@ polling has not been stopped."
 (defun spofy-player--poll-sync ()
   "Synchronously fetch and update the player state."
   (let ((data (spofy-api-get-sync "me/player" (spofy-api-with-market nil))))
-    (spofy-player--handle-poll-response data)))
+    (unless (spofy-api-rate-limit-remaining)
+      (spofy-player--handle-poll-response data))))
 
 ;;;###autoload
 (defun spofy-player-start-polling ()
@@ -271,6 +272,10 @@ Adds elapsed wall-clock time since the last poll if the track is playing."
 If no device is found, calls `spofy-select-device' so the user can
 pick one.  Refreshes state once before prompting, since cold sessions
 may have no cached state even when a device is already active."
+  (when-let* ((remaining (spofy-api-rate-limit-remaining)))
+    (user-error
+     "spofy: Spotify API rate limit exceeded; retry after %s seconds"
+     remaining))
   (unless (alist-get 'device spofy-player--current-state)
     (spofy-player--poll-sync))
   (unless (alist-get 'device spofy-player--current-state)
