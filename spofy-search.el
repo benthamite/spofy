@@ -277,7 +277,6 @@ NEXT-URL is the URL for the next page of results, or nil."
   (and (require 'spofy-consult nil t)
        (featurep 'consult)
        (fboundp 'consult--read)
-       (fboundp 'consult--dynamic-collection)
        (fboundp 'consult--lookup-member)))
 
 (defun spofy-search--dispatch (type query consult-command)

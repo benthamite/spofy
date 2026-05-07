@@ -147,53 +147,79 @@
 
 ;;;; Device management
 
-(ert-deftest spofy-player-test-poll-sync-preserves-state-during-rate-limit ()
-  "Synchronous polling does not clear state while rate-limited."
-  (let ((spofy-player--current-state '((track . "Track")
-                                       (device . "Speaker"))))
-    (cl-letf (((symbol-function 'spofy-api-get-sync)
-               (lambda (&rest _) nil))
-              ((symbol-function 'spofy-api-rate-limit-remaining)
-               (lambda () 7)))
-      (spofy-player--poll-sync)
-      (should (equal spofy-player--current-state
-                     '((track . "Track") (device . "Speaker")))))))
-
 (ert-deftest spofy-player-test-ensure-device-stops-during-rate-limit ()
-  "Device checks signal before polling while a cooldown is active."
+  "Device checks signal before any refresh while a cooldown is active."
   (let ((spofy-player--current-state nil)
-        polled
+        refreshed
         selected)
     (cl-letf (((symbol-function 'spofy-api-rate-limit-remaining)
                (lambda () 7))
-              ((symbol-function 'spofy-player--poll-sync)
-               (lambda () (setq polled t)))
+              ((symbol-function 'spofy-player--refresh-state)
+               (lambda (&rest _) (setq refreshed t)))
               ((symbol-function 'spofy-select-device)
-               (lambda () (setq selected t))))
+               (lambda (&rest _) (setq selected t))))
       (let ((err (should-error (spofy-player--ensure-device)
                                :type 'user-error)))
         (should (string-match-p "rate limit exceeded"
                                 (error-message-string err)))
         (should (string-match-p "7 seconds"
                                 (error-message-string err))))
-      (should-not polled)
+      (should-not refreshed)
       (should-not selected))))
+
+(ert-deftest spofy-player-test-ensure-device-never-refreshes-state ()
+  "The fast cached-state guard does not perform network I/O."
+  (let ((spofy-player--current-state nil)
+        refreshed)
+    (cl-letf (((symbol-function 'spofy-api-rate-limit-remaining)
+               (lambda () nil))
+              ((symbol-function 'spofy-player--refresh-state)
+               (lambda (&rest _) (setq refreshed t))))
+      (let ((err (should-error (spofy-player--ensure-device)
+                               :type 'user-error)))
+        (should (string-match-p "cached state"
+                                (error-message-string err))))
+      (should-not refreshed))))
+
+(ert-deftest spofy-player-test-with-device-refreshes-asynchronously ()
+  "Device continuations refresh state without blocking for a return value."
+  (let ((spofy-player--current-state nil)
+        refreshed
+        called)
+    (cl-letf (((symbol-function 'spofy-api-rate-limit-remaining)
+               (lambda () nil))
+              ((symbol-function 'spofy-player--refresh-state)
+               (lambda (callback)
+                 (setq refreshed t
+                       spofy-player--current-state '((device . "Speaker")))
+                 (funcall callback spofy-player--current-state)))
+              ((symbol-function 'spofy-select-device)
+               (lambda (&rest _) (ert-fail "should not prompt"))))
+      (spofy-player--with-device (lambda () (setq called t)))
+      (should refreshed)
+      (should called))))
 
 (ert-deftest spofy-player-test-select-device-signals-on-empty-device-list ()
   "An empty device array reports that no devices are available."
-  (cl-letf (((symbol-function 'spofy-api-get-sync-or-error)
-             (lambda (&rest _) '((devices . [])))))
+  (cl-letf (((symbol-function 'spofy-api-rate-limit-remaining)
+             (lambda () nil))
+            ((symbol-function 'spofy-api-get)
+             (lambda (_endpoint _params callback)
+               (funcall callback '((devices . []))))))
     (let ((err (should-error (spofy-select-device) :type 'user-error)))
       (should (string= "spofy: No devices found"
                        (error-message-string err))))))
 
 (ert-deftest spofy-player-test-select-device-transfers-selected-device ()
   "Selecting a device transfers playback to its ID."
-  (let (request)
-    (cl-letf (((symbol-function 'spofy-api-get-sync-or-error)
-               (lambda (&rest _)
-                 '((devices . [((id . "device-1")
-                                (name . "Speaker"))]))))
+  (let (request done)
+    (cl-letf (((symbol-function 'spofy-api-rate-limit-remaining)
+               (lambda () nil))
+              ((symbol-function 'spofy-api-get)
+               (lambda (_endpoint _params callback)
+                 (funcall callback
+                          '((devices . [((id . "device-1")
+                                         (name . "Speaker"))])))))
               ((symbol-function 'completing-read)
                (lambda (_prompt collection &rest _)
                  (should (equal '("Speaker") collection))
@@ -203,10 +229,11 @@
                  (setq request (list endpoint data))
                  (when callback
                    (funcall callback nil)))))
-      (spofy-select-device)
+      (spofy-select-device (lambda () (setq done t)))
       (should (equal "me/player" (car request)))
       (should (equal '((device_ids . ["device-1"]) (play . t))
-                     (cadr request))))))
+                     (cadr request)))
+      (should done))))
 
 (provide 'spofy-player-test)
 ;;; spofy-player-test.el ends here

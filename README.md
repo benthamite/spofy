@@ -13,7 +13,7 @@ A transient popup (bound to `C-c s` by default) provides quick access to playbac
 
 Optional integrations extend `spofy` into the broader Emacs ecosystem:
 
-- **Consult** — five async completion sources for searching tracks, albums, artists, playlists, and devices from the minibuffer.
+- **Consult** — async minibuffer commands for searching tracks, albums, artists, playlists, and devices.
 - **Embark** — contextual actions (play, save, browse, copy URI) on any Spotify entity.
 - **Org-mode** — a `spotify:` link type for storing, following, and exporting links to Spotify content.
 

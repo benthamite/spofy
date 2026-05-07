@@ -561,9 +561,9 @@ When Spotify's autoplay continues beyond an album, the API may still report the 
 
 @findex spofy-select-device
 
-The Spotify Web API can control playback on any device logged into the user's account: desktop apps, mobile phones, web players, smart speakers, and more.  The command @code{spofy-select-device} fetches the list of available devices, presents them in a @code{completing-read} prompt, and transfers playback to the selected device.
+The Spotify Web API can control playback on any device logged into the user's account: desktop apps, mobile phones, web players, smart speakers, and more.  The command @code{spofy-select-device} fetches the list of available devices asynchronously, presents them in a @code{completing-read} prompt when the response arrives, and transfers playback to the selected device.
 
-Any playback command that requires an active device will automatically call @code{spofy-select-device} if none is found, so you never need to select a device manually before issuing a command.
+Playback commands never perform synchronous network requests.  Commands that need an active device first use the cached player state; if no device is known, they refresh state asynchronously and then prompt with @code{spofy-select-device} when needed.  Commands that require a current track, such as seek, volume, shuffle, repeat, and Wikipedia lookup, fail fast when no player state is available yet.
 
 If device discovery fails because Spotify returns an API error, such as an authentication problem or rate limit response, spofy reports that API error instead of treating it as an empty device list.
 
@@ -588,7 +588,7 @@ spofy provides four search commands, each targeting a specific entity type:
 @code{spofy-search-playlists} searches for matching playlists.
 @end itemize
 
-When @code{spofy-consult} is loaded, these commands use incremental search via @code{consult--dynamic-collection}: the minibuffer appears immediately and candidates update live as you type.  Without @code{spofy-consult}, they fall back to prompting for a query string and displaying results in a tabulated list.
+When @code{spofy-consult} is loaded, these commands prompt for a query, fetch Spotify results asynchronously, and then present the returned candidates with Consult narrowing.  Without @code{spofy-consult}, they prompt for a query string and display results in a tabulated list.
 
 Each command creates a @samp{*spofy Search: TYPE*} buffer using @code{tabulated-list-mode}.  The columns vary by entity type:
 
@@ -1140,18 +1140,15 @@ The function @code{spofy-ui-entity-at-point} returns the full Spotify API alist 
 @section API client
 
 @findex spofy-api-get
-@findex spofy-api-get-sync
 @findex spofy-api-put
 @findex spofy-api-post
 @findex spofy-api-delete
 
-The API client in @samp{spofy-api.el} provides five high-level functions for interacting with the Spotify Web API:
+The API client in @samp{spofy-api.el} provides four high-level functions for interacting with the Spotify Web API:
 
 @itemize
 @item
 @code{spofy-api-get} sends an asynchronous GET request to an endpoint with optional query parameters.
-@item
-@code{spofy-api-get-sync} sends a synchronous GET request and returns the parsed JSON response directly, or @code{nil} on error.  It is used by the consult integration (@ref{Consult integration}) and other code paths that require a return value rather than a callback.
 @item
 @code{spofy-api-put} sends a PUT request with an optional JSON body.
 @item
@@ -1160,7 +1157,7 @@ The API client in @samp{spofy-api.el} provides five high-level functions for int
 @code{spofy-api-delete} sends a DELETE request with an optional JSON body.
 @end itemize
 
-All five accept an endpoint path (relative to @samp{https://api.spotify.com/v1/}), optional data, and---for the asynchronous variants---a callback function that receives the parsed JSON response.  They handle authentication headers, token refresh, rate limiting (429 responses), transient error retry, and response buffer cleanup automatically.  When Spotify returns HTTP 429, spofy records the @samp{Retry-After} value as a shared cooldown and blocks non-cached API requests until that cooldown expires, before token lookup or network I/O@.  If no valid access token is available, the request is skipped and a message suggesting @samp{M-x spofy-authenticate} is shown instead of sending a malformed request.
+All four accept an endpoint path (relative to @samp{https://api.spotify.com/v1/}), optional data, and a callback function that receives the parsed JSON response.  They handle authentication headers, asynchronous token refresh, rate limiting (429 responses), transient error retry, and response buffer cleanup automatically.  When Spotify returns HTTP 429, spofy records the @samp{Retry-After} value as a shared cooldown and blocks non-cached API requests until that cooldown expires, before token lookup or network I/O@.  If no valid access token is available, the request is skipped and a message suggesting @samp{M-x spofy-authenticate} is shown instead of sending a malformed request.
 
 These functions are the building blocks for all of spofy's features.  Advanced users who want to extend spofy with custom API calls can use them directly.
 
@@ -1168,11 +1165,14 @@ These functions are the building blocks for all of spofy's features.  Advanced u
 @section Authentication helpers
 
 @findex spofy-auth-access-token
+@findex spofy-auth-access-token-async
 @findex spofy-auth-refresh-token
 
-The function @code{spofy-auth-access-token} returns the current OAuth2 access token, or @code{nil} if unavailable or expired.  Because the token expiry is persisted to disk alongside the tokens, this function can determine after an Emacs restart whether the stored access token is still valid without contacting Spotify.  If the token has expired and a refresh token is available, it automatically attempts a refresh before returning @code{nil}.
+The function @code{spofy-auth-access-token} returns the current OAuth2 access token, or @code{nil} if unavailable or expired.  Because the token expiry is persisted to disk alongside the tokens, this function can determine after an Emacs restart whether the stored access token is still valid without contacting Spotify.  It never refreshes synchronously.
 
-The function @code{spofy-auth-refresh-token} explicitly uses the stored refresh token to obtain a new access token from Spotify.  The request is synchronous with a 10-second timeout to prevent Emacs from blocking indefinitely if the Spotify token endpoint is unreachable.  It requires @code{spofy-client-id} and @code{spofy-client-secret} to be set, and signals an error if either is missing.  This is called automatically when needed, but can be invoked manually if you encounter authentication issues.
+The function @code{spofy-auth-access-token-async} calls a callback with a usable access token, refreshing asynchronously first when the current token is expired and a refresh token is available.
+
+The function @code{spofy-auth-refresh-token} explicitly uses the stored refresh token to obtain a new access token from Spotify asynchronously.  It requires @code{spofy-client-id} and @code{spofy-client-secret} to be set and calls its optional callback with the refreshed token or @code{nil} on failure.
 
 @node Formatting utilities
 @section Formatting utilities
@@ -1251,13 +1251,13 @@ The file @samp{spofy-consult.el} provides @code{consult} completion sources for 
 
 All candidates are displayed in aligned tabular columns with faces matching the search result buffers.  The user option @code{spofy-consult-columns} controls the column widths per entity type; see its docstring for the column layout of each type.
 
-The command @code{consult-spofy-track} lets you search for tracks with live narrowing as you type (debounced at 300ms to avoid excessive API calls).  Candidates show Name, Artist(s), Album, and Duration columns.  Selecting a track plays it immediately.
+The command @code{consult-spofy-track} prompts for a track query, fetches matching tracks asynchronously, and then lets you narrow the returned candidates.  Candidates show Name, Artist(s), Album, and Duration columns.  Selecting a track plays it immediately.
 
-The command @code{consult-spofy-album} provides the same experience for albums, with Name, Year, Artist(s), and number of tracks columns.  Selecting an album opens the album view (@ref{Album view}).
+The command @code{consult-spofy-album} provides the same async fetch-then-narrow flow for albums, with Name, Year, Artist(s), and number of tracks columns.  Selecting an album opens the album view (@ref{Album view}).
 
 The command @code{consult-spofy-artist} searches artists, with Name, Genres, and Followers columns.  Selecting an artist opens the artist view (@ref{Artist view}).
 
-The command @code{consult-spofy-playlist} searches all Spotify playlists with live narrowing, with Name, Owner, and number of tracks columns.  Selecting a playlist opens the playlist detail view (@ref{Playlist detail view}).
+The command @code{consult-spofy-playlist} searches Spotify playlists with async fetch-then-narrow behavior, with Name, Owner, and number of tracks columns.  Selecting a playlist opens the playlist detail view (@ref{Playlist detail view}).
 
 The following three commands search within the user's own library rather than the full Spotify catalog.  They rely on the library cache (@ref{Cache management}), which is populated asynchronously in the background when spofy starts.  All saved items are available for instant client-side filtering as you type.  If the cache is not yet ready (e.g., at the start of a session), the command displays a message and starts the background fetch.  These are bound under the @samp{l} prefix in the transient popup (@ref{Transient popup}).
 
@@ -1267,11 +1267,11 @@ The command @code{spofy-library-search-albums} searches saved albums with increm
 
 The command @code{spofy-library-search-playlists} searches the user's playlists with incremental narrowing, with Name, Owner, and number of tracks columns.  Selecting a playlist opens the playlist detail view (@ref{Playlist detail view}).
 
-The command @code{consult-spofy-device} fetches available playback devices with incremental narrowing, with Name and Type columns.  Selecting a device transfers playback to it.
+The command @code{consult-spofy-device} fetches available playback devices asynchronously and then presents them with Consult narrowing, with Name and Type columns.  Selecting a device transfers playback to it.
 
 The command @code{spofy-library-search-context} fetches the tracklist of the currently playing album or playlist and lets you jump to any track with incremental narrowing.  It is not available for Spotify-generated contexts such as radio or daily mixes.  This command is bound to @samp{l c} in the transient popup (@ref{Transient popup}).
 
-The Spotify search commands use @code{consult--dynamic-collection} for incremental search with synchronous API requests (via @code{url-retrieve-synchronously}), debounced to avoid excessive API calls.  Each search returns up to 20 results per query; consult's completion framework has no native pagination concept, so refining the query is the primary way to find results beyond the initial batch.  To browse further, use @code{embark-export} to send the candidates to a paginated search buffer with infinite scroll (@ref{Embark integration}).
+The Spotify catalog search commands fetch up to 20 results for the initial query and then pass those candidates to @code{consult--read} for local narrowing.  This avoids blocking Emacs on network I/O while the minibuffer is active.  To browse further, use @code{embark-export} to send the candidates to a paginated search buffer with infinite scroll (@ref{Embark integration}).
 
 The library search commands pass a pre-fetched candidate list directly to @code{consult--read}, since all items are already in memory from the library cache.  In both cases, each candidate stores the full Spotify entity in a text property; the @code{:lookup} mechanism ensures the original propertized candidate is returned on selection, so the entity data is available for the action.  This makes them compatible with the embark integration (@ref{Embark integration}).
 

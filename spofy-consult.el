@@ -35,16 +35,16 @@
 (require 'spofy-api)
 
 (declare-function consult--read "ext:consult")
-(declare-function consult--dynamic-collection "ext:consult")
 (declare-function consult--lookup-member "ext:consult")
 
 (declare-function spofy-play-track "spofy-player" (uri &optional context-uri position))
 (declare-function spofy-library-cache-get "spofy-library" (type))
 (declare-function spofy-library--fetch-all-async "spofy-library" (endpoint type &optional callback))
 (declare-function spofy-play-context "spofy-player" (context-uri))
-(declare-function spofy-player--ensure-device "spofy-player" ())
-(declare-function spofy-player--poll-sync "spofy-player" ())
-(declare-function spofy-player--fetch-context-tracks "spofy-player" (context-type context-id))
+(declare-function spofy-player--with-state "spofy-player" (callback))
+(declare-function spofy-browse--cache-get "spofy-browse" (key))
+(declare-function spofy-browse--cache-put "spofy-browse" (key items))
+(declare-function spofy-browse--fetch-all-pages "spofy-browse" (collected next-url callback))
 (declare-function spofy-view-album "spofy-browse" (album-id))
 (declare-function spofy-view-artist "spofy-browse" (artist-id))
 (declare-function spofy-view-playlist "spofy-browse" (playlist-id))
@@ -83,7 +83,6 @@ appended as-is."
   "Return non-nil when the Consult internals used by spofy are loaded."
   (and (featurep 'consult)
        (fboundp 'consult--read)
-       (fboundp 'consult--dynamic-collection)
        (fboundp 'consult--lookup-member)))
 
 (defun spofy-consult--ensure-available ()
@@ -211,26 +210,42 @@ The full entity is stored as a text property."
   "Return non-nil if ITEM is a JSON null (the keyword :null)."
   (eq item :null))
 
-(defun spofy-consult--search-collection (type format-fn)
-  "Return a dynamic collection function searching Spotify for TYPE.
-FORMAT-FN is called on each result item to produce a candidate string.
-Each candidate carries a `spofy-search-state' text property with the
-search type, query, and next-page URL for use by embark exporters."
-  (lambda (input)
-    (let* ((response (spofy-api-get-sync
-                      "search"
-                      `(("q" . ,input) ("type" . ,type) ("limit" . "20"))))
-           (section-key (intern (concat type "s")))
-           (section (alist-get section-key response))
-           (items (alist-get 'items section))
-           (next-url (spofy-consult--extract-next-url section))
-           (state `(:type ,type :query ,input :next-url ,next-url)))
-      (when items
-        (mapcar (lambda (item)
-                  (spofy-consult--tag-search-state
-                   (funcall format-fn item) state))
-                (seq-remove #'spofy-consult--null-p
-                            (append items nil)))))))
+(defun spofy-consult--search (type format-fn prompt category action)
+  "Search Spotify for TYPE asynchronously and prompt with Consult.
+FORMAT-FN formats each result, PROMPT and CATEGORY are passed to
+`consult--read', and ACTION is called with the selected entity."
+  (spofy-consult--ensure-available)
+  (let ((query (read-string (format "spofy %s query: " type))))
+    (when (string-empty-p (string-trim query))
+      (user-error "spofy: Search query required"))
+    (message "spofy: searching %ss..." type)
+    (spofy-api-get
+     "search"
+     `(("q" . ,query) ("type" . ,type) ("limit" . "20"))
+     (lambda (response)
+       (let* ((section-key (intern (concat type "s")))
+              (section (alist-get section-key response))
+              (items (alist-get 'items section))
+              (next-url (spofy-consult--extract-next-url section))
+              (state `(:type ,type :query ,query :next-url ,next-url))
+              (candidates
+               (when items
+                 (mapcar (lambda (item)
+                           (spofy-consult--tag-search-state
+                            (funcall format-fn item) state))
+                         (seq-remove #'spofy-consult--null-p
+                                     (append items nil))))))
+         (unless candidates
+           (user-error "spofy: No %s results for \"%s\"" type query))
+         (let ((selected
+                (consult--read candidates
+                 :prompt prompt
+                 :category category
+                 :sort nil
+                 :require-match t
+                 :lookup #'consult--lookup-member)))
+          (when-let* ((entity (spofy-consult--get-entity selected)))
+            (funcall action entity))))))))
 
 (defun spofy-consult--extract-next-url (section)
   "Extract the next-page URL from SECTION, returning nil for JSON null."
@@ -250,24 +265,12 @@ STATE is a plist with :type, :query, and :next-url keys."
 (defun consult-spofy-track ()
   "Search Spotify tracks and play the selected one."
   (interactive)
-  (spofy-consult--ensure-available)
-  (let* ((selected
-          (consult--read
-           (consult--dynamic-collection
-            (spofy-consult--search-collection
-             "track" #'spofy-consult--format-track)
-            ;; 300ms debounce avoids flooding the Spotify API on fast typing;
-            ;; min-input 1 prevents an empty initial search.
-            :debounce 0.3
-            :min-input 1)
-           :prompt "spofy track: "
-           :category 'spofy-track
-           :sort nil
-           :require-match t
-           :lookup #'consult--lookup-member)))
-    (when-let* ((entity (spofy-consult--get-entity selected))
-                (uri (alist-get 'uri entity)))
-      (spofy-play-track uri))))
+  (spofy-consult--search
+   "track" #'spofy-consult--format-track
+   "spofy track: " 'spofy-track
+   (lambda (entity)
+     (when-let* ((uri (alist-get 'uri entity)))
+       (spofy-play-track uri)))))
 
 ;;;; Album source
 
@@ -275,22 +278,12 @@ STATE is a plist with :type, :query, and :next-url keys."
 (defun consult-spofy-album ()
   "Search Spotify albums and open the selected one."
   (interactive)
-  (spofy-consult--ensure-available)
-  (let* ((selected
-          (consult--read
-           (consult--dynamic-collection
-            (spofy-consult--search-collection
-             "album" #'spofy-consult--format-album)
-            :debounce 0.3
-            :min-input 1)
-           :prompt "spofy album: "
-           :category 'spofy-album
-           :sort nil
-           :require-match t
-           :lookup #'consult--lookup-member)))
-    (when-let* ((entity (spofy-consult--get-entity selected))
-                (album-id (alist-get 'id entity)))
-      (spofy-view-album album-id))))
+  (spofy-consult--search
+   "album" #'spofy-consult--format-album
+   "spofy album: " 'spofy-album
+   (lambda (entity)
+     (when-let* ((album-id (alist-get 'id entity)))
+       (spofy-view-album album-id)))))
 
 ;;;; Artist source
 
@@ -298,22 +291,12 @@ STATE is a plist with :type, :query, and :next-url keys."
 (defun consult-spofy-artist ()
   "Search Spotify artists and open the selected one."
   (interactive)
-  (spofy-consult--ensure-available)
-  (let* ((selected
-          (consult--read
-           (consult--dynamic-collection
-            (spofy-consult--search-collection
-             "artist" #'spofy-consult--format-artist)
-            :debounce 0.3
-            :min-input 1)
-           :prompt "spofy artist: "
-           :category 'spofy-artist
-           :sort nil
-           :require-match t
-           :lookup #'consult--lookup-member)))
-    (when-let* ((entity (spofy-consult--get-entity selected))
-                (artist-id (alist-get 'id entity)))
-      (spofy-view-artist artist-id))))
+  (spofy-consult--search
+   "artist" #'spofy-consult--format-artist
+   "spofy artist: " 'spofy-artist
+   (lambda (entity)
+     (when-let* ((artist-id (alist-get 'id entity)))
+       (spofy-view-artist artist-id)))))
 
 ;;;; Playlist source
 
@@ -321,22 +304,12 @@ STATE is a plist with :type, :query, and :next-url keys."
 (defun consult-spofy-playlist ()
   "Search Spotify playlists and open the selected one."
   (interactive)
-  (spofy-consult--ensure-available)
-  (let* ((selected
-          (consult--read
-           (consult--dynamic-collection
-            (spofy-consult--search-collection
-             "playlist" #'spofy-consult--format-playlist)
-            :debounce 0.3
-            :min-input 1)
-           :prompt "spofy playlist: "
-           :category 'spofy-playlist
-           :sort nil
-           :require-match t
-           :lookup #'consult--lookup-member)))
-    (when-let* ((entity (spofy-consult--get-entity selected))
-                (playlist-id (alist-get 'id entity)))
-      (spofy-view-playlist playlist-id))))
+  (spofy-consult--search
+   "playlist" #'spofy-consult--format-playlist
+   "spofy playlist: " 'spofy-playlist
+   (lambda (entity)
+     (when-let* ((playlist-id (alist-get 'id entity)))
+       (spofy-view-playlist playlist-id)))))
 
 ;;;; Library sources (saved tracks, albums, playlists -- fetches all pages)
 
@@ -422,48 +395,79 @@ start an async fetch and signal a user error asking to retry."
                   (playlist-id (alist-get 'id entity)))
         (spofy-view-playlist playlist-id)))))
 
-;;;; Device source (synchronous -- fetches available devices)
-
-(defun spofy-consult--device-collection ()
-  "Return a synchronous dynamic collection for Spotify devices.
-Results are fetched once and cached for subsequent calls."
-  (let ((cache nil))
-    (lambda (_input)
-      (or cache
-          (setq cache
-                (let* ((data (spofy-api-get-sync-or-error
-                              "me/player/devices" nil))
-                       (devices (alist-get 'devices data)))
-                  (when (and devices (> (length devices) 0))
-                    (mapcar #'spofy-consult--format-device
-                            (append devices nil)))))))))
+;;;; Device source
 
 ;;;###autoload
 (defun consult-spofy-device ()
   "Pick a Spotify playback device and transfer playback to it."
   (interactive)
   (spofy-consult--ensure-available)
-  (let* ((selected
-          (consult--read
-           (consult--dynamic-collection
-            (spofy-consult--device-collection)
-            :min-input 0)
-           :prompt "spofy device: "
-           :category 'spofy-device
-           :sort nil
-           :require-match t
-           :lookup #'consult--lookup-member)))
-    (when-let* ((entity (spofy-consult--get-entity selected))
-                (device-id (alist-get 'id entity))
-                (device-name (alist-get 'name entity)))
-      (spofy-api-put "me/player"
-                     `((device_ids . [,device-id])
-                       (play . t))
-                     (lambda (_)
-                       (message "spofy: transferred playback to %s"
-                                device-name))))))
+  (when-let* ((remaining (spofy-api-rate-limit-remaining)))
+    (user-error
+     "spofy: Spotify API rate limit exceeded; retry after %s seconds"
+     remaining))
+  (message "spofy: fetching devices...")
+  (spofy-api-get
+   "me/player/devices" nil
+   (lambda (data)
+     (let* ((devices (and data (alist-get 'devices data)))
+            (candidates
+             (when (and devices (> (length devices) 0))
+               (mapcar #'spofy-consult--format-device
+                       (append devices nil)))))
+       (cond
+        ((null data)
+         (user-error "spofy: Device lookup failed; check *Messages* for the API error"))
+        ((null candidates)
+         (user-error "spofy: No devices found"))
+        (t
+         (let ((selected
+                (consult--read candidates
+                 :prompt "spofy device: "
+                 :category 'spofy-device
+                 :sort nil
+                 :require-match t
+                 :lookup #'consult--lookup-member)))
+           (when-let* ((entity (spofy-consult--get-entity selected))
+                       (device-id (alist-get 'id entity))
+                       (device-name (alist-get 'name entity)))
+             (spofy-api-put "me/player"
+                            `((device_ids . [,device-id])
+                              (play . t))
+                            (lambda (_)
+                              (message "spofy: transferred playback to %s"
+                                       device-name)))))))))))
 
 ;;;; Context track source (jump to track in current playback)
+
+(defun spofy-consult--context-uri (context-type context-id)
+  "Return a Spotify context URI for CONTEXT-TYPE and CONTEXT-ID."
+  (format "spotify:%s:%s" context-type context-id))
+
+(defun spofy-consult--fetch-context-tracks (context-type context-id callback)
+  "Fetch tracks for CONTEXT-TYPE and CONTEXT-ID, then call CALLBACK."
+  (require 'spofy-browse)
+  (let* ((context-uri (spofy-consult--context-uri context-type context-id))
+         (endpoint (pcase context-type
+                     ("album" "albums")
+                     ("playlist" "playlists")))
+         (path (format "%s/%s/tracks" endpoint context-id)))
+    (if-let* ((cached (spofy-browse--cache-get context-uri)))
+        (funcall callback cached)
+      (spofy-api-get
+       path '(("limit" . "50"))
+       (lambda (response)
+         (let* ((first (append (alist-get 'items response) nil))
+                (next (let ((n (alist-get 'next response)))
+                        (and (stringp n) n))))
+           (if next
+               (spofy-browse--fetch-all-pages
+                first next
+                (lambda (all)
+                  (spofy-browse--cache-put context-uri all)
+                  (funcall callback all)))
+             (spofy-browse--cache-put context-uri first)
+             (funcall callback first))))))))
 
 ;;;###autoload
 (defun spofy-library-search-context ()
@@ -475,41 +479,43 @@ radio or daily mixes)."
   (interactive)
   (spofy-consult--ensure-available)
   (require 'spofy-player)
-  (spofy-player--ensure-device)
-  (unless spofy-player--current-state
-    (spofy-player--poll-sync))
-  (let* ((context-uri (alist-get 'context-uri spofy-player--current-state))
-         (context-type (alist-get 'context-type spofy-player--current-state))
-         (context-id (and context-uri
-                          (car (last (split-string context-uri ":"))))))
-    (unless (and context-id (member context-type '("album" "playlist")))
-      (user-error "spofy: Current tracks not available for this context"))
-    (let* ((raw-items (spofy-player--fetch-context-tracks context-type context-id))
-           (playlist-p (equal context-type "playlist"))
-           (candidates
-            (when raw-items
-              (cl-loop for item across raw-items
-                       for track = (if playlist-p (alist-get 'track item) item)
-                       when track collect (spofy-consult--format-track track)))))
-      (unless candidates
-        (user-error "spofy: Current tracks not available for this context"))
-      (let ((selected
-             (consult--read candidates
-              :prompt "Jump to track: "
-              :category 'spofy-track
-              :sort nil
-              :require-match t
-              :lookup #'consult--lookup-member)))
-        (when-let* ((entity (spofy-consult--get-entity selected))
-                    (uri (alist-get 'uri entity)))
-          (spofy-play-track uri context-uri
-                            (spofy-consult--jump-position raw-items playlist-p uri)))))))
+  (spofy-player--with-state
+   (lambda ()
+     (let* ((context-uri (alist-get 'context-uri spofy-player--current-state))
+            (context-type (alist-get 'context-type spofy-player--current-state))
+            (context-id (and context-uri
+                             (car (last (split-string context-uri ":"))))))
+       (unless (and context-id (member context-type '("album" "playlist")))
+         (user-error "spofy: Current tracks not available for this context"))
+       (spofy-consult--fetch-context-tracks
+        context-type context-id
+        (lambda (raw-items)
+          (let* ((playlist-p (equal context-type "playlist"))
+                 (candidates
+                  (when raw-items
+                    (cl-loop for item in raw-items
+                             for track = (if playlist-p (alist-get 'track item) item)
+                             when track collect (spofy-consult--format-track track)))))
+            (unless candidates
+              (user-error "spofy: Current tracks not available for this context"))
+            (let ((selected
+                   (consult--read candidates
+                    :prompt "Jump to track: "
+                    :category 'spofy-track
+                    :sort nil
+                    :require-match t
+                    :lookup #'consult--lookup-member)))
+              (when-let* ((entity (spofy-consult--get-entity selected))
+                          (uri (alist-get 'uri entity)))
+                (spofy-play-track
+                 uri context-uri
+                 (spofy-consult--jump-position raw-items playlist-p uri)))))))))))
 
 (defun spofy-consult--jump-position (raw-items playlist-p uri)
   "Return the 0-indexed position of URI in RAW-ITEMS.
 PLAYLIST-P indicates whether RAW-ITEMS wraps each track in a \"track\"
 field (true for playlists).  Returns nil when URI is not found."
-  (cl-loop for item across raw-items
+  (cl-loop for item in raw-items
            for index from 0
            for track = (if playlist-p (alist-get 'track item) item)
            when (and track (equal (alist-get 'uri track) uri))

@@ -140,10 +140,10 @@ HEADERS is an alist of extra headers to include."
         network-called
         callback-called)
     (cl-letf (((symbol-function 'float-time) (lambda (&optional _) 100.0))
-              ((symbol-function 'spofy-auth-access-token)
-               (lambda ()
+              ((symbol-function 'spofy-auth-access-token-async)
+               (lambda (callback)
                  (setq auth-called t)
-                 "test-token"))
+                 (funcall callback "test-token")))
               ((symbol-function 'url-retrieve)
                (lambda (&rest _)
                  (setq network-called t))))
@@ -161,8 +161,9 @@ HEADERS is an alist of extra headers to include."
         (spofy-api--cache (make-hash-table :test #'equal))
         scheduled-delay)
     (cl-letf (((symbol-function 'float-time) (lambda (&optional _) 100.0))
-              ((symbol-function 'spofy-auth-access-token)
-               (lambda () "test-token"))
+              ((symbol-function 'spofy-auth-access-token-async)
+               (lambda (callback)
+                 (funcall callback "test-token")))
               ((symbol-function 'url-retrieve)
                (lambda (_url callback &rest _args)
                  (let ((buf (spofy-api-test--mock-response
@@ -186,8 +187,9 @@ HEADERS is an alist of extra headers to include."
         (spofy-api--cache (make-hash-table :test #'equal))
         scheduled)
     (cl-letf (((symbol-function 'float-time) (lambda (&optional _) 100.0))
-              ((symbol-function 'spofy-auth-access-token)
-               (lambda () "test-token"))
+              ((symbol-function 'spofy-auth-access-token-async)
+               (lambda (callback)
+                 (funcall callback "test-token")))
               ((symbol-function 'url-retrieve)
                (lambda (_url callback &rest _args)
                  (let ((buf (spofy-api-test--mock-response
@@ -270,9 +272,10 @@ HEADERS is an alist of extra headers to include."
         (url-request-extra-headers nil)
         (url-request-data nil)
         (captured-headers nil))
-    ;; Mock spofy-auth-access-token to return a known token
-    (cl-letf (((symbol-function 'spofy-auth-access-token)
-               (lambda () "test-token-12345"))
+    ;; Mock spofy-auth-access-token-async to return a known token.
+    (cl-letf (((symbol-function 'spofy-auth-access-token-async)
+               (lambda (callback)
+                 (funcall callback "test-token-12345")))
               ((symbol-function 'url-retrieve)
                (lambda (_url callback &rest _args)
                  (setq captured-headers url-request-extra-headers)
@@ -320,64 +323,6 @@ HEADERS is an alist of extra headers to include."
       (spofy-api-get "me/playlists" '(("limit" . "50")) #'ignore)
       (should (equal "GET" captured-method))
       (should (equal "https://api.spotify.com/v1/me/playlists" captured-url)))))
-
-(ert-deftest spofy-api-test-get-sync-skips-network-during-cooldown ()
-  "Synchronous requests do not call Spotify while a cooldown is active."
-  (let ((spofy-api--rate-limit-until 107.0)
-        (spofy-api--last-error-times (make-hash-table :test #'equal))
-        auth-called
-        network-called)
-    (cl-letf (((symbol-function 'float-time) (lambda (&optional _) 100.0))
-              ((symbol-function 'spofy-auth-access-token)
-               (lambda ()
-                 (setq auth-called t)
-                 "test-token"))
-              ((symbol-function 'url-retrieve-synchronously)
-               (lambda (&rest _)
-                 (setq network-called t))))
-      (let ((err (should-error
-                  (spofy-api-get-sync-or-error "me/player/devices")
-                  :type 'user-error)))
-        (should (string-match-p "rate limit exceeded"
-                                (error-message-string err)))
-        (should (string-match-p "7 seconds"
-                                (error-message-string err))))
-      (should-not auth-called)
-      (should-not network-called))))
-
-(ert-deftest spofy-api-test-get-sync-returns-nil-on-rate-limit ()
-  "The permissive synchronous helper keeps returning nil on HTTP errors."
-  (let ((spofy-api--rate-limit-until nil)
-        (spofy-api--last-error-times (make-hash-table :test #'equal)))
-    (cl-letf (((symbol-function 'float-time) (lambda (&optional _) 100.0))
-              ((symbol-function 'spofy-auth-access-token)
-               (lambda () "test-token"))
-              ((symbol-function 'url-retrieve-synchronously)
-               (lambda (&rest _)
-                 (spofy-api-test--mock-response
-                  429 "Too many requests" '(("Retry-After" . "7"))))))
-      (should-not (spofy-api-get-sync "me/player/devices"))
-      (should (= 7 (spofy-api-rate-limit-remaining))))))
-
-(ert-deftest spofy-api-test-get-sync-or-error-signals-rate-limit ()
-  "The strict synchronous helper reports HTTP 429 accurately."
-  (let ((spofy-api--rate-limit-until nil)
-        (spofy-api--last-error-times (make-hash-table :test #'equal)))
-    (cl-letf (((symbol-function 'float-time) (lambda (&optional _) 100.0))
-              ((symbol-function 'spofy-auth-access-token)
-               (lambda () "test-token"))
-              ((symbol-function 'url-retrieve-synchronously)
-               (lambda (&rest _)
-                 (spofy-api-test--mock-response
-                  429 "Too many requests" '(("Retry-After" . "7"))))))
-      (let ((err (should-error
-                  (spofy-api-get-sync-or-error "me/player/devices")
-                  :type 'user-error)))
-        (should (string-match-p "rate limit exceeded"
-                                (error-message-string err)))
-        (should (string-match-p "7 seconds"
-                                (error-message-string err))))
-      (should (= 7 (spofy-api-rate-limit-remaining))))))
 
 (ert-deftest spofy-api-test-api-put-constructs-url ()
   "spofy-api-put constructs the correct URL and uses PUT."

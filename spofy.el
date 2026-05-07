@@ -74,8 +74,7 @@
 (declare-function spofy-play-track "spofy-player" (uri &optional context-uri))
 (declare-function spofy-play-context "spofy-player" (context-uri))
 (declare-function spofy-select-device "spofy-player" ())
-(declare-function spofy-player--ensure-device "spofy-player" ())
-(declare-function spofy-player--poll-sync "spofy-player" ())
+(declare-function spofy-player--with-state "spofy-player" (callback))
 (declare-function spofy-seek-to "spofy-player" ())
 
 ;; spofy-search
@@ -124,12 +123,20 @@
 ;;;; Variables from other modules (for byte-compiler)
 
 (defvar spofy-auth--access-token)
+(defvar spofy-auth--refresh-token)
 (defvar spofy-player--current-state)
 (defvar spofy-player-state-changed-hook)
 (defvar spofy-player-track-changed-hook)
 (defvar spofy-player--timer)
 (defvar spofy-poll-interval)
 (defvar spofy-global-mode)
+
+(defun spofy--has-auth-credentials-p ()
+  "Return non-nil when spofy has credentials for API requests.
+An expired access token is acceptable when a refresh token exists,
+since API requests refresh tokens asynchronously."
+  (or (spofy-auth-access-token)
+      spofy-auth--refresh-token))
 
 ;;;; Customization
 
@@ -855,7 +862,7 @@ authentication, starts polling, and displays the dashboard buffer."
   ;; Ensure authenticated (with interactive prompt on first use)
   (require 'spofy-auth)
   (spofy-auth--load-tokens)
-  (unless (spofy-auth-access-token)
+  (unless (spofy--has-auth-credentials-p)
     (if (y-or-n-p "spofy: Not authenticated.  Authenticate now? ")
         (progn
           (spofy-authenticate)
@@ -904,7 +911,7 @@ If no tokens are available, prompts the user to authenticate."
   (require 'spofy-api)
   (require 'spofy-player)
   (spofy-auth--load-tokens)
-  (unless (spofy-auth-access-token)
+  (unless (spofy--has-auth-credentials-p)
     (if (y-or-n-p "spofy: Not authenticated.  Authenticate now? ")
         (progn
           (spofy-authenticate)
@@ -1020,17 +1027,16 @@ standard browse buffer.  Signals an error when the context is
 unsupported (e.g., Spotify-generated radio or daily mixes)."
   (interactive)
   (require 'spofy-player)
-  (spofy-player--ensure-device)
-  (unless spofy-player--current-state
-    (spofy-player--poll-sync))
-  (let ((context-uri (alist-get 'context-uri spofy-player--current-state))
-        (context-type (alist-get 'context-type spofy-player--current-state)))
-    (unless (and context-uri (member context-type '("album" "playlist")))
-      (user-error "spofy: Cannot browse this context"))
-    (let ((context-id (car (last (split-string context-uri ":")))))
-      (pcase context-type
-        ("album" (spofy-view-album context-id))
-        ("playlist" (spofy-view-playlist context-id))))))
+  (spofy-player--with-state
+   (lambda ()
+     (let ((context-uri (alist-get 'context-uri spofy-player--current-state))
+           (context-type (alist-get 'context-type spofy-player--current-state)))
+       (unless (and context-uri (member context-type '("album" "playlist")))
+         (user-error "spofy: Cannot browse this context"))
+       (let ((context-id (car (last (split-string context-uri ":")))))
+         (pcase context-type
+           ("album" (spofy-view-album context-id))
+           ("playlist" (spofy-view-playlist context-id))))))))
 
 ;;;; Convenience commands
 

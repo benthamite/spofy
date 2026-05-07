@@ -35,8 +35,8 @@
 (require 'cl-lib)
 (require 'spofy-ui)
 
-(declare-function spofy-auth-access-token "spofy-auth" ())
-(declare-function spofy-auth-refresh-token "spofy-auth" ())
+(declare-function spofy-auth-access-token-async "spofy-auth" (callback))
+(declare-function spofy-auth-refresh-token "spofy-auth" (&optional callback))
 
 ;;;; Constants
 
@@ -247,83 +247,89 @@ REFRESHED-P is non-nil if we have already attempted a token refresh."
         (when callback
           (funcall callback cached))
       (unless (spofy-api--rate-limit-active-p full-url)
-        ;; Make the actual request.  Spotify requires a JSON body (even
-        ;; "{}") on PUT/POST/DELETE; omitting it causes "Malformed json".
-        (let* ((token (spofy-auth-access-token))
-               (has-body (not (equal method "GET"))))
-          (if (null token)
-              ;; No valid token — cannot make request
-              (let ((last (gethash full-url spofy-api--last-error-times 0)))
-                (when (> (- (float-time) last) spofy-api--error-cooldown)
-                  (puthash full-url (float-time) spofy-api--last-error-times)
-                  (message "spofy: no valid access token; try M-x spofy-authenticate"))
-                (when callback
-                  (funcall callback nil)))
-            (let* ((url-request-method method)
-                   (url-request-extra-headers
-                    `(("Authorization" . ,(concat "Bearer " token))
-                      ,@(when has-body '(("Content-Type" . "application/json")))))
-                   (url-request-data (cond (data (json-serialize data))
-                                           (has-body "{}")))
-                   (url-show-status nil))
-              (url-retrieve
-               full-url
-               (lambda (_status)
-                 (let ((buf (current-buffer)))
-                   (unwind-protect
-                       (let ((status-code (spofy-api--response-status)))
-                         (cond
-                          ;; Success (2xx)
-                          ((and status-code (>= status-code 200) (< status-code 300))
-                           (let ((parsed (spofy-api--parse-response)))
-                             (when (and (equal method "GET")
-                                        (not (spofy-api--skip-cache-p full-url)))
-                               (spofy-api--cache-put cache-key parsed
-                                                     (spofy-api--cache-ttl full-url)))
-                             (when callback
-                               (funcall callback parsed))))
-                          ;; Unauthorized (401): refresh token and retry once
-                          ((and (eql status-code 401) (not refreshed-p))
-                           (condition-case err
-                               (spofy-auth-refresh-token)
-                             (error
-                              (message "spofy: token refresh failed: %s"
-                                       (error-message-string err))))
-                           (spofy-api--request-with-retries
-                            method url params data callback retry-count t))
-                          ;; Rate limited (429): retry after delay
-                          ((eql status-code 429)
-                           (let ((delay (spofy-api--parse-retry-after)))
-                             (spofy-api--record-rate-limit full-url delay)
-                             (when (< retry-count spofy-api--max-retries)
-                               (run-at-time delay nil
-                                            #'spofy-api--request-with-retries
-                                            method url params data callback
-                                            (1+ retry-count) refreshed-p))))
-                          ;; Server error (5xx): exponential backoff
-                          ((and status-code (>= status-code 500)
-                                (< retry-count spofy-api--max-retries))
-                           (let ((delay (spofy-api--backoff-delay retry-count)))
-                             (run-at-time delay nil
-                                          #'spofy-api--request-with-retries
-                                          method url params data callback
-                                          (1+ retry-count) refreshed-p)))
-                          ;; No active device (404 on player endpoints)
-                          ((and (eql status-code 404)
-                                (string-match-p "me/player" full-url))
-                           (spofy-api--log-error full-url
-                            "spofy: no active device found; please open Spotify on a device")
-                           (when callback
-                             (funcall callback nil)))
-                          ;; All retries exhausted or unrecoverable error
-                          (t
-                           (spofy-api--log-error full-url
-                            "spofy: API request failed (HTTP %s): %s %s"
-                            (or status-code "?") method full-url)
-                           (when callback
-                             (funcall callback nil)))))
-                     (when (buffer-live-p buf)
-                       (kill-buffer buf)))))))))))))
+        (spofy-auth-access-token-async
+         (lambda (token)
+           ;; Spotify requires a JSON body (even "{}") on PUT/POST/DELETE;
+           ;; omitting it causes "Malformed json".
+           (let ((has-body (not (equal method "GET"))))
+             (if (null token)
+                 ;; No valid token — cannot make request
+                 (let ((last (gethash full-url spofy-api--last-error-times 0)))
+                   (when (> (- (float-time) last) spofy-api--error-cooldown)
+                     (puthash full-url (float-time) spofy-api--last-error-times)
+                     (message "spofy: no valid access token; try M-x spofy-authenticate"))
+                   (when callback
+                     (funcall callback nil)))
+               (let* ((url-request-method method)
+                      (url-request-extra-headers
+                       `(("Authorization" . ,(concat "Bearer " token))
+                         ,@(when has-body '(("Content-Type" . "application/json")))))
+                      (url-request-data (cond (data (json-serialize data))
+                                              (has-body "{}")))
+                      (url-show-status nil))
+                 (url-retrieve
+                  full-url
+                  (lambda (_status)
+                    (let ((buf (current-buffer)))
+                      (unwind-protect
+                          (let ((status-code (spofy-api--response-status)))
+                            (cond
+                             ;; Success (2xx)
+                             ((and status-code (>= status-code 200) (< status-code 300))
+                              (let ((parsed (spofy-api--parse-response)))
+                                (when (and (equal method "GET")
+                                           (not (spofy-api--skip-cache-p full-url)))
+                                  (spofy-api--cache-put
+                                   cache-key parsed
+                                   (spofy-api--cache-ttl full-url)))
+                                (when callback
+                                  (funcall callback parsed))))
+                             ;; Unauthorized (401): refresh token and retry once
+                             ((and (eql status-code 401) (not refreshed-p))
+                              (spofy-auth-refresh-token
+                               (lambda (refreshed-token)
+                                 (if refreshed-token
+                                     (spofy-api--request-with-retries
+                                      method url params data callback retry-count t)
+                                   (when callback
+                                     (funcall callback nil))))))
+                             ;; Rate limited (429): retry after delay
+                             ((eql status-code 429)
+                              (let ((delay (spofy-api--parse-retry-after)))
+                                (spofy-api--record-rate-limit full-url delay)
+                                (if (< retry-count spofy-api--max-retries)
+                                    (run-at-time delay nil
+                                                 #'spofy-api--request-with-retries
+                                                 method url params data callback
+                                                 (1+ retry-count) refreshed-p)
+                                  (when callback
+                                    (funcall callback nil)))))
+                             ;; Server error (5xx): exponential backoff
+                             ((and status-code (>= status-code 500)
+                                   (< retry-count spofy-api--max-retries))
+                              (let ((delay (spofy-api--backoff-delay retry-count)))
+                                (run-at-time delay nil
+                                             #'spofy-api--request-with-retries
+                                             method url params data callback
+                                             (1+ retry-count) refreshed-p)))
+                             ;; No active device (404 on player endpoints)
+                             ((and (eql status-code 404)
+                                   (string-match-p "me/player" full-url))
+                              (spofy-api--log-error
+                               full-url
+                               "spofy: no active device found; please open Spotify on a device")
+                              (when callback
+                                (funcall callback nil)))
+                             ;; All retries exhausted or unrecoverable error
+                             (t
+                              (spofy-api--log-error
+                               full-url
+                               "spofy: API request failed (HTTP %s): %s %s"
+                               (or status-code "?") method full-url)
+                              (when callback
+                                (funcall callback nil)))))
+                        (when (buffer-live-p buf)
+                          (kill-buffer buf)))))))))))))))
 
 ;;;; High-level helpers
 
@@ -344,90 +350,6 @@ scope to accept from_token) must not use this helper."
   (if (assoc "market" params)
       params
     (cons '("market" . "from_token") params)))
-
-(defun spofy-api-get-sync (endpoint &optional params)
-  "Synchronously GET ENDPOINT with optional query PARAMS.
-Return the parsed JSON response, or nil on error."
-  (spofy-api--get-sync endpoint params nil))
-
-(defun spofy-api-get-sync-or-error (endpoint &optional params)
-  "Synchronously GET ENDPOINT with PARAMS or signal a user error."
-  (spofy-api--get-sync endpoint params t))
-
-(defun spofy-api--get-sync (endpoint params signal-errors &optional refreshed-p)
-  "Synchronously GET ENDPOINT with PARAMS.
-When SIGNAL-ERRORS is non-nil, signal a user error instead of
-silently returning nil.  REFRESHED-P records whether token refresh
-has already been attempted."
-  (let ((url (spofy-api--build-url endpoint params)))
-    (if (spofy-api--rate-limit-active-p url)
-        (spofy-api--sync-fail
-         signal-errors
-         "spofy: Spotify API rate limit exceeded; retry after %s seconds"
-         (spofy-api-rate-limit-remaining))
-      (if-let* ((token (spofy-auth-access-token)))
-          (let ((url-request-method "GET")
-                (url-request-extra-headers
-                 `(("Authorization" . ,(concat "Bearer " token))))
-                (url-show-status nil)
-                (buf (url-retrieve-synchronously url t nil 5)))
-            (if buf
-                (unwind-protect
-                    (with-current-buffer buf
-                      (spofy-api--handle-sync-response endpoint params
-                                                      signal-errors
-                                                      refreshed-p))
-                  (kill-buffer buf))
-              (spofy-api--sync-fail
-               signal-errors "spofy: API request timed out: GET %s" endpoint)))
-        (spofy-api--sync-fail
-         signal-errors "spofy: no valid access token; try M-x spofy-authenticate")))))
-
-(defun spofy-api--handle-sync-response (endpoint params signal-errors refreshed-p)
-  "Handle a synchronous response for ENDPOINT with PARAMS.
-SIGNAL-ERRORS and REFRESHED-P have the same meaning as in
-`spofy-api--get-sync'."
-  (let ((status (spofy-api--response-status)))
-    (cond
-     ((and status (>= status 200) (< status 300))
-      (spofy-api--parse-response))
-     ((and (eql status 401) (not refreshed-p))
-      (spofy-api--refresh-and-retry-sync endpoint params signal-errors))
-     ((eql status 429)
-      (let ((retry-after (spofy-api--parse-retry-after))
-            (url (spofy-api--build-url endpoint params)))
-        (spofy-api--record-rate-limit url retry-after)
-        (spofy-api--sync-fail
-         signal-errors
-         "spofy: Spotify API rate limit exceeded; retry after %s seconds"
-         retry-after)))
-     (status
-      (spofy-api--sync-fail
-       signal-errors "spofy: API request failed (HTTP %s): GET %s"
-       status endpoint))
-     (t
-      (spofy-api--sync-fail
-       signal-errors "spofy: API request failed without an HTTP status")))))
-
-(defun spofy-api--refresh-and-retry-sync (endpoint params signal-errors)
-  "Refresh the access token and retry the synchronous GET request.
-ENDPOINT, PARAMS, and SIGNAL-ERRORS have the same meaning as in
-`spofy-api--get-sync'."
-  (condition-case err
-      (progn
-        (spofy-auth-refresh-token)
-        (spofy-api--get-sync endpoint params signal-errors t))
-    (error
-     (spofy-api--sync-fail
-      signal-errors "spofy: token refresh failed: %s"
-      (error-message-string err)))))
-
-(defun spofy-api--sync-fail (signal-errors format-string &rest args)
-  "Return nil or signal a user error built from FORMAT-STRING and ARGS.
-SIGNAL-ERRORS controls whether an error is signaled."
-  (when signal-errors
-    (apply #'user-error format-string args))
-  nil)
 
 (defun spofy-api-put (endpoint &optional data callback)
   "Send a PUT request to ENDPOINT with optional JSON body DATA.

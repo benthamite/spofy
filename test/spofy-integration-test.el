@@ -74,16 +74,19 @@
              (lambda () nil)))
     (should-error (consult-spofy-track) :type 'user-error)))
 
-(ert-deftest spofy-player-test-ensure-device-refreshes-on-empty-state ()
-  "Device checks refresh the player state before failing."
+(ert-deftest spofy-player-test-with-device-refreshes-on-empty-state ()
+  "Device continuations refresh player state before prompting."
   (let ((spofy-player--current-state nil)
-        polled)
-    (cl-letf (((symbol-function 'spofy-player--poll-sync)
-               (lambda ()
-                 (setq polled t
-                       spofy-player--current-state '((device . "MacBook"))))))
-      (spofy-player--ensure-device))
-    (should polled)
+        refreshed
+        called)
+    (cl-letf (((symbol-function 'spofy-player--refresh-state)
+               (lambda (callback)
+                 (setq refreshed t
+                       spofy-player--current-state '((device . "MacBook")))
+                 (funcall callback spofy-player--current-state))))
+      (spofy-player--with-device (lambda () (setq called t))))
+    (should refreshed)
+    (should called)
     (should (equal (alist-get 'device spofy-player--current-state) "MacBook"))))
 
 (provide 'spofy-integration-test)

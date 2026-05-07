@@ -157,6 +157,29 @@
         (spofy-auth--token-expiry (- (float-time) 100)))
     (should-not (spofy-auth-access-token))))
 
+(ert-deftest spofy-auth-test-access-token-never-refreshes-synchronously ()
+  "The synchronous accessor does not contact Spotify on expired tokens."
+  (let ((spofy-auth--access-token "old-token")
+        (spofy-auth--refresh-token "refresh-token")
+        (spofy-auth--token-expiry (- (float-time) 100))
+        refreshed)
+    (cl-letf (((symbol-function 'spofy-auth-refresh-token)
+               (lambda (&rest _) (setq refreshed t))))
+      (should-not (spofy-auth-access-token))
+      (should-not refreshed))))
+
+(ert-deftest spofy-auth-test-access-token-async-refreshes-expired-token ()
+  "The async accessor refreshes expired tokens through a callback."
+  (let ((spofy-auth--access-token "old-token")
+        (spofy-auth--refresh-token "refresh-token")
+        (spofy-auth--token-expiry (- (float-time) 100))
+        result)
+    (cl-letf (((symbol-function 'spofy-auth-refresh-token)
+               (lambda (callback)
+                 (funcall callback "new-token"))))
+      (spofy-auth-access-token-async (lambda (token) (setq result token)))
+      (should (equal result "new-token")))))
+
 ;;;; Token exchange request body format
 
 (ert-deftest spofy-auth-test-exchange-code-request-body ()

@@ -35,7 +35,7 @@
 (require 'cl-lib)
 
 (declare-function spofy-api-get "spofy-api" (endpoint &optional params callback))
-(declare-function spofy-player--poll-sync "spofy-player" ())
+(declare-function spofy-player--with-state "spofy-player" (callback))
 (declare-function gptel-request "gptel" (&optional prompt &rest args))
 (declare-function gptel-get-backend "gptel" (name))
 (declare-function gptel-backend-models "gptel-request" (backend))
@@ -589,28 +589,28 @@ with (WIKI-TITLE . WIKI-URL) or signal an error."
   "Open the Wikipedia article for the currently playing album or work."
   (interactive)
   (require 'spofy-player)
-  (unless spofy-player--current-state
-    (spofy-player--poll-sync))
-  (let* ((state spofy-player--current-state)
-         (track (alist-get 'track state))
-         (album (alist-get 'album state))
-         (album-id (alist-get 'album-id state))
-         (artist (alist-get 'artist state))
-         (artist-id (alist-get 'artist-id state)))
-    (unless track
-      (user-error "spofy: No track currently playing"))
-    (unless artist-id
-      (user-error "spofy: No artist information available"))
-    (spofy-wikipedia--classify-artist
-     artist-id track
-     (lambda (classical)
-       (if classical
-           (spofy-wikipedia--lookup-work
-            track album artist artist-id
-            (lambda (result) (browse-url (cdr result))))
-         (spofy-wikipedia--lookup-album
-          album artist album-id artist-id
-          (lambda (result) (browse-url (cdr result)))))))))
+  (spofy-player--with-state
+   (lambda ()
+     (let* ((state spofy-player--current-state)
+            (track (alist-get 'track state))
+            (album (alist-get 'album state))
+            (album-id (alist-get 'album-id state))
+            (artist (alist-get 'artist state))
+            (artist-id (alist-get 'artist-id state)))
+       (unless track
+         (user-error "spofy: No track currently playing"))
+       (unless artist-id
+         (user-error "spofy: No artist information available"))
+       (spofy-wikipedia--classify-artist
+        artist-id track
+        (lambda (classical)
+          (if classical
+              (spofy-wikipedia--lookup-work
+               track album artist artist-id
+               (lambda (result) (browse-url (cdr result))))
+            (spofy-wikipedia--lookup-album
+             album artist album-id artist-id
+             (lambda (result) (browse-url (cdr result)))))))))))
 
 ;;;; Embark action helpers
 

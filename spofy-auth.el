@@ -196,21 +196,23 @@ Returns non-nil if tokens were found."
 ;;;; Token access
 
 (defun spofy-auth-access-token ()
-  "Return the current access token, or nil if unavailable/expired.
-If the token is expired and a refresh token is available,
-attempts to refresh automatically."
-  (cond
-   ;; Token in memory and not expired
-   ((and spofy-auth--access-token
-         (not (spofy-auth--token-expired-p)))
-    spofy-auth--access-token)
-   ;; Token expired but we have a refresh token
-   (spofy-auth--refresh-token
-    (spofy-auth-refresh-token)
-    (and (not (spofy-auth--token-expired-p))
-         spofy-auth--access-token))
-   ;; Nothing available
-   (t nil)))
+  "Return the current non-expired access token, or nil.
+This function never contacts Spotify.  Use
+`spofy-auth-access-token-async' when an expired token may be
+refreshed before continuing."
+  (and spofy-auth--access-token
+       (not (spofy-auth--token-expired-p))
+       spofy-auth--access-token))
+
+(defun spofy-auth-access-token-async (callback)
+  "Call CALLBACK with a usable access token, or nil.
+When the current token has expired and a refresh token is
+available, refresh it asynchronously before calling CALLBACK."
+  (if-let* ((token (spofy-auth-access-token)))
+      (funcall callback token)
+    (if spofy-auth--refresh-token
+        (spofy-auth-refresh-token callback)
+      (funcall callback nil))))
 
 ;;;; Token exchange
 
@@ -252,42 +254,63 @@ on success, or signals an error on failure."
 
 ;;;; Token refresh
 
-(defun spofy-auth-refresh-token ()
-  "Use the refresh token to obtain a new access token.
-Updates the stored tokens on success."
-  (unless spofy-auth--refresh-token
-    (error "spofy: No refresh token available; please re-authenticate with `spofy-authenticate'"))
-  (unless (and spofy-client-id spofy-client-secret)
-    (error "spofy: `spofy-client-id' and `spofy-client-secret' must be set"))
-  (let ((url-request-method "POST")
-        (url-request-extra-headers
-         '(("Content-Type" . "application/x-www-form-urlencoded")))
-        (url-request-data
-         (url-build-query-string
-          `(("grant_type" "refresh_token")
-            ("refresh_token" ,spofy-auth--refresh-token)
-            ("client_id" ,spofy-client-id)
-            ("client_secret" ,spofy-client-secret)))))
-    (when-let* ((buf (url-retrieve-synchronously
-                      "https://accounts.spotify.com/api/token" t nil 10)))
-      (unwind-protect
-          (with-current-buffer buf
-            (goto-char url-http-end-of-headers)
-            (let* ((json (condition-case nil
-                             (json-parse-buffer :object-type 'alist)
-                           (json-parse-error nil)))
-                   (access-token (and json (alist-get 'access_token json)))
-                   (new-refresh (and json (alist-get 'refresh_token json)))
-                   (expires-in (and json (alist-get 'expires_in json))))
-              (if access-token
-                  (spofy-auth--store-tokens access-token
-                                            (or new-refresh spofy-auth--refresh-token)
-                                            expires-in)
-                (message "spofy: token refresh failed: %s"
-                         (or (and json (alist-get 'error_description json))
-                             (and json (alist-get 'error json))
-                             "no access token in response")))))
-        (kill-buffer buf)))))
+(defun spofy-auth-refresh-token (&optional callback)
+  "Use the refresh token to obtain a new access token asynchronously.
+Updates the stored tokens on success.  CALLBACK, when non-nil, is
+called with the refreshed access token or nil on failure."
+  (cond
+   ((not spofy-auth--refresh-token)
+    (message "spofy: no refresh token available; please re-authenticate with `spofy-authenticate'")
+    (when callback
+      (funcall callback nil)))
+   ((not (and spofy-client-id spofy-client-secret))
+    (message "spofy: `spofy-client-id' and `spofy-client-secret' must be set")
+    (when callback
+      (funcall callback nil)))
+   (t
+    (let ((url-request-method "POST")
+          (url-request-extra-headers
+           '(("Content-Type" . "application/x-www-form-urlencoded")))
+          (url-request-data
+           (url-build-query-string
+            `(("grant_type" "refresh_token")
+              ("refresh_token" ,spofy-auth--refresh-token)
+              ("client_id" ,spofy-client-id)
+              ("client_secret" ,spofy-client-secret)))))
+      (url-retrieve
+       "https://accounts.spotify.com/api/token"
+       (lambda (status)
+         (let ((buf (current-buffer)))
+           (unwind-protect
+               (let ((token nil))
+                 (if (plist-get status :error)
+                     (message "spofy: token refresh failed: %S"
+                              (plist-get status :error))
+                   (goto-char url-http-end-of-headers)
+                   (let* ((json (condition-case err
+                                    (json-parse-buffer :object-type 'alist)
+                                  (json-parse-error
+                                   (message "spofy: failed to parse token refresh response: %s"
+                                            (error-message-string err))
+                                   nil)))
+                          (access-token (and json (alist-get 'access_token json)))
+                          (new-refresh (and json (alist-get 'refresh_token json)))
+                          (expires-in (and json (alist-get 'expires_in json))))
+                     (if access-token
+                         (progn
+                           (setq token access-token)
+                           (spofy-auth--store-tokens
+                            access-token
+                            (or new-refresh spofy-auth--refresh-token)
+                            expires-in))
+                       (message "spofy: token refresh failed: %s"
+                                (or (and json (alist-get 'error_description json))
+                                    (and json (alist-get 'error json))
+                                    "no access token in response")))))
+                 (when callback
+                   (funcall callback token)))
+             (when (buffer-live-p buf)
+               (kill-buffer buf))))))))))
 
 ;;;; Callback parsing
 
