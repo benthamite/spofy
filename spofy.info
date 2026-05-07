@@ -747,7 +747,8 @@ network latency—a fixed-interval repeating timer would fire new requests
 even while previous ones were still in flight, causing unbounded buffer
 growth.  A generation counter ensures that stale in-flight callbacks
 from a previous polling loop do not accidentally reschedule after a stop
-or restart.
+or restart, and spofy checks for stale timer objects when ensuring that
+polling is active.
 
    When the player state changes, spofy runs
 ‘spofy-player-state-changed-hook’.  When the track changes specifically,
@@ -783,8 +784,9 @@ The Spotify Web API can control playback on any device logged into the
 user's account: desktop apps, mobile phones, web players, smart
 speakers, and more.  The command ‘spofy-select-device’ fetches the list
 of available devices asynchronously, presents them in a
-‘completing-read’ prompt when the response arrives, and transfers
-playback to the selected device.
+‘completing-read’ prompt when the response arrives, transfers playback
+to the selected device, and refreshes the cached player state so the
+dashboard, mode line, and tab bar update.
 
    Playback commands never perform synchronous network requests.
 Commands that need an active device first use the cached player state;
@@ -2150,39 +2152,39 @@ Node: Tracking the playing position28043
 Node: Cursor follows playback28486
 Node: Buffer mode-line29215
 Node: Polling30600
-Node: Device management32821
-Node: Search33936
-Node: Navigating search results35402
-Node: Browsing36518
-Node: Album view36708
-Node: Artist view38108
-Node: Playlist detail view40200
-Node: Playlist management41646
-Node: Library management44365
-Node: Timeline49874
-Node: Cache management52087
-Node: Browse cache54365
-Node: Functions55481
-Node: Player state accessors55732
-Node: Entity access in buffers56844
-Node: API client57442
-Node: Authentication helpers58905
-Node: Formatting utilities59931
-Node: Pagination63487
-Node: Entity storage and list rendering65340
-Node: Consult integration67900
-Node: Embark integration72223
-Node: Org-mode integration75356
-Node: Wikipedia integration76601
-Node: Wikipedia user options80249
-Node: Faces81928
-Node: Hooks84049
-Node: Mode-line display85260
-Node: Tab-bar display86188
-Node: Development87507
-Node: Indices87724
-Node: Function index87861
-Node: Variable index99191
+Node: Device management32900
+Node: Search34098
+Node: Navigating search results35564
+Node: Browsing36680
+Node: Album view36870
+Node: Artist view38270
+Node: Playlist detail view40362
+Node: Playlist management41808
+Node: Library management44527
+Node: Timeline50036
+Node: Cache management52249
+Node: Browse cache54527
+Node: Functions55643
+Node: Player state accessors55894
+Node: Entity access in buffers57006
+Node: API client57604
+Node: Authentication helpers59067
+Node: Formatting utilities60093
+Node: Pagination63649
+Node: Entity storage and list rendering65502
+Node: Consult integration68062
+Node: Embark integration72385
+Node: Org-mode integration75518
+Node: Wikipedia integration76763
+Node: Wikipedia user options80411
+Node: Faces82090
+Node: Hooks84211
+Node: Mode-line display85422
+Node: Tab-bar display86350
+Node: Development87669
+Node: Indices87886
+Node: Function index88023
+Node: Variable index99353
 
 End Tag Table
 

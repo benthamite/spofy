@@ -81,6 +81,9 @@ device, volume, track-id, context-uri, context-type.")
 Incremented on each `spofy-player-start-polling' call so that
 stale in-flight callbacks do not reschedule a stopped loop.")
 
+(defvar spofy-player--poll-in-flight-p nil
+  "Non-nil when a player-state poll request is awaiting a response.")
+
 ;;;; State extraction
 
 (defun spofy-player--best-image-url (images)
@@ -163,15 +166,21 @@ Uses a one-shot timer that only reschedules after the response
 callback completes, so requests never pile up under network
 latency."
   (let ((gen spofy-player--poll-generation))
-    (condition-case err
-        (spofy-api-get "me/player" (spofy-api-with-market nil)
-                       (lambda (data)
-                         (unwind-protect
-                             (spofy-player--handle-poll-response data)
-                           (spofy-player--reschedule-poll gen))))
-      (error
-       (message "spofy: poll error: %S" err)
-       (spofy-player--reschedule-poll gen)))))
+    (if (spofy-api-rate-limit-remaining)
+        (spofy-player--reschedule-poll gen)
+      (condition-case err
+          (progn
+            (setq spofy-player--poll-in-flight-p t)
+            (spofy-api-get "me/player" (spofy-api-with-market nil)
+                           (lambda (data)
+                             (unwind-protect
+                                 (spofy-player--handle-poll-response data)
+                               (setq spofy-player--poll-in-flight-p nil)
+                               (spofy-player--reschedule-poll gen)))))
+        (error
+         (setq spofy-player--poll-in-flight-p nil)
+         (message "spofy: poll error: %S" err)
+         (spofy-player--reschedule-poll gen))))))
 
 (defun spofy-player--handle-poll-response (data)
   "Handle the poll response DATA.
@@ -221,6 +230,19 @@ state is available."
                    (spofy-player--handle-poll-response data)
                    (funcall callback spofy-player--current-state))))
 
+(defun spofy-player-polling-active-p ()
+  "Return non-nil when polling has a live timer or in-flight request."
+  (or spofy-player--poll-in-flight-p
+      (and spofy-player--timer
+           (memq spofy-player--timer timer-list)
+           t)))
+
+(defun spofy-player-ensure-polling ()
+  "Start player polling unless an active poll loop already exists."
+  (unless (spofy-player-polling-active-p)
+    (setq spofy-player--timer nil)
+    (spofy-player-start-polling)))
+
 ;;;###autoload
 (defun spofy-player-start-polling ()
   "Start polling the Spotify player state.
@@ -228,6 +250,7 @@ Polls at `spofy-poll-interval' second intervals."
   (interactive)
   (spofy-player-stop-polling)
   (cl-incf spofy-player--poll-generation)
+  (setq spofy-player--poll-in-flight-p nil)
   (setq spofy-player--timer
         (run-with-timer 0 nil #'spofy-player--poll)))
 
@@ -237,7 +260,8 @@ Polls at `spofy-poll-interval' second intervals."
   (interactive)
   (when spofy-player--timer
     (cancel-timer spofy-player--timer)
-    (setq spofy-player--timer nil)))
+    (setq spofy-player--timer nil))
+  (setq spofy-player--poll-in-flight-p nil))
 
 ;;;; Helper accessors
 
@@ -353,13 +377,22 @@ CALLBACK, when non-nil, is called after playback is transferred."
                          `((device_ids . [,device-id])
                            (play . t))
                          (lambda (_)
-                           (when spofy-player--current-state
-                             (setf (alist-get 'device spofy-player--current-state)
-                                   choice)
-                             (run-hooks 'spofy-player-state-changed-hook))
-                           (message "spofy: transferred playback to %s" choice)
-                           (when callback
-                             (funcall callback))))))))))
+                          (when spofy-player--current-state
+                            (setf (alist-get 'device spofy-player--current-state)
+                                  choice)
+                            (run-hooks 'spofy-player-state-changed-hook))
+                          (message "spofy: transferred playback to %s" choice)
+                          (spofy-player-ensure-polling)
+                          (spofy-player--poll-after-device-transfer)
+                          (when callback
+                            (funcall callback))))))))))
+
+(defun spofy-player--poll-after-device-transfer ()
+  "Refresh player state shortly after transferring playback devices."
+  (run-with-timer
+   0.5 nil
+   (lambda ()
+     (spofy-player--refresh-state #'ignore))))
 
 ;;;; Playback commands
 

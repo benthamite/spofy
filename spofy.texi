@@ -548,7 +548,7 @@ The mode-line updates automatically on player state changes (shuffle, repeat) an
 @findex spofy-player-start-polling
 @findex spofy-player-stop-polling
 
-The command @code{spofy-player-start-polling} starts a timer that polls the Spotify player state at @code{spofy-poll-interval} second intervals.  Polling is necessary because the Spotify Web API does not support push notifications.  The timer uses a self-rescheduling design: each poll is a one-shot timer that only schedules the next poll after the HTTP response callback completes.  This prevents request accumulation under network latency—a fixed-interval repeating timer would fire new requests even while previous ones were still in flight, causing unbounded buffer growth.  A generation counter ensures that stale in-flight callbacks from a previous polling loop do not accidentally reschedule after a stop or restart.
+The command @code{spofy-player-start-polling} starts a timer that polls the Spotify player state at @code{spofy-poll-interval} second intervals.  Polling is necessary because the Spotify Web API does not support push notifications.  The timer uses a self-rescheduling design: each poll is a one-shot timer that only schedules the next poll after the HTTP response callback completes.  This prevents request accumulation under network latency—a fixed-interval repeating timer would fire new requests even while previous ones were still in flight, causing unbounded buffer growth.  A generation counter ensures that stale in-flight callbacks from a previous polling loop do not accidentally reschedule after a stop or restart, and spofy checks for stale timer objects when ensuring that polling is active.
 
 When the player state changes, spofy runs @code{spofy-player-state-changed-hook}.  When the track changes specifically, it also runs @code{spofy-player-track-changed-hook}.  When the API reports no active player session (e.g. playback ended or the device went idle), the response may contain null fields such as @code{item}; spofy normalizes these to @code{nil}, clears the player state, and runs @code{spofy-player-state-changed-hook} so that the mode line and tab bar reflect that nothing is playing.
 
@@ -561,7 +561,7 @@ When Spotify's autoplay continues beyond an album, the API may still report the 
 
 @findex spofy-select-device
 
-The Spotify Web API can control playback on any device logged into the user's account: desktop apps, mobile phones, web players, smart speakers, and more.  The command @code{spofy-select-device} fetches the list of available devices asynchronously, presents them in a @code{completing-read} prompt when the response arrives, and transfers playback to the selected device.
+The Spotify Web API can control playback on any device logged into the user's account: desktop apps, mobile phones, web players, smart speakers, and more.  The command @code{spofy-select-device} fetches the list of available devices asynchronously, presents them in a @code{completing-read} prompt when the response arrives, transfers playback to the selected device, and refreshes the cached player state so the dashboard, mode line, and tab bar update.
 
 Playback commands never perform synchronous network requests.  Commands that need an active device first use the cached player state; if no device is known, they refresh state asynchronously and then prompt with @code{spofy-select-device} when needed.  Commands that require a current track, such as seek, volume, shuffle, repeat, and Wikipedia lookup, fail fast when no player state is available yet.
 

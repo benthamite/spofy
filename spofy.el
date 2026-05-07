@@ -56,8 +56,8 @@
 (declare-function spofy-api-get "spofy-api" (endpoint &optional params callback))
 
 ;; spofy-player
-(declare-function spofy-player-start-polling "spofy-player" ())
 (declare-function spofy-player-stop-polling "spofy-player" ())
+(declare-function spofy-player-ensure-polling "spofy-player" ())
 (declare-function spofy-player-current-track "spofy-player" ())
 (declare-function spofy-player-playing-p "spofy-player" ())
 (declare-function spofy-player-interpolated-progress "spofy-player" ())
@@ -127,7 +127,6 @@
 (defvar spofy-player--current-state)
 (defvar spofy-player-state-changed-hook)
 (defvar spofy-player-track-changed-hook)
-(defvar spofy-player--timer)
 (defvar spofy-poll-interval)
 (defvar spofy-global-mode)
 
@@ -919,6 +918,7 @@ If no tokens are available, prompts the user to authenticate."
       (user-error "spofy: Authentication required")))
   (unless spofy-global-mode
     (spofy-global-mode 1))
+  (spofy-player-ensure-polling)
   (add-hook 'spofy-player-track-changed-hook
             #'spofy-ui--refresh-track-highlights)
   (add-hook 'spofy-player-state-changed-hook
@@ -1080,8 +1080,7 @@ polling, and optionally enables the mode-line display."
                     (kbd spofy-global-key) #'spofy-menu)
         ;; Start polling
         (require 'spofy-player)
-        (unless (and (boundp 'spofy-player--timer) spofy-player--timer)
-          (spofy-player-start-polling))
+        (spofy-player-ensure-polling)
         ;; Enable display: tab-bar takes precedence over mode-line to
         ;; avoid duplication (mode-line strings appear in the tab bar
         ;; via `tab-bar-format-global').

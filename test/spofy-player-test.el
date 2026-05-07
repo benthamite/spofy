@@ -147,6 +147,41 @@
 
 ;;;; Device management
 
+(ert-deftest spofy-player-test-polling-active-ignores-stale-timer ()
+  "A non-nil but inactive timer object does not count as polling."
+  (let ((spofy-player--timer (timer-create))
+        (spofy-player--poll-in-flight-p nil))
+    (should-not (spofy-player-polling-active-p))))
+
+(ert-deftest spofy-player-test-polling-active-during-in-flight-request ()
+  "An in-flight request counts as active polling."
+  (let ((spofy-player--timer nil)
+        (spofy-player--poll-in-flight-p t))
+    (should (spofy-player-polling-active-p))))
+
+(ert-deftest spofy-player-test-ensure-polling-restarts-stale-timer ()
+  "Polling is restarted when the stored timer object is stale."
+  (let ((spofy-player--timer (timer-create))
+        (spofy-player--poll-in-flight-p nil)
+        started)
+    (cl-letf (((symbol-function 'spofy-player-start-polling)
+               (lambda () (setq started t))))
+      (spofy-player-ensure-polling)
+      (should started)
+      (should-not spofy-player--timer))))
+
+(ert-deftest spofy-player-test-poll-reschedules-during-rate-limit ()
+  "Polling reschedules when cooldown prevents the API callback."
+  (let (rescheduled)
+    (cl-letf (((symbol-function 'spofy-api-rate-limit-remaining)
+               (lambda () 3))
+              ((symbol-function 'spofy-api-get)
+               (lambda (&rest _) (ert-fail "should not call API")))
+              ((symbol-function 'spofy-player--reschedule-poll)
+               (lambda (generation) (setq rescheduled generation))))
+      (spofy-player--poll)
+      (should (= rescheduled spofy-player--poll-generation)))))
+
 (ert-deftest spofy-player-test-ensure-device-stops-during-rate-limit ()
   "Device checks signal before any refresh while a cooldown is active."
   (let ((spofy-player--current-state nil)
@@ -212,7 +247,7 @@
 
 (ert-deftest spofy-player-test-select-device-transfers-selected-device ()
   "Selecting a device transfers playback to its ID."
-  (let (request done)
+  (let (request done ensured refreshed)
     (cl-letf (((symbol-function 'spofy-api-rate-limit-remaining)
                (lambda () nil))
               ((symbol-function 'spofy-api-get)
@@ -228,11 +263,17 @@
                (lambda (endpoint data &optional callback)
                  (setq request (list endpoint data))
                  (when callback
-                   (funcall callback nil)))))
+                   (funcall callback nil))))
+              ((symbol-function 'spofy-player-ensure-polling)
+               (lambda () (setq ensured t)))
+              ((symbol-function 'spofy-player--poll-after-device-transfer)
+               (lambda () (setq refreshed t))))
       (spofy-select-device (lambda () (setq done t)))
       (should (equal "me/player" (car request)))
       (should (equal '((device_ids . ["device-1"]) (play . t))
                      (cadr request)))
+      (should ensured)
+      (should refreshed)
       (should done))))
 
 (provide 'spofy-player-test)
