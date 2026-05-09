@@ -262,6 +262,13 @@ responsive to changes (e.g.  track transitions) at the cost of more API
 requests.  The Spotify API does not provide push notifications, so
 polling is the only way to detect state changes.
 
+   The user option ‘spofy-poll-timeout’ sets the number of seconds spofy
+waits for an in-flight player state poll before treating it as stuck and
+scheduling another poll.  It defaults to ‘15’.  Increase it only if your
+network routinely takes longer than that to return from Spotify; lower
+values recover faster from lost callbacks but may retry while a slow
+response is still in transit.
+
    The user option ‘spofy-seek-seconds’ controls how many seconds
 ‘spofy-seek-forward’ and ‘spofy-seek-backward’ jump.  It defaults to
 ‘10’.
@@ -745,10 +752,13 @@ a one-shot timer that only schedules the next poll after the HTTP
 response callback completes.  This prevents request accumulation under
 network latency—a fixed-interval repeating timer would fire new requests
 even while previous ones were still in flight, causing unbounded buffer
-growth.  A generation counter ensures that stale in-flight callbacks
-from a previous polling loop do not accidentally reschedule after a stop
-or restart, and spofy checks for stale timer objects when ensuring that
-polling is active.
+growth.  Each in-flight poll also has a recovery timer governed by
+‘spofy-poll-timeout’ (*note Playback options: Playback.), so a lost
+callback cannot leave the dashboard, mode-line, or tab-bar stuck on
+stale player state.  A generation counter and per-request identifier
+ensure that stale callbacks from a previous polling loop do not
+accidentally reschedule after a stop, restart, or timeout, and spofy
+checks for stale timer objects when ensuring that polling is active.
 
    When the player state changes, spofy runs
 ‘spofy-player-state-changed-hook’.  When the track changes specifically,
@@ -2106,6 +2116,7 @@ File: spofy.info,  Node: Variable index,  Prev: Function index,  Up: Indices
 * spofy-playing:                         Faces.                (line  6)
 * spofy-playing-icon:                    Faces.                (line  6)
 * spofy-poll-interval:                   Playback.             (line  6)
+* spofy-poll-timeout:                    Playback.             (line  6)
 * spofy-progress-empty:                  Faces.                (line  6)
 * spofy-progress-filled:                 Faces.                (line  6)
 * spofy-redirect-port:                   Authentication (1).   (line  6)
@@ -2138,53 +2149,53 @@ Node: Getting started4897
 Node: User options6219
 Node: Authentication (1)6480
 Node: Playback8049
-Node: Mode-line8873
-Node: Tab-bar9988
-Node: Global key and mode-line activation12140
-Node: Column widths15389
-Node: Commands17285
-Node: Authentication17692
-Node: Dashboard and global control18917
-Node: Transient popup21192
-Node: Global minor mode22927
-Node: Playback control24381
-Node: Tracking the playing position28043
-Node: Cursor follows playback28486
-Node: Buffer mode-line29215
-Node: Polling30600
-Node: Device management32900
-Node: Search34098
-Node: Navigating search results35564
-Node: Browsing36680
-Node: Album view36870
-Node: Artist view38270
-Node: Playlist detail view40362
-Node: Playlist management41808
-Node: Library management44527
-Node: Timeline50036
-Node: Cache management52249
-Node: Browse cache54527
-Node: Functions55643
-Node: Player state accessors55894
-Node: Entity access in buffers57006
-Node: API client57604
-Node: Authentication helpers59067
-Node: Formatting utilities60093
-Node: Pagination63649
-Node: Entity storage and list rendering65502
-Node: Consult integration68062
-Node: Embark integration72385
-Node: Org-mode integration75518
-Node: Wikipedia integration76763
-Node: Wikipedia user options80411
-Node: Faces82090
-Node: Hooks84211
-Node: Mode-line display85422
-Node: Tab-bar display86350
-Node: Development87669
-Node: Indices87886
-Node: Function index88023
-Node: Variable index99353
+Node: Mode-line9271
+Node: Tab-bar10386
+Node: Global key and mode-line activation12538
+Node: Column widths15787
+Node: Commands17683
+Node: Authentication18090
+Node: Dashboard and global control19315
+Node: Transient popup21590
+Node: Global minor mode23325
+Node: Playback control24779
+Node: Tracking the playing position28441
+Node: Cursor follows playback28884
+Node: Buffer mode-line29613
+Node: Polling30998
+Node: Device management33543
+Node: Search34741
+Node: Navigating search results36207
+Node: Browsing37323
+Node: Album view37513
+Node: Artist view38913
+Node: Playlist detail view41005
+Node: Playlist management42451
+Node: Library management45170
+Node: Timeline50679
+Node: Cache management52892
+Node: Browse cache55170
+Node: Functions56286
+Node: Player state accessors56537
+Node: Entity access in buffers57649
+Node: API client58247
+Node: Authentication helpers59710
+Node: Formatting utilities60736
+Node: Pagination64292
+Node: Entity storage and list rendering66145
+Node: Consult integration68705
+Node: Embark integration73028
+Node: Org-mode integration76161
+Node: Wikipedia integration77406
+Node: Wikipedia user options81054
+Node: Faces82733
+Node: Hooks84854
+Node: Mode-line display86065
+Node: Tab-bar display86993
+Node: Development88312
+Node: Indices88529
+Node: Function index88666
+Node: Variable index99996
 
 End Tag Table
 

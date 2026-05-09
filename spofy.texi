@@ -220,9 +220,12 @@ The user option @code{spofy-token-file} specifies where spofy stores OAuth token
 @section Playback
 
 @vindex spofy-poll-interval
+@vindex spofy-poll-timeout
 @vindex spofy-seek-seconds
 @vindex spofy-volume-step
 The user option @code{spofy-poll-interval} sets the number of seconds between player state polls.  It defaults to @code{5}.  Lower values make the UI more responsive to changes (e.g. track transitions) at the cost of more API requests.  The Spotify API does not provide push notifications, so polling is the only way to detect state changes.
+
+The user option @code{spofy-poll-timeout} sets the number of seconds spofy waits for an in-flight player state poll before treating it as stuck and scheduling another poll.  It defaults to @code{15}.  Increase it only if your network routinely takes longer than that to return from Spotify; lower values recover faster from lost callbacks but may retry while a slow response is still in transit.
 
 The user option @code{spofy-seek-seconds} controls how many seconds @code{spofy-seek-forward} and @code{spofy-seek-backward} jump.  It defaults to @code{10}.
 
@@ -548,7 +551,7 @@ The mode-line updates automatically on player state changes (shuffle, repeat) an
 @findex spofy-player-start-polling
 @findex spofy-player-stop-polling
 
-The command @code{spofy-player-start-polling} starts a timer that polls the Spotify player state at @code{spofy-poll-interval} second intervals.  Polling is necessary because the Spotify Web API does not support push notifications.  The timer uses a self-rescheduling design: each poll is a one-shot timer that only schedules the next poll after the HTTP response callback completes.  This prevents request accumulation under network latency—a fixed-interval repeating timer would fire new requests even while previous ones were still in flight, causing unbounded buffer growth.  A generation counter ensures that stale in-flight callbacks from a previous polling loop do not accidentally reschedule after a stop or restart, and spofy checks for stale timer objects when ensuring that polling is active.
+The command @code{spofy-player-start-polling} starts a timer that polls the Spotify player state at @code{spofy-poll-interval} second intervals.  Polling is necessary because the Spotify Web API does not support push notifications.  The timer uses a self-rescheduling design: each poll is a one-shot timer that only schedules the next poll after the HTTP response callback completes.  This prevents request accumulation under network latency—a fixed-interval repeating timer would fire new requests even while previous ones were still in flight, causing unbounded buffer growth.  Each in-flight poll also has a recovery timer governed by @code{spofy-poll-timeout} (@ref{Playback, , Playback options}), so a lost callback cannot leave the dashboard, mode-line, or tab-bar stuck on stale player state.  A generation counter and per-request identifier ensure that stale callbacks from a previous polling loop do not accidentally reschedule after a stop, restart, or timeout, and spofy checks for stale timer objects when ensuring that polling is active.
 
 When the player state changes, spofy runs @code{spofy-player-state-changed-hook}.  When the track changes specifically, it also runs @code{spofy-player-track-changed-hook}.  When the API reports no active player session (e.g. playback ended or the device went idle), the response may contain null fields such as @code{item}; spofy normalizes these to @code{nil}, clears the player state, and runs @code{spofy-player-state-changed-hook} so that the mode line and tab bar reflect that nothing is playing.
 

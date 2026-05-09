@@ -154,15 +154,37 @@
     (should-not (spofy-player-polling-active-p))))
 
 (ert-deftest spofy-player-test-polling-active-during-in-flight-request ()
-  "An in-flight request counts as active polling."
+  "An in-flight request with a timeout counts as active polling."
   (let ((spofy-player--timer nil)
+        (spofy-player--poll-timeout-timer (run-at-time 60 nil #'ignore))
         (spofy-player--poll-in-flight-p t))
-    (should (spofy-player-polling-active-p))))
+    (unwind-protect
+        (should (spofy-player-polling-active-p))
+      (cancel-timer spofy-player--poll-timeout-timer))))
+
+(ert-deftest spofy-player-test-polling-active-rejects-stuck-in-flight-request ()
+  "An orphaned in-flight flag without timeout recovery is not active polling."
+  (let ((spofy-player--timer nil)
+        (spofy-player--poll-timeout-timer nil)
+        (spofy-player--poll-in-flight-p t))
+    (should-not (spofy-player-polling-active-p))))
 
 (ert-deftest spofy-player-test-ensure-polling-restarts-stale-timer ()
   "Polling is restarted when the stored timer object is stale."
   (let ((spofy-player--timer (timer-create))
         (spofy-player--poll-in-flight-p nil)
+        started)
+    (cl-letf (((symbol-function 'spofy-player-start-polling)
+               (lambda () (setq started t))))
+      (spofy-player-ensure-polling)
+      (should started)
+      (should-not spofy-player--timer))))
+
+(ert-deftest spofy-player-test-ensure-polling-restarts-stuck-in-flight-request ()
+  "Polling is restarted when the in-flight flag has no timeout timer."
+  (let ((spofy-player--timer nil)
+        (spofy-player--poll-timeout-timer nil)
+        (spofy-player--poll-in-flight-p t)
         started)
     (cl-letf (((symbol-function 'spofy-player-start-polling)
                (lambda () (setq started t))))
@@ -181,6 +203,36 @@
                (lambda (generation) (setq rescheduled generation))))
       (spofy-player--poll)
       (should (= rescheduled spofy-player--poll-generation)))))
+
+(ert-deftest spofy-player-test-poll-timeout-reschedules ()
+  "A timed-out player-state poll is cleared and rescheduled."
+  (let ((spofy-player--poll-in-flight-p t)
+        (spofy-player--poll-request-id 42)
+        (spofy-player--poll-timeout-timer (timer-create))
+        rescheduled)
+    (cl-letf (((symbol-function 'spofy-player--reschedule-poll)
+               (lambda (generation) (setq rescheduled generation))))
+      (spofy-player--handle-poll-timeout 7 42)
+      (should-not spofy-player--poll-in-flight-p)
+      (should-not spofy-player--poll-timeout-timer)
+      (should (= rescheduled 7)))))
+
+(ert-deftest spofy-player-test-stale-poll-callback-is-ignored ()
+  "A callback from an old poll cannot overwrite newer state."
+  (let ((spofy-player--poll-in-flight-p nil)
+        (spofy-player--poll-request-id 2)
+        (spofy-player--current-state '((track . "newer")))
+        called)
+    (cl-letf (((symbol-function 'spofy-player--reschedule-poll)
+               (lambda (&rest _) (ert-fail "should not reschedule"))))
+      (spofy-player--complete-poll
+       7 1
+       (lambda ()
+         (setq called t
+               spofy-player--current-state '((track . "older")))))
+      (should-not called)
+      (should (equal "newer"
+                     (alist-get 'track spofy-player--current-state))))))
 
 (ert-deftest spofy-player-test-ensure-device-stops-during-rate-limit ()
   "Device checks signal before any refresh while a cooldown is active."

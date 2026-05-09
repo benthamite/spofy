@@ -43,6 +43,11 @@
   :type 'number
   :group 'spofy)
 
+(defcustom spofy-poll-timeout 15
+  "Seconds to wait for a player state poll before retrying."
+  :type 'number
+  :group 'spofy)
+
 (defcustom spofy-seek-seconds 10
   "Number of seconds to seek forward or backward."
   :type 'integer
@@ -83,6 +88,12 @@ stale in-flight callbacks do not reschedule a stopped loop.")
 
 (defvar spofy-player--poll-in-flight-p nil
   "Non-nil when a player-state poll request is awaiting a response.")
+
+(defvar spofy-player--poll-request-id 0
+  "Identifier for the latest player-state poll request.")
+
+(defvar spofy-player--poll-timeout-timer nil
+  "Timer object that recovers from a stuck player-state poll.")
 
 ;;;; State extraction
 
@@ -169,16 +180,15 @@ latency."
     (if (spofy-api-rate-limit-remaining)
         (spofy-player--reschedule-poll gen)
       (condition-case err
-          (progn
-            (setq spofy-player--poll-in-flight-p t)
+          (let ((request-id (spofy-player--begin-poll gen)))
             (spofy-api-get "me/player" (spofy-api-with-market nil)
                            (lambda (data)
-                             (unwind-protect
-                                 (spofy-player--handle-poll-response data)
-                               (setq spofy-player--poll-in-flight-p nil)
-                               (spofy-player--reschedule-poll gen)))))
+                             (spofy-player--complete-poll
+                              gen request-id
+                              (lambda ()
+                                (spofy-player--handle-poll-response data))))))
         (error
-         (setq spofy-player--poll-in-flight-p nil)
+         (spofy-player--abort-poll)
          (message "spofy: poll error: %S" err)
          (spofy-player--reschedule-poll gen))))))
 
@@ -221,6 +231,60 @@ polling has not been stopped."
     (setq spofy-player--timer
           (run-with-timer spofy-poll-interval nil #'spofy-player--poll))))
 
+(defun spofy-player--begin-poll (generation)
+  "Mark a player-state poll as in flight for GENERATION.
+Return the request identifier assigned to the poll."
+  (setq spofy-player--poll-in-flight-p t)
+  (cl-incf spofy-player--poll-request-id)
+  (spofy-player--start-poll-timeout generation spofy-player--poll-request-id)
+  spofy-player--poll-request-id)
+
+(defun spofy-player--complete-poll (generation request-id callback)
+  "Complete REQUEST-ID, run CALLBACK, and reschedule GENERATION."
+  (when (spofy-player--current-poll-p request-id)
+    (unwind-protect
+        (funcall callback)
+      (spofy-player--finish-poll request-id)
+      (spofy-player--reschedule-poll generation))))
+
+(defun spofy-player--abort-poll ()
+  "Clear the active player-state poll without rescheduling."
+  (setq spofy-player--poll-in-flight-p nil)
+  (spofy-player--cancel-poll-timeout))
+
+(defun spofy-player--finish-poll (request-id)
+  "Clear the active player-state poll when it matches REQUEST-ID."
+  (when (spofy-player--current-poll-p request-id)
+    (setq spofy-player--poll-in-flight-p nil)
+    (spofy-player--cancel-poll-timeout)))
+
+(defun spofy-player--current-poll-p (request-id)
+  "Return non-nil when REQUEST-ID is the active player-state poll."
+  (and spofy-player--poll-in-flight-p
+       (= request-id spofy-player--poll-request-id)))
+
+(defun spofy-player--start-poll-timeout (generation request-id)
+  "Start timeout recovery for REQUEST-ID in polling GENERATION."
+  (spofy-player--cancel-poll-timeout)
+  (setq spofy-player--poll-timeout-timer
+        (run-with-timer spofy-poll-timeout nil
+                        #'spofy-player--handle-poll-timeout
+                        generation request-id)))
+
+(defun spofy-player--cancel-poll-timeout ()
+  "Cancel the active player-state poll timeout timer."
+  (when (timerp spofy-player--poll-timeout-timer)
+    (cancel-timer spofy-player--poll-timeout-timer))
+  (setq spofy-player--poll-timeout-timer nil))
+
+(defun spofy-player--handle-poll-timeout (generation request-id)
+  "Recover polling when REQUEST-ID has not completed in GENERATION."
+  (when (spofy-player--current-poll-p request-id)
+    (setq spofy-player--poll-in-flight-p nil)
+    (setq spofy-player--poll-timeout-timer nil)
+    (message "spofy: player poll timed out; retrying")
+    (spofy-player--reschedule-poll generation)))
+
 (defun spofy-player--refresh-state (callback)
   "Fetch the player state asynchronously, then call CALLBACK.
 CALLBACK receives the current normalized state, or nil when no
@@ -232,10 +296,17 @@ state is available."
 
 (defun spofy-player-polling-active-p ()
   "Return non-nil when polling has a live timer or in-flight request."
-  (or spofy-player--poll-in-flight-p
-      (and spofy-player--timer
-           (memq spofy-player--timer timer-list)
-           t)))
+  (or (spofy-player--active-in-flight-p)
+      (spofy-player--live-timer-p spofy-player--timer)))
+
+(defun spofy-player--active-in-flight-p ()
+  "Return non-nil when an in-flight poll still has timeout recovery."
+  (and spofy-player--poll-in-flight-p
+       (spofy-player--live-timer-p spofy-player--poll-timeout-timer)))
+
+(defun spofy-player--live-timer-p (timer)
+  "Return non-nil when TIMER is live."
+  (and timer (memq timer timer-list) t))
 
 (defun spofy-player-ensure-polling ()
   "Start player polling unless an active poll loop already exists."
@@ -261,7 +332,7 @@ Polls at `spofy-poll-interval' second intervals."
   (when spofy-player--timer
     (cancel-timer spofy-player--timer)
     (setq spofy-player--timer nil))
-  (setq spofy-player--poll-in-flight-p nil))
+  (spofy-player--abort-poll))
 
 ;;;; Helper accessors
 
