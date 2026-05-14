@@ -77,5 +77,45 @@
   (should (equal '("album" . "abc")
                  (spofy-library--resolve-entity "albums" "abc"))))
 
+;;;; Cached library rendering
+
+(ert-deftest spofy-library-test-render-cached-albums-skips-json-null ()
+  "Cached album rendering skips Spotify JSON null entries."
+  (unwind-protect
+      (progn
+        (spofy-library--render-albums-from-cache
+         (list :null
+               '((album
+                  (uri . "spotify:album:album-1")
+                  (name . "Album")
+                  (artists . [])
+                  (release_date . "2026")
+                  (total_tracks . 1)))))
+        (with-current-buffer "*spofy Saved Albums*"
+          (should (= 1 (length tabulated-list-entries)))
+          (should (equal "spotify:album:album-1"
+                         (caar tabulated-list-entries)))))
+    (when-let* ((buffer (get-buffer "*spofy Saved Albums*")))
+      (kill-buffer buffer))))
+
+(ert-deftest spofy-library-test-render-cached-tracks-skips-json-null ()
+  "Cached track rendering skips Spotify JSON null entries."
+  (unwind-protect
+      (progn
+        (spofy-library--render-tracks-from-cache
+         (list :null
+               '((track
+                  (uri . "spotify:track:track-1")
+                  (name . "Track")
+                  (artists . [])
+                  (album (name . "Album"))
+                  (duration_ms . 1000)))))
+        (with-current-buffer "*spofy Saved Tracks*"
+          (should (= 1 (length tabulated-list-entries)))
+          (should (equal "spotify:track:track-1"
+                         (caar tabulated-list-entries)))))
+    (when-let* ((buffer (get-buffer "*spofy Saved Tracks*")))
+      (kill-buffer buffer))))
+
 (provide 'spofy-library-test)
 ;;; spofy-library-test.el ends here

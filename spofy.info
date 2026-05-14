@@ -1215,6 +1215,10 @@ completes), library search commands display a message asking the user to
 try again shortly, and browse commands fall back to the standard
 paginated API flow.
 
+   Saved track and saved album browse buffers ignore JSON null entries
+returned by Spotify, so a single unavailable saved item does not prevent
+the rest of the cached library from rendering.
+
    The library cache is invalidated automatically when items are saved
 or unsaved via ‘spofy-library-save’ and ‘spofy-library-unsave’.  The
 command ‘spofy-library-invalidate-cache’ can also be called manually.
@@ -2174,28 +2178,28 @@ Node: Playlist management42451
 Node: Library management45170
 Node: Timeline50679
 Node: Cache management52892
-Node: Browse cache55170
-Node: Functions56286
-Node: Player state accessors56537
-Node: Entity access in buffers57649
-Node: API client58247
-Node: Authentication helpers59710
-Node: Formatting utilities60736
-Node: Pagination64292
-Node: Entity storage and list rendering66145
-Node: Consult integration68705
-Node: Embark integration73028
-Node: Org-mode integration76161
-Node: Wikipedia integration77406
-Node: Wikipedia user options81054
-Node: Faces82733
-Node: Hooks84854
-Node: Mode-line display86065
-Node: Tab-bar display86993
-Node: Development88312
-Node: Indices88529
-Node: Function index88666
-Node: Variable index99996
+Node: Browse cache55362
+Node: Functions56478
+Node: Player state accessors56729
+Node: Entity access in buffers57841
+Node: API client58439
+Node: Authentication helpers59902
+Node: Formatting utilities60928
+Node: Pagination64484
+Node: Entity storage and list rendering66337
+Node: Consult integration68897
+Node: Embark integration73220
+Node: Org-mode integration76353
+Node: Wikipedia integration77598
+Node: Wikipedia user options81246
+Node: Faces82925
+Node: Hooks85046
+Node: Mode-line display86257
+Node: Tab-bar display87185
+Node: Development88504
+Node: Indices88721
+Node: Function index88858
+Node: Variable index100188
 
 End Tag Table
 

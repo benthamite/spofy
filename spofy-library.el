@@ -73,6 +73,27 @@ For example, \"spotify:track:1234\" returns \"track\"."
 Returns \"track\" or \"album\"."
   (symbol-name (or spofy-ui--entity-type 'track)))
 
+(defun spofy-library--saved-items (items entity-key)
+  "Return valid saved ITEMS whose wrapped entity is ENTITY-KEY.
+Spotify may include JSON null entries in result arrays; those are
+represented as the keyword `:null' by `json-parse-string'."
+  (cl-loop for item in (spofy-library--items-list items)
+           when (spofy-library--saved-item-entity item entity-key)
+           collect item))
+
+(defun spofy-library--items-list (items)
+  "Return ITEMS as a list, or nil for non-sequence values."
+  (cond
+   ((vectorp items) (append items nil))
+   ((listp items) items)
+   (t nil)))
+
+(defun spofy-library--saved-item-entity (item entity-key)
+  "Return ITEM's wrapped ENTITY-KEY entity unless it is JSON null."
+  (when (listp item)
+    (let ((entity (alist-get entity-key item)))
+      (unless (eq entity :null) entity))))
+
 ;;;; Saved tracks
 
 (defvar spofy-library-tracks-mode-map
@@ -146,13 +167,13 @@ _IDX is the entry position (unused)."
     (spofy-ui-render-list
      buf-name #'spofy-library-tracks-mode
      (lambda ()
-       (cl-loop for item across items
+       (cl-loop for item in (spofy-library--saved-items items 'track)
                 collect (spofy-library--format-saved-track item)))
      next-url
      (lambda (response)
        (let ((items (alist-get 'items response))
              (next-url (alist-get 'next response)))
-         (cons (cl-loop for item across items
+         (cons (cl-loop for item in (spofy-library--saved-items items 'track)
                         collect (spofy-library--format-saved-track item))
                next-url))))
     (with-current-buffer buf-name
@@ -175,7 +196,7 @@ the /me/tracks endpoint with pagination."
   (spofy-ui-render-list
    "*spofy Saved Tracks*" #'spofy-library-tracks-mode
    (lambda ()
-     (cl-loop for item in items
+     (cl-loop for item in (spofy-library--saved-items items 'track)
               collect (spofy-library--format-saved-track item)))
    nil)
   (with-current-buffer "*spofy Saved Tracks*"
@@ -279,13 +300,13 @@ ITEM is the wrapper alist from /me/albums which contains an `album' key."
     (spofy-ui-render-list
      buf-name #'spofy-library-albums-mode
      (lambda ()
-       (cl-loop for item across items
+       (cl-loop for item in (spofy-library--saved-items items 'album)
                 collect (spofy-library--format-saved-album item)))
      next-url
      (lambda (response)
        (let ((items (alist-get 'items response))
              (next-url (alist-get 'next response)))
-         (cons (cl-loop for item across items
+         (cons (cl-loop for item in (spofy-library--saved-items items 'album)
                         collect (spofy-library--format-saved-album item))
                next-url))))))
 
@@ -305,7 +326,7 @@ the /me/albums endpoint with pagination."
   (spofy-ui-render-list
    "*spofy Saved Albums*" #'spofy-library-albums-mode
    (lambda ()
-     (cl-loop for item in items
+     (cl-loop for item in (spofy-library--saved-items items 'album)
               collect (spofy-library--format-saved-album item)))
    nil))
 

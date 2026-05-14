@@ -1086,6 +1086,8 @@ In addition to the API response cache, spofy maintains a separate @strong{librar
 
 The library cache serves two purposes: it provides instant results for library search commands (@code{spofy-library-search-tracks}, @code{spofy-library-search-albums}, @code{spofy-library-search-playlists}), and it allows library browse commands (@code{spofy-library-browse-tracks}, @code{spofy-library-browse-albums}, @code{spofy-library-browse-playlists}) to render all items immediately without pagination.  When the cache is empty (e.g., at the start of a session before the background fetch completes), library search commands display a message asking the user to try again shortly, and browse commands fall back to the standard paginated API flow.
 
+Saved track and saved album browse buffers ignore JSON null entries returned by Spotify, so a single unavailable saved item does not prevent the rest of the cached library from rendering.
+
 The library cache is invalidated automatically when items are saved or unsaved via @code{spofy-library-save} and @code{spofy-library-unsave}.  The command @code{spofy-library-invalidate-cache} can also be called manually.  The cache is not persisted to disk; a new Emacs session starts fresh.
 
 @menu
