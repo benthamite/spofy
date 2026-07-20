@@ -5,3 +5,6 @@
 /dist/
 spofy.org
 dir
+/logs/
+/CLAUDE.md
+/AGENTS.md
