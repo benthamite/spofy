@@ -8,6 +8,8 @@ LOAD_PATH := -L $(CURDIR) \
 CONSULT_DIR := $(ELPACA_REPOS)consult
 EMBARK_DIR := $(ELPACA_REPOS)embark
 COMPAT_DIR := $(ELPACA_REPOS)compat
+LLAMA_DIR := $(ELPACA_REPOS)llama
+SEQ_DIR := $(ELPACA_REPOS)seq
 
 ifneq ($(wildcard $(CONSULT_DIR)),)
   LOAD_PATH += -L $(CONSULT_DIR)
@@ -17,6 +19,12 @@ ifneq ($(wildcard $(EMBARK_DIR)),)
 endif
 ifneq ($(wildcard $(COMPAT_DIR)),)
   LOAD_PATH += -L $(COMPAT_DIR)
+endif
+ifneq ($(wildcard $(LLAMA_DIR)),)
+  LOAD_PATH += -L $(LLAMA_DIR)
+endif
+ifneq ($(wildcard $(SEQ_DIR)),)
+  LOAD_PATH += -L $(SEQ_DIR)
 endif
 
 SRC_FILES := $(filter-out test/%,$(wildcard *.el))

@@ -21,6 +21,8 @@ jobs:
           git clone --depth 1 https://github.com/magit/transient.git ../transient
           git clone --depth 1 https://github.com/tarsius/cond-let.git ../cond-let
           git clone --depth 1 https://github.com/emacs-compat/compat.git ../compat
+          git clone --depth 1 https://github.com/tarsius/llama.git ../llama
+          git clone --depth 1 https://github.com/emacs-straight/seq.git ../seq
       - name: Byte-compile
         run: make compile
       - name: Run tests
