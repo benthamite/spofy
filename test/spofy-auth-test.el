@@ -201,6 +201,109 @@
       (should (string-match-p "client_id=cid" captured-data))
       (should (string-match-p "client_secret=csecret" captured-data)))))
 
+(ert-deftest spofy-auth-test-exchange-code-handles-missing-response ()
+  "Token exchange reports failure when no HTTP response was received."
+  (let ((spofy-client-id "cid")
+        (spofy-client-secret "csecret")
+        request-callback
+        response-buffer
+        (callback-count 0)
+        (result 'not-called))
+    (cl-letf (((symbol-function 'url-retrieve)
+               (lambda (_url callback &rest _)
+                 (setq request-callback callback))))
+      (spofy-auth--exchange-code
+       "auth-code-123"
+       (lambda (&rest tokens)
+         (cl-incf callback-count)
+         (setq result tokens))))
+    (with-temp-buffer
+      (setq response-buffer (current-buffer))
+      (setq-local url-http-end-of-headers nil)
+      (funcall request-callback nil))
+    (should (equal result '(nil nil nil)))
+    (should (= callback-count 1))
+    (should-not (buffer-live-p response-buffer))))
+
+(ert-deftest spofy-auth-test-refresh-handles-missing-response ()
+  "Token refresh reports failure when no HTTP response was received."
+  (let ((spofy-client-id "cid")
+        (spofy-client-secret "csecret")
+        (spofy-auth--access-token "old-token")
+        (spofy-auth--refresh-token "refresh-token")
+        (spofy-auth--token-expiry 123)
+        request-callback
+        response-buffer
+        (callback-count 0)
+        (result 'not-called))
+    (cl-letf (((symbol-function 'url-retrieve)
+               (lambda (_url callback &rest _)
+                 (setq request-callback callback))))
+      (spofy-auth-refresh-token
+       (lambda (token)
+         (cl-incf callback-count)
+         (setq result token))))
+    (with-temp-buffer
+      (setq response-buffer (current-buffer))
+      (setq-local url-http-end-of-headers nil)
+      (funcall request-callback nil))
+    (should-not result)
+    (should (= callback-count 1))
+    (should-not (buffer-live-p response-buffer))
+    (should (equal spofy-auth--access-token "old-token"))
+    (should (equal spofy-auth--refresh-token "refresh-token"))
+    (should (= spofy-auth--token-expiry 123))))
+
+(ert-deftest spofy-auth-test-refresh-accepts-nil-success-status ()
+  "Token refresh accepts nil status when an HTTP response was received."
+  (let ((spofy-client-id "cid")
+        (spofy-client-secret "csecret")
+        (spofy-auth--refresh-token "refresh-token")
+        request-callback
+        result)
+    (cl-letf (((symbol-function 'url-retrieve)
+               (lambda (_url callback &rest _)
+                 (setq request-callback callback)))
+              ((symbol-function 'spofy-auth--persist-tokens) #'ignore))
+      (spofy-auth-refresh-token
+       (lambda (token)
+         (setq result token)))
+      (with-temp-buffer
+        (insert "HTTP/1.1 200 OK\r\n\r\n")
+        (setq-local url-http-end-of-headers (point-marker))
+        (insert "{\"access_token\":\"new-token\",\"expires_in\":3600}")
+        (funcall request-callback nil)))
+    (should (equal result "new-token"))))
+
+(ert-deftest spofy-auth-test-callback-handles-token-exchange-failure ()
+  "OAuth callback stops cleanly when the token exchange fails."
+  (let ((spofy-auth--state "expected-state")
+        exchange-callback
+        response
+        stored
+        stopped)
+    (cl-letf (((symbol-function 'spofy-auth--send-response)
+               (lambda (_proc status body)
+                 (setq response (list status body))))
+              ((symbol-function 'spofy-auth--exchange-code)
+               (lambda (_code callback)
+                 (setq exchange-callback callback)))
+              ((symbol-function 'spofy-auth--store-tokens)
+               (lambda (&rest _)
+                 (setq stored t)))
+              ((symbol-function 'spofy-auth--stop-server)
+               (lambda ()
+                 (setq stopped t))))
+      (spofy-auth--handle-callback
+       nil
+       "GET /spofy/callback?code=code&state=expected-state HTTP/1.1\r\n\r\n")
+      (should-not response)
+      (funcall exchange-callback nil nil nil))
+    (should-not stored)
+    (should stopped)
+    (should (equal response
+                   '(502 "Authentication failed while exchanging tokens. You can close this window.")))))
+
 ;;;; Callback parsing
 
 (ert-deftest spofy-auth-test-parse-callback-extracts-code ()

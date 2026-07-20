@@ -219,7 +219,7 @@ available, refresh it asynchronously before calling CALLBACK."
 (defun spofy-auth--exchange-code (code callback)
   "Exchange authorization CODE for access and refresh tokens.
 CALLBACK is called with (access-token refresh-token expires-in)
-on success, or signals an error on failure."
+on success, or with three nil values on failure."
   (let ((url-request-method "POST")
         (url-request-extra-headers
          '(("Content-Type" . "application/x-www-form-urlencoded")))
@@ -235,8 +235,10 @@ on success, or signals an error on failure."
      (lambda (status)
        (let ((buf (current-buffer)))
          (unwind-protect
-             (if (plist-get status :error)
-                 (message "spofy: token exchange failed: %S" (plist-get status :error))
+             (if-let* ((response-error (spofy-auth--response-error status)))
+                 (progn
+                   (message "spofy: token exchange failed: %S" response-error)
+                   (funcall callback nil nil nil))
                (goto-char url-http-end-of-headers)
                (let* ((json (condition-case err
                                 (json-parse-buffer :object-type 'alist)
@@ -249,7 +251,8 @@ on success, or signals an error on failure."
                       (expires-in (and json (alist-get 'expires_in json))))
                  (if access-token
                      (funcall callback access-token refresh-token expires-in)
-                   (message "spofy: token exchange returned no access token: %S" json))))
+                   (message "spofy: token exchange returned no access token: %S" json)
+                   (funcall callback nil nil nil))))
            (kill-buffer buf)))))))
 
 ;;;; Token refresh
@@ -283,9 +286,9 @@ called with the refreshed access token or nil on failure."
          (let ((buf (current-buffer)))
            (unwind-protect
                (let ((token nil))
-                 (if (plist-get status :error)
+                 (if-let* ((response-error (spofy-auth--response-error status)))
                      (message "spofy: token refresh failed: %S"
-                              (plist-get status :error))
+                              response-error)
                    (goto-char url-http-end-of-headers)
                    (let* ((json (condition-case err
                                     (json-parse-buffer :object-type 'alist)
@@ -311,6 +314,15 @@ called with the refreshed access token or nil on failure."
                    (funcall callback token)))
              (when (buffer-live-p buf)
                (kill-buffer buf))))))))))
+
+(defun spofy-auth--response-error (status)
+  "Return the transport error for token response STATUS, or nil.
+A response without a usable end-of-headers position is incomplete."
+  (or (plist-get status :error)
+      (unless (or (integerp url-http-end-of-headers)
+                  (and (markerp url-http-end-of-headers)
+                       (marker-position url-http-end-of-headers)))
+        '(error http "connection closed without an HTTP response"))))
 
 ;;;; Callback parsing
 
@@ -380,15 +392,23 @@ the code for tokens, and sends an HTTP response to the browser."
       (spofy-auth--stop-server)
       (message "spofy: OAuth2 state mismatch — possible CSRF attack"))
      ((alist-get 'code params)
-      (spofy-auth--send-response proc 200
-                                  "Authentication successful! You can close this window.")
       (spofy-auth--exchange-code
        (alist-get 'code params)
        (lambda (access-token refresh-token expires-in)
-         (spofy-auth--store-tokens access-token refresh-token expires-in)
-         (spofy-auth--stop-server)
-         (message "spofy: authenticated successfully")
-         (run-hooks 'spofy-authenticated-hook))))
+         (unwind-protect
+             (if access-token
+                 (progn
+                   (spofy-auth--store-tokens access-token refresh-token expires-in)
+                   (spofy-auth--send-response
+                    proc 200
+                    "Authentication successful! You can close this window.")
+                   (message "spofy: authenticated successfully")
+                   (run-hooks 'spofy-authenticated-hook))
+               (spofy-auth--send-response
+                proc 502
+                "Authentication failed while exchanging tokens. You can close this window.")
+               (message "spofy: authentication failed during token exchange"))
+           (spofy-auth--stop-server)))))
      (t
       (spofy-auth--send-response proc 400
                                   "Missing authorization code. You can close this window.")
@@ -401,12 +421,13 @@ the code for tokens, and sends an HTTP response to the browser."
                        (200 "OK")
                        (400 "Bad Request")
                        (404 "Not Found")
+                       (502 "Bad Gateway")
                        (_ "Error"))))
-    (process-send-string
-     proc
-     (format "HTTP/1.1 %d %s\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n<html><body><h2>%s</h2></body></html>"
-             status-code status-text body))
     (when (process-live-p proc)
+      (process-send-string
+       proc
+       (format "HTTP/1.1 %d %s\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n<html><body><h2>%s</h2></body></html>"
+               status-code status-text body))
       (delete-process proc))))
 
 ;;;; Main entry point

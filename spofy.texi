@@ -389,7 +389,7 @@ The function @code{spofy-ui-compute-format} takes a view symbol and a list of co
 
 The command @code{spofy-authenticate} initiates the Spotify OAuth2 authorization flow.  It starts a temporary HTTP server on @code{spofy-redirect-port}, opens the user's default browser to Spotify's authorization page, and waits for the redirect callback.  The server silently ignores non-OAuth requests (such as the browser's @samp{favicon.ico} request) and only processes callbacks that carry the expected query parameters.  Once the user grants access, spofy exchanges the authorization code for access and refresh tokens, stores them along with the expiry time in @code{spofy-token-file}, and shuts down the temporary server.
 
-After successful authentication, spofy runs @code{spofy-authenticated-hook}.  You only need to authenticate once; subsequent sessions reuse the stored refresh token to obtain new access tokens automatically.
+After successful authentication, spofy runs @code{spofy-authenticated-hook}.  You only need to authenticate once; subsequent sessions reuse the stored refresh token to obtain new access tokens automatically.  Token exchange and refresh failures, including connections that close before returning a complete HTTP response, are reported without entering the debugger.  A failed refresh leaves the stored tokens unchanged.
 
 Any spofy command that requires an active session will prompt for authentication if no valid tokens are found, so you do not need to call @code{spofy-authenticate} or @code{spofy} explicitly before using other entry points such as the transient menu.
 
